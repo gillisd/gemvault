@@ -7,34 +7,34 @@ class CLITest < Minitest::Test
   include GemvaultTestHelper
 
   def setup
-    @tmpdir = Dir.mktmpdir("gemvault_cli_test")
-    @gem_build_dir = File.join(@tmpdir, "gems")
-    FileUtils.mkdir_p(@gem_build_dir)
+    @tmpdir = Pathname(Dir.mktmpdir("gemvault_cli_test"))
+    @gem_build_dir = @tmpdir / "gems"
+    @gem_build_dir.mkpath
     @original_dir = Dir.pwd
     Dir.chdir(@tmpdir)
   end
 
   def teardown
     Dir.chdir(@original_dir)
-    FileUtils.rm_rf(@tmpdir)
+    @tmpdir.rmtree
   end
 
   # --- new ---
 
   def test_new_creates_vault
     assert_equal 0, run_cli("new", "myvault")
-    assert_path_exists File.join(@tmpdir, "myvault.gemv")
+    assert_path_exists @tmpdir / "myvault.gemv"
     assert_match(/Created myvault\.gemv/, @stdout)
   end
 
   def test_new_appends_gemv_extension
     run_cli("new", "test")
-    assert_path_exists File.join(@tmpdir, "test.gemv")
+    assert_path_exists @tmpdir / "test.gemv"
   end
 
   def test_new_preserves_gemv_extension
     run_cli("new", "test.gemv")
-    assert_path_exists File.join(@tmpdir, "test.gemv")
+    assert_path_exists @tmpdir / "test.gemv"
   end
 
   def test_new_errors_on_existing
@@ -58,8 +58,8 @@ class CLITest < Minitest::Test
 
   def test_add_multiple_gems
     gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    dir2 = File.join(@gem_build_dir, "bar_dir")
-    FileUtils.mkdir_p(dir2)
+    dir2 = @gem_build_dir / "bar_dir"
+    dir2.mkpath
     gem2 = build_gem("bar", "2.0.0", dir: dir2)
     run_cli("new", "test")
     assert_equal 0, run_cli("add", "test.gemv", gem1, gem2)
@@ -68,8 +68,8 @@ class CLITest < Minitest::Test
   end
 
   def test_add_errors_on_invalid_gem
-    bad_gem = File.join(@tmpdir, "bad.gem")
-    File.write(bad_gem, "not a gem")
+    bad_gem = @tmpdir / "bad.gem"
+    bad_gem.write("not a gem")
     run_cli("new", "test")
     assert_equal 1, run_cli("add", "test.gemv", bad_gem)
     refute_empty @stderr
@@ -108,8 +108,8 @@ class CLITest < Minitest::Test
 
   def test_list_with_gems
     gem1 = build_gem("alpha", "1.0.0", dir: @gem_build_dir)
-    dir2 = File.join(@gem_build_dir, "beta_dir")
-    FileUtils.mkdir_p(dir2)
+    dir2 = @gem_build_dir / "beta_dir"
+    dir2.mkpath
     gem2 = build_gem("beta", "2.0.0", dir: dir2)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem1, gem2)
@@ -147,8 +147,8 @@ class CLITest < Minitest::Test
 
   def test_remove_all_versions
     gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    dir2 = File.join(@gem_build_dir, "v2")
-    FileUtils.mkdir_p(dir2)
+    dir2 = @gem_build_dir / "v2"
+    dir2.mkpath
     gem2 = build_gem("foo", "2.0.0", dir: dir2)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem1, gem2)
@@ -175,15 +175,15 @@ class CLITest < Minitest::Test
 
   def test_extract_produces_valid_gem
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    original = File.binread(gem_path)
+    original = gem_path.binread
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
 
-    output_dir = File.join(@tmpdir, "output")
+    output_dir = @tmpdir / "output"
     assert_equal 0, run_cli("extract", "test.gemv", "foo", "1.0.0", "-o", output_dir)
     assert_match(/Extracted foo-1\.0\.0\.gem/, @stdout)
 
-    extracted = File.binread(File.join(output_dir, "foo-1.0.0.gem"))
+    extracted = (output_dir / "foo-1.0.0.gem").binread
     assert_equal original, extracted
   end
 
@@ -192,23 +192,23 @@ class CLITest < Minitest::Test
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
 
-    output_dir = File.join(@tmpdir, "custom_out")
+    output_dir = @tmpdir / "custom_out"
     assert_equal 0, run_cli("extract", "test.gemv", "foo", "1.0.0", "--output", output_dir)
-    assert_path_exists File.join(output_dir, "foo-1.0.0.gem")
+    assert_path_exists output_dir / "foo-1.0.0.gem"
   end
 
   def test_extract_all_versions
     gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    dir2 = File.join(@gem_build_dir, "v2")
-    FileUtils.mkdir_p(dir2)
+    dir2 = @gem_build_dir / "v2"
+    dir2.mkpath
     gem2 = build_gem("foo", "2.0.0", dir: dir2)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem1, gem2)
 
-    output_dir = File.join(@tmpdir, "output")
+    output_dir = @tmpdir / "output"
     assert_equal 0, run_cli("extract", "test.gemv", "foo", "-o", output_dir)
-    assert_path_exists File.join(output_dir, "foo-1.0.0.gem")
-    assert_path_exists File.join(output_dir, "foo-2.0.0.gem")
+    assert_path_exists output_dir / "foo-1.0.0.gem"
+    assert_path_exists output_dir / "foo-2.0.0.gem"
   end
 
   def test_extract_nonexistent_gem_errors

@@ -6,14 +6,14 @@ class VaultTest < Minitest::Test
   include GemvaultTestHelper
 
   def setup
-    @tmpdir = Dir.mktmpdir("gemvault_test")
-    @vault_path = File.join(@tmpdir, "test.gemv")
-    @gem_build_dir = File.join(@tmpdir, "gems")
-    FileUtils.mkdir_p(@gem_build_dir)
+    @tmpdir = Pathname(Dir.mktmpdir("gemvault_test"))
+    @vault_path = @tmpdir / "test.gemv"
+    @gem_build_dir = @tmpdir / "gems"
+    @gem_build_dir.mkpath
   end
 
   def teardown
-    FileUtils.rm_rf(@tmpdir)
+    @tmpdir.rmtree
   end
 
   # --- Create / Open ---
@@ -45,13 +45,13 @@ class VaultTest < Minitest::Test
 
   def test_open_nonexistent_raises
     assert_raises(Gemvault::Vault::NotFoundError) do
-      Gemvault::Vault.new(File.join(@tmpdir, "nope.gemv"))
+      Gemvault::Vault.new(@tmpdir / "nope.gemv")
     end
   end
 
   def test_open_invalid_file_raises
-    invalid = File.join(@tmpdir, "bad.gemv")
-    File.write(invalid, "this is not sqlite")
+    invalid = @tmpdir / "bad.gemv"
+    invalid.write("this is not sqlite")
     assert_raises(Gemvault::Vault::Error) do
       Gemvault::Vault.new(invalid)
     end
@@ -97,14 +97,14 @@ class VaultTest < Minitest::Test
   def test_add_nonexistent_gem_raises
     vault = Gemvault::Vault.new(@vault_path, create: true)
     assert_raises(Gemvault::Vault::NotFoundError) do
-      vault.add(File.join(@tmpdir, "nonexistent.gem"))
+      vault.add(@tmpdir / "nonexistent.gem")
     end
     vault.close
   end
 
   def test_add_invalid_gem_raises
-    bad_gem = File.join(@tmpdir, "bad.gem")
-    File.write(bad_gem, "not a gem")
+    bad_gem = @tmpdir / "bad.gem"
+    bad_gem.write("not a gem")
     vault = Gemvault::Vault.new(@vault_path, create: true)
     assert_raises(Gemvault::Vault::InvalidGemError) do
       vault.add(bad_gem)
@@ -163,8 +163,8 @@ class VaultTest < Minitest::Test
 
   def test_remove_by_name_only
     gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    dir2 = File.join(@gem_build_dir, "v2")
-    FileUtils.mkdir_p(dir2)
+    dir2 = @gem_build_dir / "v2"
+    dir2.mkpath
     gem2 = build_gem("foo", "2.0.0", dir: dir2)
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem1)
@@ -186,7 +186,7 @@ class VaultTest < Minitest::Test
 
   def test_gem_data_returns_matching_bytes
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    original = File.binread(gem_path)
+    original = gem_path.binread
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem_path)
     retrieved = vault.gem_data("foo", "1.0.0")
