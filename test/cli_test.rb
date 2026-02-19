@@ -23,18 +23,18 @@ class CLITest < Minitest::Test
 
   def test_new_creates_vault
     assert_equal 0, run_cli("new", "myvault")
-    assert File.exist?(File.join(@tmpdir, "myvault.gemv"))
+    assert_path_exists File.join(@tmpdir, "myvault.gemv")
     assert_match(/Created myvault\.gemv/, @stdout)
   end
 
   def test_new_appends_gemv_extension
     run_cli("new", "test")
-    assert File.exist?(File.join(@tmpdir, "test.gemv"))
+    assert_path_exists File.join(@tmpdir, "test.gemv")
   end
 
   def test_new_preserves_gemv_extension
     run_cli("new", "test.gemv")
-    assert File.exist?(File.join(@tmpdir, "test.gemv"))
+    assert_path_exists File.join(@tmpdir, "test.gemv")
   end
 
   def test_new_errors_on_existing
@@ -199,7 +199,7 @@ class CLITest < Minitest::Test
 
     output_dir = File.join(@tmpdir, "custom_out")
     assert_equal 0, run_cli("extract", "test.gemv", "foo", "1.0.0", "--output", output_dir)
-    assert File.exist?(File.join(output_dir, "foo-1.0.0.gem"))
+    assert_path_exists File.join(output_dir, "foo-1.0.0.gem")
   end
 
   def test_extract_all_versions
@@ -212,8 +212,8 @@ class CLITest < Minitest::Test
 
     output_dir = File.join(@tmpdir, "output")
     assert_equal 0, run_cli("extract", "test.gemv", "foo", "-o", output_dir)
-    assert File.exist?(File.join(output_dir, "foo-1.0.0.gem"))
-    assert File.exist?(File.join(output_dir, "foo-2.0.0.gem"))
+    assert_path_exists File.join(output_dir, "foo-1.0.0.gem")
+    assert_path_exists File.join(output_dir, "foo-2.0.0.gem")
   end
 
   def test_extract_nonexistent_gem_errors
@@ -262,25 +262,10 @@ class CLITest < Minitest::Test
   private
 
   def run_cli(*args)
-    @stdout = ""
-    @stderr = ""
-    stdout_io = StringIO.new
-    stderr_io = StringIO.new
-
-    old_stdout = $stdout
-    old_stderr = $stderr
-    $stdout = stdout_io
-    $stderr = stderr_io
-
-    begin
+    result = nil
+    @stdout, @stderr = capture_io do
       result = Gemvault::CLI.run(args.map(&:to_s))
-    ensure
-      $stdout = old_stdout
-      $stderr = old_stderr
     end
-
-    @stdout = stdout_io.string
-    @stderr = stderr_io.string
     result
   end
 end

@@ -51,7 +51,7 @@ class VaultSourceTest < Minitest::Test
     source = create_vault_source(@vault_path)
     files = source.fetch_gemspec_files
     assert_equal 2, files.length
-    files.each { |f| assert File.exist?(f), "Expected gemspec file to exist: #{f}" }
+    files.each { |f| assert_path_exists f }
   end
 
   def test_fetch_gemspec_files_returns_valid_gemspecs
@@ -75,12 +75,12 @@ class VaultSourceTest < Minitest::Test
     source.dependency_names = %w[alpha]
 
     spec = find_spec(source, "alpha")
-    assert spec, "Expected to find alpha spec"
+    refute_nil spec, "Expected to find alpha spec"
 
     source.install(spec)
 
     gem_dir = File.join(Bundler.bundle_path, "gems", "alpha-1.0.0")
-    assert File.directory?(gem_dir), "Expected gem dir at #{gem_dir}"
+    assert_path_exists gem_dir
   end
 
   def test_install_sets_full_gem_path
@@ -90,8 +90,8 @@ class VaultSourceTest < Minitest::Test
     spec = find_spec(source, "alpha")
     source.install(spec)
 
-    assert spec.full_gem_path
-    assert File.directory?(spec.full_gem_path)
+    refute_nil spec.full_gem_path
+    assert_path_exists spec.full_gem_path
   end
 
   def test_install_sets_loaded_from
@@ -101,8 +101,8 @@ class VaultSourceTest < Minitest::Test
     spec = find_spec(source, "alpha")
     source.install(spec)
 
-    assert spec.loaded_from
-    assert File.exist?(spec.loaded_from)
+    refute_nil spec.loaded_from
+    assert_path_exists spec.loaded_from
   end
 
   def test_to_lock_format
@@ -164,7 +164,7 @@ class VaultSourceTest < Minitest::Test
     files = source.fetch_gemspec_files
     spec = Gem::Specification.load(files.first)
     dep = spec.dependencies.find { |d| d.name == "rake" }
-    assert dep
+    refute_nil dep
     assert_equal Gem::Requirement.new(">= 13.0"), dep.requirement
   end
 

@@ -40,11 +40,11 @@ class IntegrationTest < Minitest::Test
     GEMFILE
 
     output, status = run_bundle("install")
-    assert status.success?, "bundle install failed:\n#{output}"
+    assert_predicate status, :success?, "bundle install failed:\n#{output}"
     assert_match(/Bundle complete!/, output)
 
     gem_dirs = Dir.glob(File.join(@bundle_path, "**", "gems", "hello_vault-1.0.0"))
-    assert gem_dirs.any?, "Expected hello_vault-1.0.0 gem directory to exist"
+    refute_empty gem_dirs, "Expected hello_vault-1.0.0 gem directory to exist"
   end
 
   def test_multiple_gems
@@ -70,11 +70,11 @@ class IntegrationTest < Minitest::Test
     GEMFILE
 
     output, status = run_bundle("install")
-    assert status.success?, "bundle install failed:\n#{output}"
+    assert_predicate status, :success?, "bundle install failed:\n#{output}"
 
     %w[alpha_vault-1.0.0 beta_vault-2.0.0 gamma_vault-3.0.0].each do |full_name|
       dirs = Dir.glob(File.join(@bundle_path, "**", "gems", full_name))
-      assert dirs.any?, "Expected #{full_name} to be installed"
+      refute_empty dirs, "Expected #{full_name} to be installed"
     end
   end
 
@@ -134,7 +134,7 @@ class IntegrationTest < Minitest::Test
     run_bundle!("install")
 
     output, status = run_bundle("exec", "ruby", "-e", "require 'loadme'; puts Loadme::VERSION")
-    assert status.success?, "bundle exec failed:\n#{output}"
+    assert_predicate status, :success?, "bundle exec failed:\n#{output}"
     assert_match(/1\.0\.0/, output)
   end
 
@@ -153,7 +153,7 @@ class IntegrationTest < Minitest::Test
     GEMFILE
 
     output, status = run_bundle("install")
-    assert status.success?, "bundle install with mixed sources failed:\n#{output}"
+    assert_predicate status, :success?, "bundle install with mixed sources failed:\n#{output}"
     assert_match(/Bundle complete!/, output)
   end
 
@@ -180,10 +180,9 @@ class IntegrationTest < Minitest::Test
 
     run_bundle!("install")
 
-    assert Dir.glob(File.join(@bundle_path, "**", "gems", "want1-1.0.0")).any?
-    assert Dir.glob(File.join(@bundle_path, "**", "gems", "want2-1.0.0")).any?
-    # skipme should NOT be installed
-    refute Dir.glob(File.join(@bundle_path, "**", "gems", "skipme-1.0.0")).any?,
+    refute_empty Dir.glob(File.join(@bundle_path, "**", "gems", "want1-1.0.0"))
+    refute_empty Dir.glob(File.join(@bundle_path, "**", "gems", "want2-1.0.0"))
+    assert_empty Dir.glob(File.join(@bundle_path, "**", "gems", "skipme-1.0.0")),
       "skipme should not be installed"
   end
 
@@ -207,10 +206,10 @@ class IntegrationTest < Minitest::Test
     GEMFILE
 
     output, status = run_bundle("install")
-    assert status.success?, "bundle install with dependencies failed:\n#{output}"
+    assert_predicate status, :success?, "bundle install with dependencies failed:\n#{output}"
 
-    assert Dir.glob(File.join(@bundle_path, "**", "gems", "depa-1.0.0")).any?
-    assert Dir.glob(File.join(@bundle_path, "**", "gems", "depb-1.0.0")).any?
+    refute_empty Dir.glob(File.join(@bundle_path, "**", "gems", "depa-1.0.0"))
+    refute_empty Dir.glob(File.join(@bundle_path, "**", "gems", "depb-1.0.0"))
   end
 
   def test_multi_version_resolution
@@ -234,14 +233,14 @@ class IntegrationTest < Minitest::Test
     run_bundle!("install")
 
     # Only 2.0.0 should be installed
-    assert Dir.glob(File.join(@bundle_path, "**", "gems", "multiver-2.0.0")).any?,
+    refute_empty Dir.glob(File.join(@bundle_path, "**", "gems", "multiver-2.0.0")),
       "Expected multiver-2.0.0 to be installed"
-    refute Dir.glob(File.join(@bundle_path, "**", "gems", "multiver-1.0.0")).any?,
+    assert_empty Dir.glob(File.join(@bundle_path, "**", "gems", "multiver-1.0.0")),
       "multiver-1.0.0 should not be installed"
 
     # Verify the correct version loads
     output, status = run_bundle("exec", "ruby", "-e", "require 'multiver'; puts Multiver::VERSION")
-    assert status.success?, "bundle exec failed:\n#{output}"
+    assert_predicate status, :success?, "bundle exec failed:\n#{output}"
     assert_match(/2\.0\.0/, output)
   end
 
@@ -276,7 +275,7 @@ class IntegrationTest < Minitest::Test
       Open3.capture2e(env, "ruby", script_path, chdir: @project_dir)
     end
 
-    assert status.success?, "bundler/inline script failed:\n#{output}"
+    assert_predicate status, :success?, "bundler/inline script failed:\n#{output}"
     assert_match(/1\.0\.0/, output)
   end
 
@@ -293,7 +292,7 @@ class IntegrationTest < Minitest::Test
     GEMFILE
 
     output, status = run_bundle("install")
-    refute status.success?, "Expected bundle install to fail with unsatisfied constraint"
+    refute_predicate status, :success?, "Expected bundle install to fail with unsatisfied constraint"
     assert_match(/could not find/i, output)
   end
 
@@ -355,7 +354,7 @@ class IntegrationTest < Minitest::Test
 
   def run_bundle!(*args, **kwargs)
     output, status = run_bundle(*args, **kwargs)
-    assert status.success?, "bundle #{args.join(' ')} failed:\n#{output}"
+    assert_predicate status, :success?, "bundle #{args.join(' ')} failed:\n#{output}"
     [output, status]
   end
 end
