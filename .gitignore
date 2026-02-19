@@ -1,0 +1,7 @@
+*.gem
+*.gemv
+tmp/
+pkg/
+Gemfile.lock
+.bundle/
+vendor/
