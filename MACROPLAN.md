@@ -51,8 +51,13 @@ CREATE TABLE gems (
 - Phase 0: Complete (project scaffolding)
 - Phase 1: Complete (core Vault library — 27 unit tests)
 - Phase 2: Complete (Bundler source plugin — 15 unit tests)
-- Phase 3: Complete (integration tests — 8 end-to-end tests)
-- Phase 4: Complete (CLI tool — 27 CLI tests)
+- Phase 3: Complete (integration tests — 11 end-to-end tests)
+- Phase 4: Complete (CLI tool with CommandKit auto-loaded subcommands — 27 CLI tests)
 - Phase 5: Future (encryption)
 
-Total: 77 tests, 188 assertions
+Post-phase refinements:
+- Schema: dropped `spec` column, specs derived from gem blobs at runtime
+- Tests: idiomatic Minitest assertions, Pathname throughout
+- CLI: refactored from hand-rolled dispatcher to CommandKit::Commands::AutoLoad
+
+Total: 84 tests, 215 assertions
