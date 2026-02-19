@@ -4,4 +4,4 @@
 require_relative "../lib/gemvault"
 require_relative "../lib/gemvault/cli"
 
-exit Gemvault::CLI.run(ARGV)
+Gemvault::CLI.start
