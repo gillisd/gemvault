@@ -57,7 +57,7 @@ class VaultSourceTest < Minitest::Test
   def test_fetch_gemspec_files_returns_valid_gemspecs
     source = create_vault_source(@vault_path)
     files = source.fetch_gemspec_files
-    specs = files.map { |f| eval(File.read(f)) } # rubocop:disable Security/Eval
+    specs = files.map { |f| Gem::Specification.load(f) }
     names = specs.map(&:name).sort
     assert_equal %w[alpha beta], names
   end
@@ -145,7 +145,7 @@ class VaultSourceTest < Minitest::Test
     source = create_vault_source(vault2_path)
     files = source.fetch_gemspec_files
     assert_equal 1, files.length
-    spec = eval(File.read(files.first)) # rubocop:disable Security/Eval
+    spec = Gem::Specification.load(files.first)
     assert_equal "x86_64-linux", spec.platform.to_s
   end
 
@@ -162,7 +162,7 @@ class VaultSourceTest < Minitest::Test
 
     source = create_vault_source(vault2_path)
     files = source.fetch_gemspec_files
-    spec = eval(File.read(files.first)) # rubocop:disable Security/Eval
+    spec = Gem::Specification.load(files.first)
     dep = spec.dependencies.find { |d| d.name == "rake" }
     assert dep
     assert_equal Gem::Requirement.new(">= 13.0"), dep.requirement

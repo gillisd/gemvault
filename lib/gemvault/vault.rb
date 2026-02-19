@@ -3,6 +3,7 @@
 require "sqlite3"
 require "rubygems/package"
 require "fileutils"
+require "tempfile"
 
 module Gemvault
   class Vault
@@ -104,8 +105,8 @@ module Gemvault
     end
 
     def specs
-      rows = @db.execute("SELECT spec FROM gems")
-      rows.map { |row| eval(row["spec"]) } # rubocop:disable Security/Eval
+      rows = @db.execute("SELECT name, version, platform FROM gems")
+      rows.map { |row| spec_from_blob(row["name"], row["version"], row["platform"]) }
     end
 
     def gem_entries
@@ -120,6 +121,19 @@ module Gemvault
 
     def close
       @db.close if @db && !@db.closed?
+    end
+
+    def spec_from_blob(name, version, platform = "ruby")
+      data = gem_data(name, version, platform: platform)
+      tmpfile = Tempfile.new(["vault_spec", ".gem"])
+      begin
+        tmpfile.binmode
+        tmpfile.write(data)
+        tmpfile.close
+        Gem::Package.new(tmpfile.path).spec
+      ensure
+        tmpfile.unlink
+      end
     end
 
     private

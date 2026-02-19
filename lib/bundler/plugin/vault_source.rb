@@ -20,8 +20,9 @@ module Bundler
 
         begin
           vault.gem_entries.each do |entry|
-            spec = eval(entry["spec"]) # rubocop:disable Security/Eval
+            spec = vault.spec_from_blob(entry["name"], entry["version"], entry["platform"])
             full_name = spec.full_name
+            spec_ruby = spec.to_ruby
 
             # If the gem is already installed, return the gemspec from inside the
             # gem directory. Bundler computes full_gem_path as dirname(loaded_from)
@@ -30,14 +31,14 @@ module Bundler
             gem_dir = File.join(Bundler.bundle_path, "gems", full_name)
             if File.directory?(gem_dir)
               gemspec_path = File.join(gem_dir, "#{full_name}.gemspec")
-              File.write(gemspec_path, entry["spec"]) unless File.exist?(gemspec_path)
+              File.write(gemspec_path, spec_ruby) unless File.exist?(gemspec_path)
               gemspec_files << gemspec_path
             else
               # Not yet installed — write a temp gemspec for resolution
               gemspec_dir = File.join(Bundler.tmp("vault_source"), "specifications")
               FileUtils.mkdir_p(gemspec_dir)
               gemspec_path = File.join(gemspec_dir, "#{full_name}.gemspec")
-              File.write(gemspec_path, entry["spec"])
+              File.write(gemspec_path, spec_ruby)
               gemspec_files << gemspec_path
             end
           end
