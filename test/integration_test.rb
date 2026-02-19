@@ -279,6 +279,90 @@ class IntegrationTest < Minitest::Test
     assert_match(/1\.0\.0/, output)
   end
 
+  def test_plugins_rb_makes_plugin_root_deps_activatable
+    # Reproduces the bug where Bundler installs plugin deps (e.g. sqlite3) into
+    # Plugin.root but doesn't add their load paths. On systems where sqlite3
+    # isn't a system gem, `require "sqlite3"` fails during plugin loading,
+    # causing "No plugin sources available for vault."
+    #
+    # The test places a dummy gem spec ONLY in a fake Plugin.root/specifications/.
+    # It then runs the plugins.rb preamble (the workaround code, without the
+    # require_relative that triggers the full vault_source/sqlite3 chain).
+    # Without the fix, the spec stays invisible to RubyGems.
+    # With the fix, it becomes findable — proving plugin deps are activatable.
+
+    fake_root = @project_dir / "fake_plugin_root"
+    fake_specs = fake_root / "specifications"
+    fake_specs.mkpath
+
+    # Extract preamble: everything before the require_relative line.
+    # This is the workaround code that should add Plugin.root specs to RubyGems.
+    # In the broken version, there's nothing here (just a comment + blank line).
+    # In the fixed version, this contains the Gem::Specification.dirs patch.
+    plugins_rb = (PLUGIN_PATH / "plugins.rb").read
+    preamble = plugins_rb.lines.take_while { |l| !l.include?("require_relative") }.join
+
+    # Build the subprocess script in two parts to avoid heredoc interpolation issues
+    preamble_path = @project_dir / "preamble.rb"
+    preamble_path.write(preamble)
+
+    script_path = @project_dir / "test_plugin_root_deps.rb"
+    script_path.write(<<~RUBY)
+      require "bundler"
+
+      # Create a dummy gem spec ONLY in Plugin.root/specifications/
+      fake_spec = Gem::Specification.new do |s|
+        s.name = "phantom_dep"
+        s.version = "1.0.0"
+        s.summary = "Simulated plugin dependency"
+        s.authors = ["Test"]
+        s.files = []
+      end
+      File.write("#{fake_specs / "phantom_dep-1.0.0.gemspec"}", fake_spec.to_ruby)
+
+      # Verify phantom_dep is NOT findable yet
+      begin
+        Gem::Specification.find_by_name("phantom_dep")
+        $stderr.puts "SETUP ERROR: phantom_dep already visible"
+        exit 2
+      rescue Gem::MissingSpecError
+        # Expected — it only exists in the fake Plugin.root
+      end
+
+      # Override Bundler::Plugin.root to our fake root (simulates plugin env)
+      module Bundler::Plugin
+        remove_method :root if method_defined?(:root)
+        define_method(:root) { Pathname.new("#{fake_root}") }
+        module_function :root
+      end
+
+      # Run the plugins.rb preamble — the code before require_relative.
+      # In the broken version: no-op (just comments).
+      # In the fixed version: adds Plugin.root/specifications to Gem dirs.
+      load "#{preamble_path}"
+
+      # NOW: can RubyGems find the dep that's only in Plugin.root?
+      begin
+        Gem::Specification.find_by_name("phantom_dep")
+        puts "PASS"
+      rescue Gem::MissingSpecError
+        $stderr.puts "FAIL: phantom_dep not findable after plugins.rb preamble"
+        $stderr.puts "Gem::Specification.dirs = " + Gem::Specification.dirs.inspect
+        exit 1
+      end
+    RUBY
+
+    output, status = Bundler.with_unbundled_env do
+      Open3.capture2e(
+        { "GEM_PATH" => Gem.path.join(File::PATH_SEPARATOR) },
+        "ruby", script_path.to_s
+      )
+    end
+
+    assert_predicate status, :success?,
+      "plugins.rb should make Plugin.root deps findable by RubyGems:\n#{output}"
+  end
+
   def test_version_constraint_unsatisfied
     gem_path = build_gem("constrained", "1.0.0", dir: @gem_build_dir,
       files: { "lib/constrained.rb" => 'module Constrained; end' })
