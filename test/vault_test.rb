@@ -245,20 +245,6 @@ class VaultTest < Minitest::Test
     vault.close
   end
 
-  # --- gem_spec_ruby ---
-
-  def test_gem_spec_ruby_returns_string
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
-    vault.add(gem_path)
-
-    ruby_str = vault.gem_spec_ruby("foo", "1.0.0")
-    assert_kind_of String, ruby_str
-    assert_includes ruby_str, "foo"
-    assert_includes ruby_str, "1.0.0"
-    vault.close
-  end
-
   # --- gem_entries ---
 
   def test_gem_entries_excludes_data
@@ -270,7 +256,8 @@ class VaultTest < Minitest::Test
     assert_equal 1, entries.length
     entry = entries.first
     assert entry["name"]
-    assert entry["spec"]
+    assert entry["version"]
+    assert entry["platform"]
     refute entry.key?("data"), "gem_entries should not include data blob"
     vault.close
   end

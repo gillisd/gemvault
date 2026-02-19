@@ -58,8 +58,8 @@ module Gemvault
 
       data = File.binread(gem_path)
       @db.execute(
-        "INSERT INTO gems (name, version, platform, spec, data) VALUES (?, ?, ?, ?, ?)",
-        [name, version, platform, spec.to_ruby, SQLite3::Blob.new(data)]
+        "INSERT INTO gems (name, version, platform, data) VALUES (?, ?, ?, ?)",
+        [name, version, platform, SQLite3::Blob.new(data)]
       )
     end
 
@@ -94,16 +94,6 @@ module Gemvault
       row["data"]
     end
 
-    def gem_spec_ruby(name, version, platform: "ruby")
-      row = @db.execute(
-        "SELECT spec FROM gems WHERE name = ? AND version = ? AND platform = ?",
-        [name, version, platform]
-      ).first
-
-      raise NotFoundError, "Gem not found: #{name}-#{version} (#{platform})" unless row
-      row["spec"]
-    end
-
     def specs
       rows = @db.execute("SELECT name, version, platform FROM gems")
       rows.map { |row| spec_from_blob(row["name"], row["version"], row["platform"]) }
@@ -111,7 +101,7 @@ module Gemvault
 
     def gem_entries
       @db.execute(
-        "SELECT name, version, platform, spec, created_at FROM gems ORDER BY name, version"
+        "SELECT name, version, platform, created_at FROM gems ORDER BY name, version"
       )
     end
 
@@ -149,7 +139,6 @@ module Gemvault
           name TEXT NOT NULL,
           version TEXT NOT NULL,
           platform TEXT NOT NULL DEFAULT 'ruby',
-          spec TEXT NOT NULL,
           data BLOB NOT NULL,
           created_at TEXT NOT NULL DEFAULT (datetime('now')),
           PRIMARY KEY (name, version, platform)
