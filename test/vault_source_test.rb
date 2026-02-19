@@ -168,6 +168,42 @@ class VaultSourceTest < Minitest::Test
     assert_equal Gem::Requirement.new(">= 13.0"), dep.requirement
   end
 
+  def test_install_skips_when_already_installed
+    source = create_vault_source(@vault_path)
+    source.dependency_names = %w[alpha]
+
+    spec = find_spec(source, "alpha")
+    source.install(spec) # first install — actually extracts
+
+    # Second install should skip extraction and NOT print "Installing"
+    out, _err = capture_io do
+      Bundler.ui = Bundler::UI::Shell.new
+      source.install(spec)
+    end
+
+    refute_match(/Installing/, out, "Expected skip on second install, but got Installing output")
+    # Verify load paths still set correctly
+    gem_dir = File.join(Bundler.bundle_path, "gems", spec.full_name)
+    assert_equal gem_dir, spec.full_gem_path
+    assert_path_exists spec.loaded_from
+  end
+
+  def test_install_force_reinstalls_when_already_installed
+    source = create_vault_source(@vault_path)
+    source.dependency_names = %w[alpha]
+
+    spec = find_spec(source, "alpha")
+    source.install(spec) # first install
+
+    # Force reinstall should actually install again
+    out, _err = capture_io do
+      Bundler.ui = Bundler::UI::Shell.new
+      source.install(spec, force: true)
+    end
+
+    assert_match(/Installing/, out, "Expected force reinstall to print Installing")
+  end
+
   def test_options_to_lock
     source = create_vault_source(@vault_path)
     assert_equal({}, source.options_to_lock)

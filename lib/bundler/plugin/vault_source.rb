@@ -28,7 +28,7 @@ module Bundler
             # gem directory. Bundler computes full_gem_path as dirname(loaded_from)
             # for plugin sources (see rubygems_ext.rb), so loaded_from must be
             # inside the gem directory for the load path to resolve correctly.
-            gem_dir = File.join(Bundler.bundle_path, "gems", full_name)
+            gem_dir = gem_dir_for(full_name)
             if File.directory?(gem_dir)
               gemspec_path = File.join(gem_dir, "#{full_name}.gemspec")
               File.write(gemspec_path, spec_ruby) unless File.exist?(gemspec_path)
@@ -50,6 +50,15 @@ module Bundler
       end
 
       def install(spec, opts = {})
+        gem_dir = gem_dir_for(spec.full_name)
+        if File.directory?(gem_dir) && !opts[:force]
+          Bundler.ui.debug "Using #{version_message(spec)} from vault #{File.basename(@vault_path)}"
+          gemspec_in_gem = File.join(gem_dir, "#{spec.full_name}.gemspec")
+          spec.full_gem_path = gem_dir
+          spec.loaded_from = gemspec_in_gem
+          return nil
+        end
+
         Bundler.ui.info "Installing #{version_message(spec)} from vault #{File.basename(@vault_path)}"
 
         vault = open_vault
@@ -120,6 +129,10 @@ module Bundler
 
       def open_vault
         Gemvault::Vault.new(@vault_path)
+      end
+
+      def gem_dir_for(full_name)
+        File.join(Bundler.bundle_path, "gems", full_name)
       end
 
       def validate_vault_exists!
