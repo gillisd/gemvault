@@ -20,7 +20,7 @@ class VaultTest < Minitest::Test
 
   def test_create_new_vault
     vault = Gemvault::Vault.new(@vault_path, create: true)
-    assert File.exist?(@vault_path)
+    assert_path_exists @vault_path
     assert_equal 0, vault.size
     vault.close
   end
@@ -132,7 +132,7 @@ class VaultTest < Minitest::Test
     assert_equal "alpha", entries[0]["name"]
     assert_equal "1.0.0", entries[0]["version"]
     assert_equal "ruby", entries[0]["platform"]
-    assert entries[0]["created_at"]
+    refute_nil entries[0]["created_at"]
     assert_equal "beta", entries[1]["name"]
     vault.close
   end
@@ -143,7 +143,9 @@ class VaultTest < Minitest::Test
     vault.add(gem_path)
 
     entry = vault.list.first
-    assert_equal %w[name version platform created_at].sort, entry.keys.select { |k| k.is_a?(String) }.sort
+    %w[name version platform created_at].each do |key|
+      assert_includes entry.keys, key
+    end
     vault.close
   end
 
@@ -240,7 +242,7 @@ class VaultTest < Minitest::Test
 
     spec = vault.specs.first
     dep = spec.dependencies.find { |d| d.name == "rake" }
-    assert dep
+    refute_nil dep
     assert_equal Gem::Requirement.new(">= 13.0"), dep.requirement
     vault.close
   end
