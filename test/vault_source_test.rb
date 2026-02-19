@@ -12,17 +12,17 @@ class VaultSourceTest < Minitest::Test
   include GemvaultTestHelper
 
   def setup
-    @tmpdir = Dir.mktmpdir("vault_source_test")
-    @gem_build_dir = File.join(@tmpdir, "gems")
-    FileUtils.mkdir_p(@gem_build_dir)
-    @vault_path = File.join(@tmpdir, "test.gemv")
+    @tmpdir = Pathname(Dir.mktmpdir("vault_source_test"))
+    @gem_build_dir = @tmpdir / "gems"
+    @gem_build_dir.mkpath
+    @vault_path = @tmpdir / "test.gemv"
 
     # Build fixture gems and create a vault
     @gem1_path = build_gem("alpha", "1.0.0", dir: @gem_build_dir,
       files: { "lib/alpha.rb" => 'module Alpha; VERSION = "1.0.0"; end' })
 
-    dir2 = File.join(@gem_build_dir, "beta_dir")
-    FileUtils.mkdir_p(dir2)
+    dir2 = @gem_build_dir / "beta_dir"
+    dir2.mkpath
     @gem2_path = build_gem("beta", "2.0.0", dir: dir2,
       files: { "lib/beta.rb" => 'module Beta; VERSION = "2.0.0"; end' })
 
@@ -33,7 +33,7 @@ class VaultSourceTest < Minitest::Test
   end
 
   def teardown
-    FileUtils.rm_rf(@tmpdir)
+    @tmpdir.rmtree
   end
 
   def test_initialize_resolves_path
@@ -43,7 +43,7 @@ class VaultSourceTest < Minitest::Test
 
   def test_initialize_missing_vault_raises
     assert_raises(Bundler::PathError) do
-      create_vault_source(File.join(@tmpdir, "nope.gemv"))
+      create_vault_source(@tmpdir / "nope.gemv")
     end
   end
 
@@ -79,7 +79,7 @@ class VaultSourceTest < Minitest::Test
 
     source.install(spec)
 
-    gem_dir = File.join(Bundler.bundle_path, "gems", "alpha-1.0.0")
+    gem_dir = Pathname(Bundler.bundle_path) / "gems" / "alpha-1.0.0"
     assert_path_exists gem_dir
   end
 
@@ -124,7 +124,7 @@ class VaultSourceTest < Minitest::Test
   end
 
   def test_inequality
-    vault2 = File.join(@tmpdir, "other.gemv")
+    vault2 = @tmpdir / "other.gemv"
     Gemvault::Vault.new(vault2, create: true).close
 
     source1 = create_vault_source(@vault_path)
@@ -133,11 +133,11 @@ class VaultSourceTest < Minitest::Test
   end
 
   def test_platform_gem
-    dir3 = File.join(@gem_build_dir, "native_dir")
-    FileUtils.mkdir_p(dir3)
+    dir3 = @gem_build_dir / "native_dir"
+    dir3.mkpath
     native_gem = build_gem("native", "1.0.0", dir: dir3, platform: "x86_64-linux")
 
-    vault2_path = File.join(@tmpdir, "native.gemv")
+    vault2_path = @tmpdir / "native.gemv"
     vault2 = Gemvault::Vault.new(vault2_path, create: true)
     vault2.add(native_gem)
     vault2.close
@@ -150,12 +150,12 @@ class VaultSourceTest < Minitest::Test
   end
 
   def test_dependencies_preserved
-    dir3 = File.join(@gem_build_dir, "dep_dir")
-    FileUtils.mkdir_p(dir3)
+    dir3 = @gem_build_dir / "dep_dir"
+    dir3.mkpath
     dep_gem = build_gem("depgem", "1.0.0", dir: dir3,
       dependencies: [["rake", ">= 13.0"]])
 
-    vault2_path = File.join(@tmpdir, "deps.gemv")
+    vault2_path = @tmpdir / "deps.gemv"
     vault2 = Gemvault::Vault.new(vault2_path, create: true)
     vault2.add(dep_gem)
     vault2.close
@@ -180,7 +180,7 @@ class VaultSourceTest < Minitest::Test
   end
 
   def create_vault_source(path, dependency_names: [])
-    opts = { "uri" => path, "type" => "vault" }
+    opts = { "uri" => path.to_s, "type" => "vault" }
     source = Bundler::Plugin::VaultSource.new(opts)
     source.dependency_names = dependency_names
     source

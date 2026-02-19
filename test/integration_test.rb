@@ -5,26 +5,26 @@ require "test_helper"
 class IntegrationTest < Minitest::Test
   include GemvaultTestHelper
 
-  INTEGRATION_TMP = File.join(__dir__, "..", "tmp", "integration")
-  PLUGIN_PATH = File.expand_path("..", __dir__)
+  INTEGRATION_TMP = Pathname(__dir__).parent / "tmp" / "integration"
+  PLUGIN_PATH = Pathname(__dir__).parent
 
   def setup
-    @project_dir = File.join(INTEGRATION_TMP, "test_#{name}_#{$$}_#{Time.now.to_i}")
-    FileUtils.mkdir_p(@project_dir)
-    @bundle_path = File.join(@project_dir, "vendor", "bundle")
+    @project_dir = INTEGRATION_TMP / "test_#{name}_#{$$}_#{Time.now.to_i}"
+    @project_dir.mkpath
+    @bundle_path = @project_dir / "vendor" / "bundle"
 
-    @gem_build_dir = File.join(@project_dir, "gem_build")
-    FileUtils.mkdir_p(@gem_build_dir)
+    @gem_build_dir = @project_dir / "gem_build"
+    @gem_build_dir.mkpath
 
     # Write a placeholder Gemfile so Bundler treats this as a project
-    File.write(File.join(@project_dir, "Gemfile"), "# placeholder\n")
+    (@project_dir / "Gemfile").write("# placeholder\n")
 
     # Pre-install the plugin
     install_plugin!
   end
 
   def teardown
-    FileUtils.rm_rf(@project_dir)
+    @project_dir.rmtree
   end
 
   def test_basic_install
@@ -43,19 +43,19 @@ class IntegrationTest < Minitest::Test
     assert_predicate status, :success?, "bundle install failed:\n#{output}"
     assert_match(/Bundle complete!/, output)
 
-    gem_dirs = Dir.glob(File.join(@bundle_path, "**", "gems", "hello_vault-1.0.0"))
+    gem_dirs = @bundle_path.glob("**/gems/hello_vault-1.0.0")
     refute_empty gem_dirs, "Expected hello_vault-1.0.0 gem directory to exist"
   end
 
   def test_multiple_gems
     gem1 = build_gem("alpha_vault", "1.0.0", dir: @gem_build_dir,
       files: { "lib/alpha_vault.rb" => 'module AlphaVault; end' })
-    dir2 = File.join(@gem_build_dir, "beta_dir")
-    FileUtils.mkdir_p(dir2)
+    dir2 = @gem_build_dir / "beta_dir"
+    dir2.mkpath
     gem2 = build_gem("beta_vault", "2.0.0", dir: dir2,
       files: { "lib/beta_vault.rb" => 'module BetaVault; end' })
-    dir3 = File.join(@gem_build_dir, "gamma_dir")
-    FileUtils.mkdir_p(dir3)
+    dir3 = @gem_build_dir / "gamma_dir"
+    dir3.mkpath
     gem3 = build_gem("gamma_vault", "3.0.0", dir: dir3,
       files: { "lib/gamma_vault.rb" => 'module GammaVault; end' })
 
@@ -73,7 +73,7 @@ class IntegrationTest < Minitest::Test
     assert_predicate status, :success?, "bundle install failed:\n#{output}"
 
     %w[alpha_vault-1.0.0 beta_vault-2.0.0 gamma_vault-3.0.0].each do |full_name|
-      dirs = Dir.glob(File.join(@bundle_path, "**", "gems", full_name))
+      dirs = @bundle_path.glob("**/gems/#{full_name}")
       refute_empty dirs, "Expected #{full_name} to be installed"
     end
   end
@@ -92,7 +92,7 @@ class IntegrationTest < Minitest::Test
 
     run_bundle!("install")
 
-    lockfile = File.read(File.join(@project_dir, "Gemfile.lock"))
+    lockfile = (@project_dir / "Gemfile.lock").read
     assert_includes lockfile, "PLUGIN SOURCE"
     assert_includes lockfile, "type: vault"
     assert_includes lockfile, "locktest (1.0.0)"
@@ -111,10 +111,10 @@ class IntegrationTest < Minitest::Test
     GEMFILE
 
     run_bundle!("install")
-    lockfile1 = File.read(File.join(@project_dir, "Gemfile.lock"))
+    lockfile1 = (@project_dir / "Gemfile.lock").read
 
     run_bundle!("install")
-    lockfile2 = File.read(File.join(@project_dir, "Gemfile.lock"))
+    lockfile2 = (@project_dir / "Gemfile.lock").read
 
     assert_equal lockfile1, lockfile2, "Lockfile changed after second install"
   end
@@ -160,12 +160,12 @@ class IntegrationTest < Minitest::Test
   def test_subset_of_vault
     gem1 = build_gem("want1", "1.0.0", dir: @gem_build_dir,
       files: { "lib/want1.rb" => 'module Want1; end' })
-    dir2 = File.join(@gem_build_dir, "want2_dir")
-    FileUtils.mkdir_p(dir2)
+    dir2 = @gem_build_dir / "want2_dir"
+    dir2.mkpath
     gem2 = build_gem("want2", "1.0.0", dir: dir2,
       files: { "lib/want2.rb" => 'module Want2; end' })
-    dir3 = File.join(@gem_build_dir, "skip_dir")
-    FileUtils.mkdir_p(dir3)
+    dir3 = @gem_build_dir / "skip_dir"
+    dir3.mkpath
     gem3 = build_gem("skipme", "1.0.0", dir: dir3,
       files: { "lib/skipme.rb" => 'module Skipme; end' })
 
@@ -180,16 +180,16 @@ class IntegrationTest < Minitest::Test
 
     run_bundle!("install")
 
-    refute_empty Dir.glob(File.join(@bundle_path, "**", "gems", "want1-1.0.0"))
-    refute_empty Dir.glob(File.join(@bundle_path, "**", "gems", "want2-1.0.0"))
-    assert_empty Dir.glob(File.join(@bundle_path, "**", "gems", "skipme-1.0.0")),
+    refute_empty @bundle_path.glob("**/gems/want1-1.0.0")
+    refute_empty @bundle_path.glob("**/gems/want2-1.0.0")
+    assert_empty @bundle_path.glob("**/gems/skipme-1.0.0"),
       "skipme should not be installed"
   end
 
   def test_dependency_resolution
     # gem_a depends on gem_b, both in vault
-    dir_b = File.join(@gem_build_dir, "b_dir")
-    FileUtils.mkdir_p(dir_b)
+    dir_b = @gem_build_dir / "b_dir"
+    dir_b.mkpath
     gem_b = build_gem("depb", "1.0.0", dir: dir_b,
       files: { "lib/depb.rb" => 'module Depb; end' })
     gem_a = build_gem("depa", "1.0.0", dir: @gem_build_dir,
@@ -208,17 +208,17 @@ class IntegrationTest < Minitest::Test
     output, status = run_bundle("install")
     assert_predicate status, :success?, "bundle install with dependencies failed:\n#{output}"
 
-    refute_empty Dir.glob(File.join(@bundle_path, "**", "gems", "depa-1.0.0"))
-    refute_empty Dir.glob(File.join(@bundle_path, "**", "gems", "depb-1.0.0"))
+    refute_empty @bundle_path.glob("**/gems/depa-1.0.0")
+    refute_empty @bundle_path.glob("**/gems/depb-1.0.0")
   end
 
   def test_multi_version_resolution
-    dir1 = File.join(@gem_build_dir, "mv1")
-    FileUtils.mkdir_p(dir1)
+    dir1 = @gem_build_dir / "mv1"
+    dir1.mkpath
     gem_v1 = build_gem("multiver", "1.0.0", dir: dir1,
       files: { "lib/multiver.rb" => 'module Multiver; VERSION = "1.0.0"; end' })
-    dir2 = File.join(@gem_build_dir, "mv2")
-    FileUtils.mkdir_p(dir2)
+    dir2 = @gem_build_dir / "mv2"
+    dir2.mkpath
     gem_v2 = build_gem("multiver", "2.0.0", dir: dir2,
       files: { "lib/multiver.rb" => 'module Multiver; VERSION = "2.0.0"; end' })
 
@@ -233,9 +233,9 @@ class IntegrationTest < Minitest::Test
     run_bundle!("install")
 
     # Only 2.0.0 should be installed
-    refute_empty Dir.glob(File.join(@bundle_path, "**", "gems", "multiver-2.0.0")),
+    refute_empty @bundle_path.glob("**/gems/multiver-2.0.0"),
       "Expected multiver-2.0.0 to be installed"
-    assert_empty Dir.glob(File.join(@bundle_path, "**", "gems", "multiver-1.0.0")),
+    assert_empty @bundle_path.glob("**/gems/multiver-1.0.0"),
       "multiver-1.0.0 should not be installed"
 
     # Verify the correct version loads
@@ -265,14 +265,14 @@ class IntegrationTest < Minitest::Test
       puts InlineGem::VERSION
     RUBY
 
-    script_path = File.join(@project_dir, "inline_test.rb")
-    File.write(script_path, script)
+    script_path = @project_dir / "inline_test.rb"
+    script_path.write(script)
 
     env = {
       "GEM_PATH" => Gem.path.join(File::PATH_SEPARATOR),
     }
     output, status = Bundler.with_unbundled_env do
-      Open3.capture2e(env, "ruby", script_path, chdir: @project_dir)
+      Open3.capture2e(env, "ruby", script_path.to_s, chdir: @project_dir.to_s)
     end
 
     assert_predicate status, :success?, "bundler/inline script failed:\n#{output}"
@@ -299,7 +299,7 @@ class IntegrationTest < Minitest::Test
   private
 
   def create_vault(name, *gem_paths)
-    vault_file = File.join(@project_dir, name)
+    vault_file = @project_dir / name
     vault = Gemvault::Vault.new(vault_file, create: true)
     gem_paths.each { |gp| vault.add(gp) }
     vault.close
@@ -307,21 +307,21 @@ class IntegrationTest < Minitest::Test
   end
 
   def write_gemfile(content)
-    File.write(File.join(@project_dir, "Gemfile"), "# frozen_string_literal: true\n\n#{content}")
+    (@project_dir / "Gemfile").write("# frozen_string_literal: true\n\n#{content}")
   end
 
   def install_plugin!
     # Manually write the plugin index instead of running `bundle plugin install`
     # which would try to resolve sqlite3 from rubygems.org. The plugin is local
     # and sqlite3 is a system gem — the index just needs to point at our source.
-    plugin_dir = File.join(@project_dir, ".bundle", "plugin")
-    FileUtils.mkdir_p(plugin_dir)
+    plugin_dir = @project_dir / ".bundle" / "plugin"
+    plugin_dir.mkpath
 
     # Bundler only loads paths listed in the plugin index, so we must include
     # sqlite3's native extension path alongside our own lib path.
     sqlite3_paths = Gem::Specification.find_by_name("sqlite3").full_require_paths
 
-    load_paths = [File.join(PLUGIN_PATH, "lib")] + sqlite3_paths
+    load_paths = [(PLUGIN_PATH / "lib").to_s] + sqlite3_paths
     load_paths_yaml = load_paths.map { |p| "  - \"#{p}\"" }.join("\n")
 
     index_content = <<~YAML
@@ -336,19 +336,19 @@ class IntegrationTest < Minitest::Test
       sources:
         vault: "bundler-source-vault"
     YAML
-    File.write(File.join(plugin_dir, "index"), index_content)
+    (plugin_dir / "index").write(index_content)
   end
 
   def run_bundle(*args, dir: @project_dir)
     env = {
-      "BUNDLE_PATH" => @bundle_path,
+      "BUNDLE_PATH" => @bundle_path.to_s,
       "BUNDLE_PLUGINS" => "false",
       # Expose system gems so the plugin can load sqlite3
       "GEM_PATH" => Gem.path.join(File::PATH_SEPARATOR),
     }
     cmd = ["bundle", *args]
     Bundler.with_unbundled_env do
-      Open3.capture2e(env, *cmd, chdir: dir)
+      Open3.capture2e(env, *cmd, chdir: dir.to_s)
     end
   end
 
