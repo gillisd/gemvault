@@ -59,7 +59,7 @@ module Bundler
           return nil
         end
 
-        Bundler.ui.info "Installing #{version_message(spec)} from vault #{File.basename(@vault_path)}"
+        Bundler.ui.confirm "Installing #{version_message(spec)} from vault #{File.basename(@vault_path)}"
 
         vault = open_vault
         begin
