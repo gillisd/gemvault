@@ -31,17 +31,25 @@ module Gemvault
           with_vault(vault) do |v|
             ::FileUtils.mkdir_p(output_dir)
 
-            entries = v.gem_entries.select { |e| e.name == name }
-            entries = entries.select { |e| e.version == version } if version
-            if entries.empty?
-              print_error("No gem named '#{name}' in vault")
-              exit(1)
-            end
-
-            entries.each do |entry|
-              data = v.gem_data(entry.name, entry.version, platform: entry.platform)
-              File.binwrite(File.join(output_dir, entry.filename), data)
-              puts "Extracted #{entry.filename}"
+            if version
+              data = v.gem_data(name, version)
+              filename = "#{name}-#{version}.gem"
+              File.binwrite(File.join(output_dir, filename), data)
+              puts "Extracted #{filename}"
+            else
+              entries = v.gem_entries.select { |e| e["name"] == name }
+              if entries.empty?
+                print_error("No gem named '#{name}' in vault")
+                exit(1)
+              end
+              entries.each do |entry|
+                data = v.gem_data(entry["name"], entry["version"], platform: entry["platform"])
+                full_name = "#{entry['name']}-#{entry['version']}"
+                full_name += "-#{entry['platform']}" if entry["platform"] != "ruby"
+                filename = "#{full_name}.gem"
+                File.binwrite(File.join(output_dir, filename), data)
+                puts "Extracted #{filename}"
+              end
             end
           end
         end
