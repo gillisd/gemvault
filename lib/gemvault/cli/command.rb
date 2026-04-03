@@ -9,11 +9,8 @@ module Gemvault
       private
 
       def with_vault(path, create: false)
-        vault = Gemvault::Vault.new(path, create: create)
-        begin
+        Gemvault::Vault.open(path, create: create) do |vault|
           yield vault
-        ensure
-          vault.close
         end
       rescue Gemvault::Vault::Error => e
         print_error(e.message)

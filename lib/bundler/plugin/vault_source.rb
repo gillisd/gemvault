@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
-require "rubygems/package"
 require "fileutils"
-require "tempfile"
 require_relative "../../gemvault/vault"
 
 module Bundler
@@ -15,26 +13,18 @@ module Bundler
       end
 
       def fetch_gemspec_files
-        vault = open_vault
         gemspec_files = []
 
-        begin
+        Gemvault::Vault.open(@vault_path) do |vault|
           vault.gem_entries.each do |entry|
-            spec = vault.spec_from_blob(entry["name"], entry["version"], entry["platform"])
+            spec = vault.spec_from_blob(entry.name, entry.version, entry.platform)
             full_name = spec.full_name
             spec_ruby = spec.to_ruby
 
-            # If the gem is already installed, return the gemspec from inside the
-            # gem directory. Bundler computes full_gem_path as dirname(loaded_from)
-            # for plugin sources (see rubygems_ext.rb), so loaded_from must be
-            # inside the gem directory for the load path to resolve correctly.
             gem_dir = gem_dir_for(full_name)
             if File.directory?(gem_dir)
-              gemspec_path = File.join(gem_dir, "#{full_name}.gemspec")
-              File.write(gemspec_path, spec_ruby) unless File.exist?(gemspec_path)
-              gemspec_files << gemspec_path
+              gemspec_files << anchor_gemspec(gem_dir, full_name, spec_ruby)
             else
-              # Not yet installed — write a temp gemspec for resolution
               gemspec_dir = File.join(Bundler.tmp("vault_source"), "specifications")
               FileUtils.mkdir_p(gemspec_dir)
               gemspec_path = File.join(gemspec_dir, "#{full_name}.gemspec")
@@ -42,8 +32,6 @@ module Bundler
               gemspec_files << gemspec_path
             end
           end
-        ensure
-          vault.close
         end
 
         gemspec_files
@@ -61,47 +49,26 @@ module Bundler
 
         Bundler.ui.confirm "Installing #{version_message(spec)} from vault #{File.basename(@vault_path)}"
 
-        vault = open_vault
-        begin
-          data = vault.gem_data(spec.name, spec.version.to_s, platform: spec.platform.to_s)
-        ensure
-          vault.close
-        end
+        Gemvault::Vault.open(@vault_path) do |vault|
+          vault.with_gem_file(spec.name, spec.version.to_s, platform: spec.platform.to_s) do |gem_path|
+            require "bundler/rubygems_gem_installer"
 
-        # Write .gem blob to a temp file for RubyGemsGemInstaller
-        tmpfile = Tempfile.new(["vault_gem", ".gem"])
-        begin
-          tmpfile.binmode
-          tmpfile.write(data)
-          tmpfile.close
+            installer = Bundler::RubyGemsGemInstaller.at(
+              gem_path,
+              install_dir: Bundler.bundle_path.to_s,
+              bin_dir: Bundler.system_bindir.to_s,
+              ignore_dependencies: true,
+              wrappers: true,
+              env_shebang: true,
+              build_args: opts[:build_args] || []
+            )
 
-          require "bundler/rubygems_gem_installer"
+            installed_spec = installer.install
 
-          installer = Bundler::RubyGemsGemInstaller.at(
-            tmpfile.path,
-            install_dir: Bundler.bundle_path.to_s,
-            bin_dir: Bundler.system_bindir.to_s,
-            ignore_dependencies: true,
-            wrappers: true,
-            env_shebang: true,
-            build_args: opts[:build_args] || []
-          )
-
-          installed_spec = installer.install
-
-          # For plugin sources, Bundler computes full_gem_path as
-          # dirname(loaded_from) (see rubygems_ext.rb). So loaded_from
-          # must point INSIDE the gem directory, not in specifications/.
-          gem_dir = installed_spec.full_gem_path
-          gemspec_in_gem = File.join(gem_dir, "#{spec.full_name}.gemspec")
-          unless File.exist?(gemspec_in_gem)
-            File.write(gemspec_in_gem, installed_spec.to_ruby)
+            gem_dir = installed_spec.full_gem_path
+            spec.full_gem_path = gem_dir
+            spec.loaded_from = anchor_gemspec(gem_dir, spec.full_name, installed_spec.to_ruby)
           end
-
-          spec.full_gem_path = gem_dir
-          spec.loaded_from = gemspec_in_gem
-        ensure
-          tmpfile.unlink
         end
 
         spec.post_install_message
@@ -127,8 +94,13 @@ module Bundler
         File.expand_path(uri, Bundler.root.to_s)
       end
 
-      def open_vault
-        Gemvault::Vault.new(@vault_path)
+      # Bundler computes full_gem_path as dirname(loaded_from) for plugin
+      # sources, so the gemspec must live inside the gem directory — not
+      # in specifications/ — for load paths to resolve correctly.
+      def anchor_gemspec(gem_dir, full_name, spec_ruby)
+        gemspec_path = File.join(gem_dir, "#{full_name}.gemspec")
+        File.write(gemspec_path, spec_ruby) unless File.exist?(gemspec_path)
+        gemspec_path
       end
 
       def gem_dir_for(full_name)

@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
-require "rake/testtask"
+require "bundler/gem_tasks"
+require "minitest/test_task"
 
-Rake::TestTask.new(:test) do |t|
-  t.libs << "test"
-  t.libs << "lib"
-  t.test_files = FileList["test/**/*_test.rb"]
+Minitest::TestTask.create
+
+namespace :shim do
+  desc "Build the bundler-source-vault shim gem"
+  task :build do
+    Dir.chdir("shim") { sh "gem build bundler-source-vault.gemspec" }
+  end
 end
 
 task default: :test
