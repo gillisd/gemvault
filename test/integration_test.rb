@@ -245,6 +245,10 @@ class IntegrationTest < Minitest::Test
   end
 
   def test_bundler_inline
+    # Remove the pre-installed plugin index — bundler/inline handles its own
+    # plugin installation, and having it pre-registered causes SourceConflict.
+    FileUtils.rm_rf(@project_dir / ".bundle" / "plugin")
+
     gem_path = build_gem("inline_gem", "1.0.0", dir: @gem_build_dir,
       files: { "lib/inline_gem.rb" => 'module InlineGem; VERSION = "1.0.0"; end' })
 
@@ -299,8 +303,8 @@ class IntegrationTest < Minitest::Test
     # This is the workaround code that should add Plugin.root specs to RubyGems.
     # In the broken version, there's nothing here (just a comment + blank line).
     # In the fixed version, this contains the Gem::Specification.dirs patch.
-    plugins_rb = (PLUGIN_PATH / "plugins.rb").read
-    preamble = plugins_rb.lines.take_while { |l| !l.include?("require_relative") }.join
+    plugins_rb = (PLUGIN_PATH / "shim" / "plugins.rb").read
+    preamble = plugins_rb.lines.take_while { |l| !l.match?(/^require\b/) }.join
 
     # Build the subprocess script in two parts to avoid heredoc interpolation issues
     preamble_path = @project_dir / "preamble.rb"

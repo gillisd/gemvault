@@ -4,6 +4,7 @@ require "sqlite3"
 require "rubygems/package"
 require "fileutils"
 require "tempfile"
+require_relative "gem_entry"
 
 module Gemvault
   class Vault
@@ -15,6 +16,17 @@ module Gemvault
     SCHEMA_VERSION = "1"
 
     attr_reader :path
+
+    def self.open(path, **opts, &block)
+      raise ArgumentError, "#{name}.open requires a block" unless block
+
+      vault = new(path, **opts)
+      begin
+        yield vault
+      ensure
+        vault.close
+      end
+    end
 
     def initialize(path, create: false)
       @path = File.expand_path(path)
@@ -63,12 +75,6 @@ module Gemvault
       )
     end
 
-    def list
-      @db.execute(
-        "SELECT name, version, platform, created_at FROM gems ORDER BY name, version"
-      )
-    end
-
     def remove(name, version = nil)
       if version
         @db.execute(
@@ -95,14 +101,13 @@ module Gemvault
     end
 
     def specs
-      rows = @db.execute("SELECT name, version, platform FROM gems")
-      rows.map { |row| spec_from_blob(row["name"], row["version"], row["platform"]) }
+      gem_entries.map { |entry| spec_from_blob(entry.name, entry.version, entry.platform) }
     end
 
     def gem_entries
       @db.execute(
         "SELECT name, version, platform, created_at FROM gems ORDER BY name, version"
-      )
+      ).map { |row| GemEntry.new(**row.transform_keys(&:to_sym)) }
     end
 
     def size
@@ -113,16 +118,23 @@ module Gemvault
       @db.close if @db && !@db.closed?
     end
 
-    def spec_from_blob(name, version, platform = "ruby")
+    def with_gem_file(name, version, platform: "ruby")
       data = gem_data(name, version, platform: platform)
-      tmpfile = Tempfile.new(["vault_spec", ".gem"])
+      tmpfile = Tempfile.new(["vault_gem", ".gem"])
       begin
         tmpfile.binmode
         tmpfile.write(data)
         tmpfile.close
-        Gem::Package.new(tmpfile.path).spec
+        yield tmpfile.path
       ensure
+        tmpfile.close unless tmpfile.closed?
         tmpfile.unlink
+      end
+    end
+
+    def spec_from_blob(name, version, platform = "ruby")
+      with_gem_file(name, version, platform: platform) do |path|
+        Gem::Package.new(path).spec
       end
     end
 
