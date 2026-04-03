@@ -14,15 +14,11 @@ module Gemvault
 
         def run(vault)
           with_vault(vault) do |v|
-            entries = v.list
+            entries = v.gem_entries
             if entries.empty?
               puts "Vault is empty"
             else
-              entries.each do |entry|
-                line = "#{entry['name']}-#{entry['version']}"
-                line += " (#{entry['platform']})" if entry["platform"] != "ruby"
-                puts line
-              end
+              entries.each { |entry| puts entry }
             end
           end
         end

@@ -3,15 +3,15 @@
 require_relative "lib/gemvault/version"
 
 Gem::Specification.new do |spec|
-  spec.name          = "bundler-source-vault"
+  spec.name          = "gemvault"
   spec.version       = Gemvault::VERSION
   spec.authors       = ["Author"]
-  spec.summary       = "Bundler plugin adding vault source for multi-gem .gemv archives"
-  spec.description   = "Use SQLite-backed .gemv archives as Bundler sources containing multiple gems"
+  spec.summary       = "Multi-gem portable archives backed by SQLite"
+  spec.description   = "SQLite-backed .gemv archives for bundling and distributing multiple gems as a single file"
   spec.license       = "MIT"
   spec.required_ruby_version = ">= 3.0"
 
-  spec.files = Dir["lib/**/*.rb", "plugins.rb", "LICENSE", "README.md", "exe/*"]
+  spec.files = Dir["lib/**/*.rb", "LICENSE", "README.md", "exe/*"]
   spec.bindir = "exe"
   spec.executables = ["gemvault"]
 

@@ -64,6 +64,37 @@ class VaultTest < Minitest::Test
     end
   end
 
+  # --- Vault.open ---
+
+  def test_open_yields_vault_and_closes
+    Gemvault::Vault.new(@vault_path, create: true).close
+    yielded_vault = nil
+    Gemvault::Vault.open(@vault_path) do |vault|
+      assert_instance_of Gemvault::Vault, vault
+      yielded_vault = vault
+    end
+    assert_raises(ArgumentError) { yielded_vault.size }
+  end
+
+  def test_open_closes_on_raise
+    Gemvault::Vault.new(@vault_path, create: true).close
+    yielded_vault = nil
+    assert_raises(RuntimeError) do
+      Gemvault::Vault.open(@vault_path) do |vault|
+        yielded_vault = vault
+        raise "boom"
+      end
+    end
+    assert_raises(ArgumentError) { yielded_vault.size }
+  end
+
+  def test_open_without_block_raises
+    Gemvault::Vault.new(@vault_path, create: true).close
+    assert_raises(ArgumentError) do
+      Gemvault::Vault.open(@vault_path)
+    end
+  end
+
   # --- Add ---
 
   def test_add_single_gem
@@ -112,40 +143,95 @@ class VaultTest < Minitest::Test
     vault.close
   end
 
-  # --- List ---
+  # --- gem_entries ---
 
-  def test_list_empty
+  def test_gem_entries_empty
     vault = Gemvault::Vault.new(@vault_path, create: true)
-    assert_equal [], vault.list
+    assert_equal [], vault.gem_entries
     vault.close
   end
 
-  def test_list_with_gems
+  def test_gem_entries_returns_gem_entry_objects
     gem1 = build_gem("alpha", "1.0.0", dir: @gem_build_dir)
     gem2 = build_gem("beta", "2.0.0", dir: @gem_build_dir)
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem1)
     vault.add(gem2)
 
-    entries = vault.list
+    entries = vault.gem_entries
     assert_equal 2, entries.length
-    assert_equal "alpha", entries[0]["name"]
-    assert_equal "1.0.0", entries[0]["version"]
-    assert_equal "ruby", entries[0]["platform"]
-    refute_nil entries[0]["created_at"]
-    assert_equal "beta", entries[1]["name"]
+
+    entry = entries.first
+    assert_instance_of Gemvault::GemEntry, entry
+    assert_equal "alpha", entry.name
+    assert_equal "1.0.0", entry.version
+    assert_equal "ruby", entry.platform
+    refute_nil entry.created_at
+    assert_equal "beta", entries[1].name
     vault.close
   end
 
-  def test_list_returns_correct_fields
+  def test_gem_entry_full_name
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem_path)
 
-    entry = vault.list.first
-    %w[name version platform created_at].each do |key|
-      assert_includes entry.keys, key
+    entry = vault.gem_entries.first
+    assert_equal "foo-1.0.0", entry.full_name
+    assert_equal "foo-1.0.0.gem", entry.filename
+    vault.close
+  end
+
+  def test_gem_entry_full_name_with_platform
+    gem_path = build_gem("native", "1.0.0", dir: @gem_build_dir, platform: "x86_64-linux")
+    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault.add(gem_path)
+
+    entry = vault.gem_entries.first
+    assert_equal "native-1.0.0-x86_64-linux", entry.full_name
+    assert_equal "native-1.0.0-x86_64-linux.gem", entry.filename
+    vault.close
+  end
+
+  def test_gem_entry_to_s
+    entry = Gemvault::GemEntry.new(name: "foo", version: "1.0.0")
+    assert_equal "foo-1.0.0", entry.to_s
+  end
+
+  def test_gem_entry_to_s_with_platform
+    entry = Gemvault::GemEntry.new(name: "native", version: "1.0.0", platform: "x86_64-linux")
+    assert_equal "native-1.0.0 (x86_64-linux)", entry.to_s
+  end
+
+  # --- with_gem_file ---
+
+  def test_with_gem_file_yields_path
+    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault.add(gem_path)
+
+    vault.with_gem_file("foo", "1.0.0") do |path|
+      assert_path_exists path
+      assert path.end_with?(".gem")
+      spec = Gem::Package.new(path).spec
+      assert_equal "foo", spec.name
     end
+    vault.close
+  end
+
+  def test_with_gem_file_unlinks_on_raise
+    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault.add(gem_path)
+
+    saved_path = nil
+    assert_raises(RuntimeError) do
+      vault.with_gem_file("foo", "1.0.0") do |path|
+        saved_path = path
+        raise "boom"
+      end
+    end
+    refute_path_exists saved_path
     vault.close
   end
 
@@ -224,8 +310,8 @@ class VaultTest < Minitest::Test
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem_path)
 
-    entries = vault.list
-    assert_equal "x86_64-linux", entries.first["platform"]
+    entries = vault.gem_entries
+    assert_equal "x86_64-linux", entries.first.platform
 
     specs = vault.specs
     assert_equal "x86_64-linux", specs.first.platform.to_s
@@ -244,23 +330,6 @@ class VaultTest < Minitest::Test
     dep = spec.dependencies.find { |d| d.name == "rake" }
     refute_nil dep
     assert_equal Gem::Requirement.new(">= 13.0"), dep.requirement
-    vault.close
-  end
-
-  # --- gem_entries ---
-
-  def test_gem_entries_excludes_data
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
-    vault.add(gem_path)
-
-    entries = vault.gem_entries
-    assert_equal 1, entries.length
-    entry = entries.first
-    assert entry["name"]
-    assert entry["version"]
-    assert entry["platform"]
-    refute entry.key?("data"), "gem_entries should not include data blob"
     vault.close
   end
 
@@ -284,10 +353,9 @@ class VaultTest < Minitest::Test
 
   # --- close ---
 
-  def test_close
+  def test_close_is_idempotent
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.close
-    # Double close should not raise
     vault.close
   end
 end
