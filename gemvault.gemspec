@@ -11,13 +11,17 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 4.0.1"
 
   gemspec_file = File.basename(__FILE__)
-  files = IO.popen(["git", "ls-files", "-z"], chdir: __dir__, err: IO::NULL) { |ls|
-    ls.readlines("\x0", chomp: true).reject do |f|
-      (f == gemspec_file) ||
-        f.start_with?("bin/", "test/", "spec/", "features/", ".git", "shim/", "Gemfile") ||
-        f == "plugins.rb"
-    end
-  }
+  files = begin
+    IO.popen(["git", "ls-files", "-z"], chdir: __dir__, err: IO::NULL) { |ls|
+      ls.readlines("\x0", chomp: true).reject do |f|
+        (f == gemspec_file) ||
+          f.start_with?("bin/", "test/", "spec/", "features/", ".git", "shim/", "Gemfile") ||
+          f == "plugins.rb"
+      end
+    }
+  rescue Errno::ENOENT
+    []
+  end
   files = Dir.glob("{lib,exe}/**/*").push("README.md", "LICENSE.txt", "Rakefile") if files.empty?
   spec.files = files
   spec.bindir = "exe"
