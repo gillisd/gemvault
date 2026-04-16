@@ -3,9 +3,7 @@ FROM docker.io/library/ruby:4.0.1-slim
 COPY . /tmp/build/
 
 RUN cd /tmp/build \
-    && gem build gemvault.gemspec \
-    && gem install --no-document gemvault-*.gem \
-    && cd shim \
-    && gem build bundler-source-vault.gemspec \
-    && gem install --no-document bundler-source-vault-*.gem \
+    && bundle exec rake build \
+    && gem install --no-document pkg/*.gem shim/pkg/*.gem \
+    && gem install --no-document rspec \
     && rm -rf /tmp/build
