@@ -1,9 +1,14 @@
-# frozen_string_literal: true
-
 require "bundler/gem_tasks"
-require "minitest/test_task"
 
-Minitest::TestTask.create
+require "rspec/core/rake_task"
+
+RSpec::Core::RakeTask.new(:spec)
+
+require "rubocop/rake_task"
+RuboCop::RakeTask.new
+
+require "gempilot/version_task"
+Gempilot::VersionTask.new
 
 namespace :shim do
   desc "Build the bundler-source-vault shim gem"
@@ -12,4 +17,4 @@ namespace :shim do
   end
 end
 
-task default: :test
+task default: [:spec, :rubocop]
