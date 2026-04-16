@@ -73,10 +73,10 @@ The Bundler plugin (`bundler-source-vault`) implements the `Bundler::Plugin::API
 ```bash
 git clone <repo>
 cd gemvault
-bundle install
-bundle exec rake test    # 77 tests
+bin/setup
+bundle exec rake spec
 ```
 
 ## License
 
-MIT
+The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
