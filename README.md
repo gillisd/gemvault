@@ -65,8 +65,8 @@ git clone https://github.com/gillisd/gemvault
 cd gemvault
 bin/setup
 bundle exec rake test         # unit tests
-bundle exec rspec             # specs
-bundle exec rake test:containers  # e2e tests in Podman containers
+bundle exec rake spec         # specs + container integration tests
+bundle exec rake              # all of the above + rubocop
 ```
 
 ## License
