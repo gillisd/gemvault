@@ -1,8 +1,8 @@
 require "open3"
 
 module ContainerHelper
-  BASE_IMAGE = "docker.io/library/ruby:4.0.1-slim"
-  CACHED_IMAGE = "gemvault-test:latest"
+  BASE_IMAGE = "docker.io/library/ruby:4.0.1-slim".freeze
+  CACHED_IMAGE = "gemvault-test:latest".freeze
 
   def podman_run(script)
     image = cached_image_available? ? CACHED_IMAGE : BASE_IMAGE
@@ -10,7 +10,7 @@ module ContainerHelper
       "podman", "run", "--rm", "--network=host",
       "-v", "#{project_root}:/gem:ro",
       image,
-      "bash", "-c", script,
+      "bash", "-c", script
     ]
     Open3.capture2e(*cmd)
   end

@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 module Gemvault
   class GemEntry
     attr_reader :name, :version, :platform, :created_at
@@ -24,13 +22,13 @@ module Gemvault
     end
 
     def ==(other)
-      self.class === other &&
+      other.is_a?(self.class) &&
         name == other.name &&
         version == other.version &&
         platform == other.platform
     end
 
-    alias_method :eql?, :==
+    alias eql? ==
 
     def hash
       [name, version, platform].hash

@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "test_helper"
 require "rubygems/command"
 require "rubygems/resolver"
@@ -17,22 +15,22 @@ class RubygemsSourceVaultTest < Minitest::Test
 
     # Build two gems and a prerelease, then populate the vault
     @gem1_path = build_gem("alpha", "1.0.0", dir: @gem_build_dir,
-      files: { "lib/alpha.rb" => 'module Alpha; end' })
+                                             files: { "lib/alpha.rb" => "module Alpha; end" })
 
     dir2 = @tmpdir / "gem2"
     dir2.mkpath
     @gem2_path = build_gem("alpha", "2.0.0", dir: dir2,
-      files: { "lib/alpha.rb" => 'module Alpha; end' })
+                                             files: { "lib/alpha.rb" => "module Alpha; end" })
 
     dir3 = @tmpdir / "gem3"
     dir3.mkpath
     @gem3_path = build_gem("beta", "1.0.0", dir: dir3,
-      files: { "lib/beta.rb" => 'module Beta; end' })
+                                            files: { "lib/beta.rb" => "module Beta; end" })
 
     dir4 = @tmpdir / "gem4"
     dir4.mkpath
     @gem_pre_path = build_gem("beta", "2.0.0.pre1", dir: dir4,
-      files: { "lib/beta.rb" => 'module Beta; end' })
+                                                    files: { "lib/beta.rb" => "module Beta; end" })
 
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(@gem1_path)
@@ -123,7 +121,7 @@ class RubygemsSourceVaultTest < Minitest::Test
     result = source.download(spec, download_dir.to_s)
     assert_path_exists result
     assert result.end_with?("alpha-1.0.0.gem")
-    assert File.size(result) > 0
+    assert File.size(result).positive?
   end
 
   def test_spaceship_sorts_before_remote
@@ -193,12 +191,12 @@ class RubygemsResolverVaultSetTest < Minitest::Test
     @vault_path = @tmpdir / "test.gemv"
 
     gem_path = build_gem("mygem", "1.0.0", dir: @gem_build_dir,
-      files: { "lib/mygem.rb" => 'module Mygem; end' })
+                                           files: { "lib/mygem.rb" => "module Mygem; end" })
 
     dir2 = @tmpdir / "gem2"
     dir2.mkpath
     gem2_path = build_gem("mygem", "2.0.0", dir: dir2,
-      files: { "lib/mygem.rb" => 'module Mygem; end' })
+                                            files: { "lib/mygem.rb" => "module Mygem; end" })
 
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem_path)
@@ -219,7 +217,7 @@ class RubygemsResolverVaultSetTest < Minitest::Test
 
     results = set.find_all(req)
     assert_equal 2, results.size
-    assert results.all? { |r| r.is_a?(Gem::Resolver::IndexSpecification) }
+    assert(results.all?(Gem::Resolver::IndexSpecification))
     versions = results.map { |r| r.version.to_s }.sort
     assert_equal ["1.0.0", "2.0.0"], versions
   end
