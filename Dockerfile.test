@@ -8,5 +8,4 @@ RUN cd /tmp/build \
     && cd shim \
     && gem build bundler-source-vault.gemspec \
     && gem install --no-document bundler-source-vault-*.gem \
-    && gem install --no-document rspec \
     && rm -rf /tmp/build
