@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 # Development-only plugins.rb. The published version lives in shim/plugins.rb
 # and ships inside the bundler-source-vault gem.
 #

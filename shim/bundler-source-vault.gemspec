@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require_relative "../lib/gemvault/version"
 
 Gem::Specification.new do |spec|
@@ -14,4 +12,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["."]
 
   spec.add_dependency "gemvault", "= #{Gemvault::VERSION}"
+  spec.metadata["rubygems_mfa_required"] = "true"
 end
