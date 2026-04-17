@@ -114,8 +114,8 @@ RSpec.describe "bundle install with vault source", :integration do
 
   it "resolves intra-vault dependencies" do
     @gems = [["depb", "1.0.0"], ["depa", "1.0.0"]]
-    @files = {"depa" => {"lib/depa.rb" => "require 'depb'; module Depa; end"}}
-    @dependencies = {"depa" => [["depb", "~> 1.0"]]}
+    @files = { "depa" => { "lib/depa.rb" => "require 'depb'; module Depa; end" } }
+    @dependencies = { "depa" => [["depb", "~> 1.0"]] }
     output, status = podman_run(bundle_script(
       <<~GEMFILE,
         source "$WORKDIR/test.gemv", type: :vault do
@@ -133,7 +133,7 @@ RSpec.describe "bundle install with vault source", :integration do
   it "picks the correct version with a constraint" do
     @gems = [["multiver", "1.0.0"], ["multiver", "2.0.0"]]
     @files = {
-      "multiver" => {"lib/multiver.rb" => 'module Multiver; VERSION = "replaced"; end'},
+      "multiver" => { "lib/multiver.rb" => 'module Multiver; VERSION = "replaced"; end' },
     }
     output, status = podman_run(bundle_script(
       <<~GEMFILE,
@@ -154,7 +154,7 @@ RSpec.describe "bundle install with vault source", :integration do
 
   context "when a version constraint cannot be satisfied" do
     it "fails with a meaningful error" do
-      output, status = podman_run(bundle_script(
+      output, = podman_run(bundle_script(
         'source "$WORKDIR/test.gemv", type: :vault do; gem "vault_test_gem", "~> 2.0"; end',
         "bundle install 2>&1; exit 0",
       ))

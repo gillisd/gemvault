@@ -1,6 +1,6 @@
 RSpec.describe "plugins.rb preamble", :integration do
   it "makes Plugin.root gem specs discoverable by RubyGems" do
-    output, status = podman_run(<<~'SH')
+    output, status = podman_run(<<~SH)
       set -e
       WORKDIR=$(mktemp -d)
       FAKE_ROOT=$WORKDIR/fake_plugin_root

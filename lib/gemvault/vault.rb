@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "sqlite3"
 require "rubygems/package"
 require "fileutils"
@@ -13,7 +11,7 @@ module Gemvault
     class DuplicateGemError < Error; end
     class InvalidGemError < Error; end
 
-    SCHEMA_VERSION = "1"
+    SCHEMA_VERSION = "1".freeze
 
     attr_reader :path
 
@@ -33,11 +31,13 @@ module Gemvault
 
       if create
         raise Error, "Vault already exists: #{@path}" if File.exist?(@path)
+
         @db = SQLite3::Database.new(@path)
         @db.results_as_hash = true
         create_schema
       else
         raise NotFoundError, "Vault not found: #{@path}" unless File.exist?(@path)
+
         validate_sqlite!
         @db = SQLite3::Database.new(@path)
         @db.results_as_hash = true
@@ -51,7 +51,7 @@ module Gemvault
       begin
         pkg = Gem::Package.new(gem_path)
         spec = pkg.spec
-      rescue => e
+      rescue StandardError => e
         raise InvalidGemError, "Invalid gem file #{gem_path}: #{e.message}"
       end
 
@@ -61,17 +61,17 @@ module Gemvault
 
       existing = @db.execute(
         "SELECT 1 FROM gems WHERE name = ? AND version = ? AND platform = ?",
-        [name, version, platform]
+        [name, version, platform],
       )
       unless existing.empty?
         raise DuplicateGemError,
-          "Gem already in vault: #{name}-#{version} (#{platform})"
+              "Gem already in vault: #{name}-#{version} (#{platform})"
       end
 
       data = File.binread(gem_path)
       @db.execute(
         "INSERT INTO gems (name, version, platform, data) VALUES (?, ?, ?, ?)",
-        [name, version, platform, SQLite3::Blob.new(data)]
+        [name, version, platform, SQLite3::Blob.new(data)],
       )
     end
 
@@ -79,12 +79,12 @@ module Gemvault
       if version
         @db.execute(
           "DELETE FROM gems WHERE name = ? AND version = ?",
-          [name, version]
+          [name, version],
         )
       else
         @db.execute(
           "DELETE FROM gems WHERE name = ?",
-          [name]
+          [name],
         )
       end
       @db.changes
@@ -93,10 +93,11 @@ module Gemvault
     def gem_data(name, version, platform: "ruby")
       row = @db.execute(
         "SELECT data FROM gems WHERE name = ? AND version = ? AND platform = ?",
-        [name, version, platform]
+        [name, version, platform],
       ).first
 
       raise NotFoundError, "Gem not found: #{name}-#{version} (#{platform})" unless row
+
       row["data"]
     end
 
@@ -106,7 +107,7 @@ module Gemvault
 
     def gem_entries
       @db.execute(
-        "SELECT name, version, platform, created_at FROM gems ORDER BY name, version"
+        "SELECT name, version, platform, created_at FROM gems ORDER BY name, version",
       ).map { |row| GemEntry.new(**row.transform_keys(&:to_sym)) }
     end
 
@@ -159,17 +160,18 @@ module Gemvault
 
       @db.execute(
         "INSERT INTO metadata (key, value) VALUES (?, ?)",
-        ["vault_version", SCHEMA_VERSION]
+        ["vault_version", SCHEMA_VERSION],
       )
       @db.execute(
         "INSERT INTO metadata (key, value) VALUES (?, ?)",
-        ["created_at", Time.now.utc.strftime("%Y-%m-%d %H:%M:%S")]
+        ["created_at", Time.now.utc.strftime("%Y-%m-%d %H:%M:%S")],
       )
     end
 
     def validate_sqlite!
       magic = File.binread(@path, 16)
       return if magic == "SQLite format 3\x00"
+
       raise Error, "Not a valid vault file (not SQLite): #{@path}"
     end
   end

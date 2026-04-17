@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "test_helper"
 
 class VaultTest < Minitest::Test
@@ -322,7 +320,7 @@ class VaultTest < Minitest::Test
 
   def test_gem_with_dependencies
     gem_path = build_gem("depgem", "1.0.0", dir: @gem_build_dir,
-      dependencies: [["rake", ">= 13.0"]])
+                                            dependencies: [["rake", ">= 13.0"]])
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem_path)
 

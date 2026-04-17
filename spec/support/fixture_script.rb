@@ -8,7 +8,7 @@ module FixtureScript
   #   dependencies: hash of {name => [[dep_name, requirement]]}
   def self.preamble(gems: [["vault_test_gem", "1.0.0"]], files: {}, dependencies: {})
     gem_builds = gems.map { |name, version|
-      gem_files = files.fetch(name, {"lib/#{name}.rb" => "module #{camelize(name)}; VERSION = \"#{version}\"; end"})
+      gem_files = files.fetch(name, { "lib/#{name}.rb" => "module #{camelize(name)}; VERSION = \"#{version}\"; end" })
       deps = dependencies.fetch(name, [])
 
       file_writes = gem_files.map { |path, content|
