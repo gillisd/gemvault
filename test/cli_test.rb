@@ -14,7 +14,7 @@ class CLITest < Minitest::Test
 
   def teardown
     Dir.chdir(@original_dir)
-    @tmpdir.rmtree
+    FileUtils.rm_rf(@tmpdir)
   end
 
   # --- new ---

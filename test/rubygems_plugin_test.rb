@@ -41,7 +41,7 @@ class RubygemsSourceVaultTest < Minitest::Test
   end
 
   def teardown
-    @tmpdir.rmtree
+    FileUtils.rm_rf(@tmpdir)
   end
 
   # --- Gem::Source::Vault ---
@@ -205,7 +205,7 @@ class RubygemsResolverVaultSetTest < Minitest::Test
   end
 
   def teardown
-    @tmpdir.rmtree
+    FileUtils.rm_rf(@tmpdir)
   end
 
   def test_find_all_matching

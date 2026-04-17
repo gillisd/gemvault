@@ -31,7 +31,7 @@ class VaultSourceTest < Minitest::Test
   end
 
   def teardown
-    @tmpdir.rmtree
+    FileUtils.rm_rf(@tmpdir)
   end
 
   def test_initialize_resolves_path
