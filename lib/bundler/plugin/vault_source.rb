@@ -93,8 +93,8 @@ module Bundler
       end
 
       # Bundler computes full_gem_path as dirname(loaded_from) for plugin
-      # sources, so the gemspec must live inside the gem directory not
-      # in specifications/ for load paths to resolve correctly.
+      # sources, so the gemspec must live inside the gem directory -- not
+      # in specifications/ -- for load paths to resolve correctly.
       def anchor_gemspec(gem_dir, full_name, spec_ruby)
         gemspec_path = File.join(gem_dir, "#{full_name}.gemspec")
         File.write(gemspec_path, spec_ruby) unless File.exist?(gemspec_path)

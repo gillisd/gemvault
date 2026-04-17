@@ -2,7 +2,7 @@
 # A VaultSet looks up specifications from a .gemv vault source.
 #
 # Returns standard Gem::Resolver::IndexSpecification objects so the
-# resolver's install pipeline (download Gem::Installer) works unchanged.
+# resolver's install pipeline (download -> Gem::Installer) works unchanged.
 
 class Gem::Resolver::VaultSet < Gem::Resolver::Set
   def initialize(source)

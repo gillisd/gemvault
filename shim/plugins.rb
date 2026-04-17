@@ -1,6 +1,6 @@
 # Bundler installs plugin dependencies (e.g. sqlite3) into Plugin.root but
 # does not add their load paths before loading plugins.rb. This is a known
-# Bundler limitation see the"Currently not done to avoid conflicts" comment
+# Bundler limitation -- see the "Currently not done to avoid conflicts" comment
 # in bundler/plugin.rb#load_plugin.
 #
 # Work around by registering Plugin.root as a gem search path so dependencies
