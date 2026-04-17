@@ -13,8 +13,8 @@ module FixtureScript
 
       file_writes = gem_files.map { |path, content|
         "mkdir -p $(dirname $WORKDIR/gems/#{name}/#{path}) && " \
-          "echo '#{content}' > $WORKDIR/gems/#{name}/#{path}"
-      }.join(" && ")
+          "cat > $WORKDIR/gems/#{name}/#{path} <<'FILECONTENT'\n#{content}\nFILECONTENT"
+      }.join("\n")
 
       dep_lines = deps.map { |dep_name, req| "s.add_dependency '#{dep_name}', '#{req}'" }.join("; ")
 
