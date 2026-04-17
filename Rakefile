@@ -22,8 +22,11 @@ BASE_IMAGE = "docker.io/library/ruby:4.0.1-slim"
 CACHED_IMAGE = "gemvault-test:latest"
 
 def container_image
-  `podman image exists #{CACHED_IMAGE} 2>&1`
-  $?.success? ? CACHED_IMAGE : BASE_IMAGE
+  if system("podman", "image", "exists", CACHED_IMAGE, out: File::NULL, err: File::NULL)
+    CACHED_IMAGE
+  else
+    BASE_IMAGE
+  end
 end
 
 namespace :spec do
