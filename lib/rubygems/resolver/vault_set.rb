@@ -12,7 +12,7 @@ class Gem::Resolver::VaultSet < Gem::Resolver::Set
   end
 
   def find_all(req)
-    @specs.grep(req).map do |tuple|
+    @specs.select { |tuple| req.match?(tuple) }.map do |tuple|
       Gem::Resolver::IndexSpecification.new(
         self,
         tuple.name,
