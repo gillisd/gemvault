@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require_relative "../command"
 
 module Gemvault
@@ -9,13 +7,13 @@ module Gemvault
         description "Add gem files to a vault"
 
         argument :vault, required: true,
-                 usage: "VAULT",
-                 desc: "Vault file"
+                         usage: "VAULT",
+                         desc: "Vault file"
 
         argument :gems, required: true,
-                 repeats: true,
-                 usage: "GEM",
-                 desc: "Gem files to add"
+                        repeats: true,
+                        usage: "GEM",
+                        desc: "Gem files to add"
 
         def run(vault, *gems)
           with_vault(vault) do |v|

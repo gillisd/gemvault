@@ -16,16 +16,16 @@ RuboCop::RakeTask.new
 require "gempilot/version_task"
 Gempilot::VersionTask.new
 
-CACHED_IMAGE = "gemvault-test:latest"
+CACHED_IMAGE = "gemvault-test:latest".freeze
 
 namespace :spec do
   desc "Build cached container image with gemvault pre-installed"
   task :build do
     sh "podman", "build",
-      "--network=host",
-      "-t", CACHED_IMAGE,
-      "-f", "Dockerfile.test",
-      "."
+       "--network=host",
+       "-t", CACHED_IMAGE,
+       "-f", "Dockerfile.test",
+       "."
   end
 end
 

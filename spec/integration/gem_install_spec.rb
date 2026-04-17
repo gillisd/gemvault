@@ -14,7 +14,7 @@ RSpec.describe "gem install with vault source", :integration do
   it "installs a gem and makes it loadable" do
     output, status = podman_run(gem_install_script(
       "vault_container_test",
-      '--source $WORKDIR/test.gemv',
+      "--source $WORKDIR/test.gemv",
       'ruby -e "require \'vault_container_test\'; puts VaultContainerTest::VERSION"',
     ))
     expect(status).to be_success, "Failed:\n#{output}"
@@ -24,7 +24,7 @@ RSpec.describe "gem install with vault source", :integration do
   it "shows vault messages with --verbose" do
     output, status = podman_run(gem_install_script(
       "vault_verbose",
-      '--verbose --source $WORKDIR/test.gemv',
+      "--verbose --source $WORKDIR/test.gemv",
       "true",
     ))
     expect(status).to be_success, "Failed:\n#{output}"
@@ -34,7 +34,7 @@ RSpec.describe "gem install with vault source", :integration do
   it "accepts a file:// URI as the source" do
     output, status = podman_run(gem_install_script(
       "vault_fileuri",
-      '--source file://$WORKDIR/test.gemv',
+      "--source file://$WORKDIR/test.gemv",
       "true",
     ))
     expect(status).to be_success, "Failed:\n#{output}"

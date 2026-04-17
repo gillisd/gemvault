@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require_relative "../command"
 
 module Gemvault
@@ -9,8 +7,8 @@ module Gemvault
         description "List gems in a vault"
 
         argument :vault, required: true,
-                 usage: "VAULT",
-                 desc: "Vault file"
+                         usage: "VAULT",
+                         desc: "Vault file"
 
         def run(vault)
           with_vault(vault) do |v|

@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "test_helper"
 require "gemvault/cli"
 
@@ -230,7 +228,7 @@ class CLITest < Minitest::Test
 
   def test_version
     assert_equal 0, run_cli("--version")
-    assert_match(/gemvault #{Gemvault::VERSION}/, @stdout)
+    assert_match(/gemvault #{Gemvault::VERSION}/o, @stdout)
   end
 
   # --- help ---
