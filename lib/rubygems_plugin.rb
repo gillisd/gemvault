@@ -9,9 +9,9 @@ require "rubygems/source_list"
 # Three monkey-patches (via prepend) are needed because RubyGems has no
 # source registration API:
 #
-# 1. accept_uri_http let .gemv paths bypass URI scheme validation
-# 2. add_source_option skip trailing"/" append for .gemv paths
-# 3. SourceList#<< route .gemv strings to Gem::Source::Vault
+# 1. accept_uri_http -- let .gemv paths bypass URI scheme validation
+# 2. add_source_option -- skip trailing "/" append for .gemv paths
+# 3. SourceList#<< -- route .gemv strings to Gem::Source::Vault
 
 module Gemvault
   module AcceptVaultURI
