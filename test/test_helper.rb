@@ -1,4 +1,5 @@
 require "minitest/autorun"
+require "fileutils"
 require "gemvault"
 require "tmpdir"
 require "open3"

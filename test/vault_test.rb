@@ -11,7 +11,7 @@ class VaultTest < Minitest::Test
   end
 
   def teardown
-    @tmpdir.rmtree
+    FileUtils.rm_rf(@tmpdir)
   end
 
   # --- Create / Open ---
