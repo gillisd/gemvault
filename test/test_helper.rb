@@ -1,9 +1,6 @@
-# frozen_string_literal: true
-
 require "minitest/autorun"
 require "gemvault"
 require "tmpdir"
-require "pathname"
 require "open3"
 
 module GemvaultTestHelper
@@ -18,7 +15,7 @@ module GemvaultTestHelper
   # @return [Pathname] absolute path to the built .gem file
   def build_gem(name, version, dir:, platform: nil, files: nil, dependencies: [])
     dir = Pathname(dir)
-    files ||= { "lib/#{name}.rb" => "module #{name.split('-').map(&:capitalize).join}; end" }
+    files ||= { "lib/#{name}.rb" => "module #{name.split("-").map(&:capitalize).join}; end" }
 
     spec = Gem::Specification.new do |s|
       s.name = name
