@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "fileutils"
 require_relative "../../gemvault/vault"
 
@@ -7,7 +5,7 @@ module Bundler
   module Plugin
     class VaultSource
       def initialize(opts)
-        super(opts)
+        super
         @vault_path = resolve_vault_path(@uri)
         validate_vault_exists!
       end
@@ -60,7 +58,7 @@ module Bundler
               ignore_dependencies: true,
               wrappers: true,
               env_shebang: true,
-              build_args: opts[:build_args] || []
+              build_args: opts[:build_args] || [],
             )
 
             installed_spec = installer.install
@@ -95,8 +93,8 @@ module Bundler
       end
 
       # Bundler computes full_gem_path as dirname(loaded_from) for plugin
-      # sources, so the gemspec must live inside the gem directory — not
-      # in specifications/ — for load paths to resolve correctly.
+      # sources, so the gemspec must live inside the gem directory -- not
+      # in specifications/ -- for load paths to resolve correctly.
       def anchor_gemspec(gem_dir, full_name, spec_ruby)
         gemspec_path = File.join(gem_dir, "#{full_name}.gemspec")
         File.write(gemspec_path, spec_ruby) unless File.exist?(gemspec_path)
@@ -109,9 +107,10 @@ module Bundler
 
       def validate_vault_exists!
         return if File.file?(@vault_path)
+
         raise Bundler::PathError,
-          "Could not find vault '#{@uri}' referenced in Gemfile " \
-          "(relative to #{Bundler.root})"
+              "Could not find vault '#{@uri}' referenced in Gemfile " \
+              "(relative to #{Bundler.root})"
       end
     end
   end

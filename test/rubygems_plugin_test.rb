@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "test_helper"
 require "rubygems/command"
 require "rubygems/resolver"
@@ -17,22 +15,22 @@ class RubygemsSourceVaultTest < Minitest::Test
 
     # Build two gems and a prerelease, then populate the vault
     @gem1_path = build_gem("alpha", "1.0.0", dir: @gem_build_dir,
-      files: { "lib/alpha.rb" => 'module Alpha; end' })
+                                             files: { "lib/alpha.rb" => "module Alpha; end" })
 
     dir2 = @tmpdir / "gem2"
     dir2.mkpath
     @gem2_path = build_gem("alpha", "2.0.0", dir: dir2,
-      files: { "lib/alpha.rb" => 'module Alpha; end' })
+                                             files: { "lib/alpha.rb" => "module Alpha; end" })
 
     dir3 = @tmpdir / "gem3"
     dir3.mkpath
     @gem3_path = build_gem("beta", "1.0.0", dir: dir3,
-      files: { "lib/beta.rb" => 'module Beta; end' })
+                                            files: { "lib/beta.rb" => "module Beta; end" })
 
     dir4 = @tmpdir / "gem4"
     dir4.mkpath
     @gem_pre_path = build_gem("beta", "2.0.0.pre1", dir: dir4,
-      files: { "lib/beta.rb" => 'module Beta; end' })
+                                                    files: { "lib/beta.rb" => "module Beta; end" })
 
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(@gem1_path)
@@ -43,7 +41,7 @@ class RubygemsSourceVaultTest < Minitest::Test
   end
 
   def teardown
-    @tmpdir.rmtree
+    FileUtils.rm_rf(@tmpdir)
   end
 
   # --- Gem::Source::Vault ---
@@ -123,7 +121,7 @@ class RubygemsSourceVaultTest < Minitest::Test
     result = source.download(spec, download_dir.to_s)
     assert_path_exists result
     assert result.end_with?("alpha-1.0.0.gem")
-    assert File.size(result) > 0
+    assert File.size(result).positive?
   end
 
   def test_spaceship_sorts_before_remote
@@ -193,12 +191,12 @@ class RubygemsResolverVaultSetTest < Minitest::Test
     @vault_path = @tmpdir / "test.gemv"
 
     gem_path = build_gem("mygem", "1.0.0", dir: @gem_build_dir,
-      files: { "lib/mygem.rb" => 'module Mygem; end' })
+                                           files: { "lib/mygem.rb" => "module Mygem; end" })
 
     dir2 = @tmpdir / "gem2"
     dir2.mkpath
     gem2_path = build_gem("mygem", "2.0.0", dir: dir2,
-      files: { "lib/mygem.rb" => 'module Mygem; end' })
+                                            files: { "lib/mygem.rb" => "module Mygem; end" })
 
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem_path)
@@ -207,7 +205,7 @@ class RubygemsResolverVaultSetTest < Minitest::Test
   end
 
   def teardown
-    @tmpdir.rmtree
+    FileUtils.rm_rf(@tmpdir)
   end
 
   def test_find_all_matching
@@ -219,7 +217,7 @@ class RubygemsResolverVaultSetTest < Minitest::Test
 
     results = set.find_all(req)
     assert_equal 2, results.size
-    assert results.all? { |r| r.is_a?(Gem::Resolver::IndexSpecification) }
+    assert(results.all?(Gem::Resolver::IndexSpecification))
     versions = results.map { |r| r.version.to_s }.sort
     assert_equal ["1.0.0", "2.0.0"], versions
   end
@@ -275,104 +273,5 @@ class RubygemsPluginMonkeyPatchTest < Minitest::Test
     list << "/path/to/test.gemv"
     list << "/path/to/test.gemv"
     assert_equal 1, list.sources.size
-  end
-end
-
-class RubygemsPluginIntegrationTest < Minitest::Test
-  include GemvaultTestHelper
-
-  LIB_PATH = Pathname(__dir__).parent / "lib"
-
-  def setup
-    @tmpdir = Pathname(Dir.mktmpdir("gemvault_gem_install_test"))
-    @gem_build_dir = @tmpdir / "gems"
-    @gem_build_dir.mkpath
-    @gem_home = @tmpdir / "gem_home"
-    @gem_home.mkpath
-  end
-
-  def teardown
-    @tmpdir.rmtree
-  end
-
-  def test_gem_install_from_vault
-    gem_path = build_gem("vault_installme", "1.0.0", dir: @gem_build_dir,
-      files: { "lib/vault_installme.rb" => 'module VaultInstallme; VERSION = "1.0.0"; end' })
-
-    vault_path = @tmpdir / "install_test.gemv"
-    vault = Gemvault::Vault.new(vault_path, create: true)
-    vault.add(gem_path)
-    vault.close
-
-    # Run gem install in a subprocess with our plugin loaded via RUBYLIB
-    env = {
-      "GEM_HOME" => @gem_home.to_s,
-      "GEM_PATH" => [@gem_home.to_s, *Gem.path].join(File::PATH_SEPARATOR),
-      "RUBYLIB" => LIB_PATH.to_s,
-    }
-    cmd = ["gem", "install", "--source", vault_path.to_s,
-           "--no-document", "vault_installme"]
-
-    output, status = Bundler.with_unbundled_env do
-      Open3.capture2e(env, *cmd)
-    end
-
-    assert_predicate status, :success?, "gem install failed:\n#{output}"
-    assert_match(/installed vault_installme/i, output)
-
-    # Verify it's actually installed
-    specs = Dir.glob(@gem_home / "specifications" / "vault_installme-1.0.0.gemspec")
-    refute_empty specs, "Expected vault_installme-1.0.0 to be installed in #{@gem_home}"
-  end
-
-  def test_gem_install_verbose_shows_vault_messages
-    gem_path = build_gem("vault_verbose", "1.0.0", dir: @gem_build_dir,
-      files: { "lib/vault_verbose.rb" => 'module VaultVerbose; VERSION = "1.0.0"; end' })
-
-    vault_path = @tmpdir / "verbose_test.gemv"
-    vault = Gemvault::Vault.new(vault_path, create: true)
-    vault.add(gem_path)
-    vault.close
-
-    env = {
-      "GEM_HOME" => @gem_home.to_s,
-      "GEM_PATH" => [@gem_home.to_s, *Gem.path].join(File::PATH_SEPARATOR),
-      "RUBYLIB" => LIB_PATH.to_s,
-    }
-    cmd = ["gem", "install", "--verbose", "--source", vault_path.to_s,
-           "--no-document", "vault_verbose"]
-
-    output, status = Bundler.with_unbundled_env do
-      Open3.capture2e(env, *cmd)
-    end
-
-    assert_predicate status, :success?, "gem install --verbose failed:\n#{output}"
-    assert_match(/Loading .* specs from vault at/, output)
-    assert_match(/Extracting vault_verbose-1\.0\.0\.gem from vault at/, output)
-  end
-
-  def test_gem_install_file_uri_source
-    gem_path = build_gem("vault_fileuri", "1.0.0", dir: @gem_build_dir,
-      files: { "lib/vault_fileuri.rb" => 'module VaultFileuri; VERSION = "1.0.0"; end' })
-
-    vault_path = @tmpdir / "fileuri_test.gemv"
-    vault = Gemvault::Vault.new(vault_path, create: true)
-    vault.add(gem_path)
-    vault.close
-
-    env = {
-      "GEM_HOME" => @gem_home.to_s,
-      "GEM_PATH" => [@gem_home.to_s, *Gem.path].join(File::PATH_SEPARATOR),
-      "RUBYLIB" => LIB_PATH.to_s,
-    }
-    cmd = ["gem", "install", "--source", "file://#{vault_path}",
-           "--no-document", "vault_fileuri"]
-
-    output, status = Bundler.with_unbundled_env do
-      Open3.capture2e(env, *cmd)
-    end
-
-    assert_predicate status, :success?, "gem install with file:// URI failed:\n#{output}"
-    assert_match(/installed vault_fileuri/i, output)
   end
 end

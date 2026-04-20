@@ -1,10 +1,8 @@
-# frozen_string_literal: true
-
 ##
 # A VaultSet looks up specifications from a .gemv vault source.
 #
 # Returns standard Gem::Resolver::IndexSpecification objects so the
-# resolver's install pipeline (download → Gem::Installer) works unchanged.
+# resolver's install pipeline (download -> Gem::Installer) works unchanged.
 
 class Gem::Resolver::VaultSet < Gem::Resolver::Set
   def initialize(source)
@@ -20,17 +18,17 @@ class Gem::Resolver::VaultSet < Gem::Resolver::Set
         tuple.name,
         tuple.version,
         @source,
-        tuple.platform
+        tuple.platform,
       )
     end
   end
 
-  def prefetch(reqs)
-  end
+  def prefetch(reqs); end
 
   def pretty_print(q)
     q.group 2, "[VaultSet", "]" do
       next if @specs.empty?
+
       q.breakable
 
       q.seplist @specs do |tuple|

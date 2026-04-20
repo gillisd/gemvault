@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "command_kit/command"
 require_relative "../vault"
 
@@ -8,10 +6,8 @@ module Gemvault
     class Command < CommandKit::Command
       private
 
-      def with_vault(path, create: false)
-        Gemvault::Vault.open(path, create: create) do |vault|
-          yield vault
-        end
+      def with_vault(path, create: false, &block)
+        Gemvault::Vault.open(path, create: create, &block)
       rescue Gemvault::Vault::Error => e
         print_error(e.message)
         exit(1)
