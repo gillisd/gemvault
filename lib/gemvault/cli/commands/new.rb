@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require_relative "../command"
 
 module Gemvault
@@ -9,8 +7,8 @@ module Gemvault
         description "Create a new vault"
 
         argument :name, required: true,
-                 usage: "NAME",
-                 desc: "Vault name (auto-appends .gemv)"
+                        usage: "NAME",
+                        desc: "Vault name (auto-appends .gemv)"
 
         def run(name)
           path = name.end_with?(".gemv") ? name : "#{name}.gemv"

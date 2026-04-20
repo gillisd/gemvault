@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "command_kit/command"
 require "command_kit/commands/auto_load"
 require "command_kit/options/version"
@@ -9,7 +7,7 @@ module Gemvault
   class CLI < CommandKit::Command
     include CommandKit::Commands::AutoLoad.new(
       dir: "#{__dir__}/cli/commands",
-      namespace: "#{name}::Commands"
+      namespace: "#{name}::Commands",
     )
     include CommandKit::Options::Version
 
@@ -21,7 +19,7 @@ module Gemvault
       "new myvault",
       "add myvault.gemv foo-1.0.0.gem bar-2.0.0.gem",
       "list myvault.gemv",
-      "extract myvault.gemv foo -o vendor/"
+      "extract myvault.gemv foo -o vendor/",
     ]
 
     def run(command = nil, *argv)
