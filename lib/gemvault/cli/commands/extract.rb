@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "fileutils"
 require_relative "../command"
 
@@ -10,20 +8,20 @@ module Gemvault
         description "Extract gem file(s) from a vault"
 
         argument :vault, required: true,
-                 usage: "VAULT",
-                 desc: "Vault file"
+                         usage: "VAULT",
+                         desc: "Vault file"
 
         argument :name, required: true,
-                 usage: "NAME",
-                 desc: "Gem name"
+                        usage: "NAME",
+                        desc: "Gem name"
 
         argument :version, required: false,
-                 usage: "VERSION",
-                 desc: "Gem version (omit to extract all versions)"
+                           usage: "VERSION",
+                           desc: "Gem version (omit to extract all versions)"
 
         option :output, short: "-o",
-               value: {type: String, default: "."},
-               desc: "Output directory"
+                        value: { type: String, default: "." },
+                        desc: "Output directory"
 
         def run(vault, name, version = nil)
           output_dir = options[:output]

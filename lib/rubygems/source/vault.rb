@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "gemvault/vault"
 
 ##
@@ -33,9 +31,9 @@ class Gem::Source::Vault < Gem::Source
       @specs.keys.select { |t| t.version.prerelease? }
     when :latest
       @specs.keys
-        .group_by { |tuple| [tuple.name, tuple.platform] }
-        .values
-        .map { |tuples| tuples.max_by(&:version) }
+            .group_by { |tuple| [tuple.name, tuple.platform] }
+            .values
+            .map { |tuples| tuples.max_by(&:version) }
     else
       @specs.keys
     end
@@ -46,6 +44,7 @@ class Gem::Source::Vault < Gem::Source
 
     spec = @specs[name_tuple]
     raise Gem::Exception, "Unable to find '#{name_tuple}'" unless spec
+
     spec
   end
 
@@ -76,20 +75,20 @@ class Gem::Source::Vault < Gem::Source
     when Gem::Source::Installed,
          Gem::Source::Lock then
       -1
-    when Gem::Source::Vault then
+    when Gem::Source::Vault
       0
-    when Gem::Source::Local then
+    when Gem::Source::Local
       -1
-    when Gem::Source then
+    when Gem::Source
       1
     end
   end
 
   def ==(other)
-    self.class === other && @path == other.path
+    other.is_a?(self.class) && @path == other.path
   end
 
-  alias_method :eql?, :==
+  alias eql? ==
 
   def hash
     @path.hash

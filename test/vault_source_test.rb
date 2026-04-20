@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "test_helper"
 require "bundler"
 require "bundler/plugin/api"
@@ -19,12 +17,12 @@ class VaultSourceTest < Minitest::Test
 
     # Build fixture gems and create a vault
     @gem1_path = build_gem("alpha", "1.0.0", dir: @gem_build_dir,
-      files: { "lib/alpha.rb" => 'module Alpha; VERSION = "1.0.0"; end' })
+                                             files: { "lib/alpha.rb" => 'module Alpha; VERSION = "1.0.0"; end' })
 
     dir2 = @gem_build_dir / "beta_dir"
     dir2.mkpath
     @gem2_path = build_gem("beta", "2.0.0", dir: dir2,
-      files: { "lib/beta.rb" => 'module Beta; VERSION = "2.0.0"; end' })
+                                            files: { "lib/beta.rb" => 'module Beta; VERSION = "2.0.0"; end' })
 
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(@gem1_path)
@@ -33,7 +31,7 @@ class VaultSourceTest < Minitest::Test
   end
 
   def teardown
-    @tmpdir.rmtree
+    FileUtils.rm_rf(@tmpdir)
   end
 
   def test_initialize_resolves_path
@@ -153,7 +151,7 @@ class VaultSourceTest < Minitest::Test
     dir3 = @gem_build_dir / "dep_dir"
     dir3.mkpath
     dep_gem = build_gem("depgem", "1.0.0", dir: dir3,
-      dependencies: [["rake", ">= 13.0"]])
+                                           dependencies: [["rake", ">= 13.0"]])
 
     vault2_path = @tmpdir / "deps.gemv"
     vault2 = Gemvault::Vault.new(vault2_path, create: true)
@@ -173,7 +171,7 @@ class VaultSourceTest < Minitest::Test
     source.dependency_names = %w[alpha]
 
     spec = find_spec(source, "alpha")
-    source.install(spec) # first install — actually extracts
+    source.install(spec) # first install actually extracts
 
     # Second install should skip extraction and NOT print "Installing"
     out, _err = capture_io do
