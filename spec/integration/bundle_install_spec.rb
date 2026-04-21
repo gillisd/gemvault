@@ -161,4 +161,27 @@ RSpec.describe "bundle install with vault source", :integration do
       expect(output).to match(/could not find/i)
     end
   end
+
+  context "when the user runs bundle cache with path: vendor" do
+    let(:gemfile) do
+      <<~RUBY
+        source "$WORKDIR/test.gemv", type: :vault do
+          gem "vault_test_gem"
+        end
+      RUBY
+    end
+
+    let(:script) do
+      bundle_script(gemfile, <<~SH)
+        bundle config set path vendor
+        bundle cache
+      SH
+    end
+
+    it "succeeds" do
+      output, status = podman_run(script)
+
+      expect(status).to be_success, "bundle cache failed:\n#{output}"
+    end
+  end
 end
