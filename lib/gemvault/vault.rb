@@ -121,15 +121,11 @@ module Gemvault
 
     def with_gem_file(name, version, platform: "ruby")
       data = gem_data(name, version, platform: platform)
-      tmpfile = Tempfile.new(["vault_gem", ".gem"])
-      begin
+      Tempfile.create(["vault_gem", ".gem"]) do |tmpfile|
         tmpfile.binmode
         tmpfile.write(data)
         tmpfile.close
         yield tmpfile.path
-      ensure
-        tmpfile.close unless tmpfile.closed?
-        tmpfile.unlink
       end
     end
 
