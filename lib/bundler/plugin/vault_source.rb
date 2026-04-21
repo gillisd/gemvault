@@ -76,6 +76,11 @@ module Bundler
         {}
       end
 
+      # No source-level install_path to copy: VaultSource#install installs
+      # each gem into Bundler.bundle_path via RubyGemsGemInstaller, so the
+      # default Source#cache would dereference a non-existent directory.
+      def cache(spec, custom_path = nil); end
+
       def to_s
         "vault at #{@uri}"
       end
