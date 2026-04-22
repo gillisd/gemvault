@@ -14,6 +14,7 @@ module Gemvault
       def ==(other)
         super && version == other.version
       end
+      alias eql? ==
 
       def hash
         [self.class, name, version].hash
