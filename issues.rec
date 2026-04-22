@@ -93,3 +93,20 @@ Description: This vault is in vendor/vendored_gems.gmv, relative to the Gemfile
 + Installing acme 1.0.1 from vault vendored_gems.gemv
 + ```
 Status: open
+
+Id: 4
+Updated: Wed, 22 Apr 2026 12:16:44 -0400
+Name: Running bundle install reinstalls gemvault deps every single run
+Description: Anytime I run bundle install, I always see:
++ 
++ ```
++ Fetching gem metadata from https://rubygems.org/.......
++ Resolving dependencies...
++ Installing command_kit 0.6.0
++ Installing sqlite3 2.9.3 (aarch64-linux-gnu)
++ Installing gemvault 0.1.2
++ Installing bundler-source-vault 0.1.2
++ ```
++ 
++ This is unacceptable. these should only need to be installed once
+Status: open
