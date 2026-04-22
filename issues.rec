@@ -82,3 +82,14 @@ Description: Steps to replicate:
 + 
 + Where vendored.gemv is the name of the old file, and there is still an entry in Gemfile.lock
 Status: open
+
+Id: 3
+Updated: Tue, 21 Apr 2026 23:42:59 -0400
+Name: Name of vault in logs should show relative path
+Description: This vault is in vendor/vendored_gems.gmv, relative to the Gemfile
++ in the logs of bundle install I see:
++ 
++ ```
++ Installing acme 1.0.1 from vault vendored_gems.gemv
++ ```
+Status: open
