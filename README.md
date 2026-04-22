@@ -58,6 +58,28 @@ When Bundler sees `type: :vault` in your Gemfile, it auto-installs the `bundler-
 
 The RubyGems plugin works similarly: `gem install --source vault.gemv` loads specs and extracts gems on demand.
 
+## Troubleshooting
+
+### "plugin paths don't exist" after renaming or moving a local gemvault checkout
+
+If you installed `bundler-source-vault` from a local path (e.g. `plugin "bundler-source-vault", path: "/path/to/gemvault"` in a Gemfile), bundler records that absolute path in its plugin index. Moving, renaming, or deleting the source directory afterwards invalidates the stored path, and the next `bundle install` prints:
+
+```
+The following plugin paths don't exist: /path/to/gemvault/shim/.
+Continuing without installing plugin bundler-source-vault.
+```
+
+Once the plugin skips loading, bundler crashes with `NoMethodError: undefined method 'new' for nil` on any Gemfile that uses `type: :vault`. This is a limitation of bundler's path-tracking (see `Bundler::Plugin.source` in bundler's source) and cannot be worked around from the plugin side.
+
+**Fix:** reinstall the plugin against the new path.
+
+```bash
+bundler plugin uninstall bundler-source-vault
+bundler plugin install bundler-source-vault   # or with --path if installing locally
+```
+
+The published `bundler-source-vault` gem installed from rubygems.org is immune to this: it lives in a bundler-managed directory that does not move.
+
 ## Development
 
 ```bash
