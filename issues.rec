@@ -9,3 +9,15 @@
 %type: Updated date
 %auto: Id Updated
 %mandatory: Name Description Status
+
+Id: 0
+Updated: Tue, 21 Apr 2026 23:24:50 -0400
+Name: removal of gems is not working
+Description: Removal of gems when version is specified is broken. try the following:
++ 
++ ```bash
++ gemvault remove vault.gemv somegemwithversion-1.0.1
++ ```
++ 
++ it will raise a not found error
+Status: open
