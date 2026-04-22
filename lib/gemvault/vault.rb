@@ -3,6 +3,7 @@ require "rubygems/package"
 require "fileutils"
 require "tempfile"
 require_relative "gem_entry"
+require_relative "gem_reference"
 
 module Gemvault
   class Vault
@@ -75,16 +76,14 @@ module Gemvault
       )
     end
 
-    def remove(name, version = nil)
-      if version
+    def remove(reference)
+      case reference
+      in GemReference::AnyVersion(name:)
+        @db.execute("DELETE FROM gems WHERE name = ?", [name])
+      in GemReference::SpecificVersion(name:, version:)
         @db.execute(
           "DELETE FROM gems WHERE name = ? AND version = ?",
-          [name, version],
-        )
-      else
-        @db.execute(
-          "DELETE FROM gems WHERE name = ?",
-          [name],
+          [name, version.to_s],
         )
       end
       @db.changes
