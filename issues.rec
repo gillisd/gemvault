@@ -60,3 +60,25 @@ Description: Installing bundler-source-vault 0.1.2
 + 
 +       add_source_to_list Plugin.source(source).new(options), @plugin_sources
 Status: open
+
+Id: 2
+Updated: Tue, 21 Apr 2026 23:31:42 -0400
+Name: Renaming gemv file breaks bundler config
+Description: Steps to replicate:
++ 1. add vault source with some gems
++ 2. move gemv file to another directory in project, rename, and update Gemfile to reflect
++ 3. Run bundle install
++ 4. An error is raised that looks something like
++ ```bash
++ [dev@5misc2]/workspace/fooz% bundle install
++ Fetching gem metadata from https://rubygems.org/.......
++ Resolving dependencies...
++ Installing command_kit 0.6.0
++ Installing sqlite3 2.9.3 (aarch64-linux-gnu)
++ Installing gemvault 0.1.2
++ Installing bundler-source-vault 0.1.2
++ Could not find vault 'vendored.gemv' referenced in Gemfile (relative to /workspace/fooz)
++ ```
++ 
++ Where vendored.gemv is the name of the old file, and there is still an entry in Gemfile.lock
+Status: open
