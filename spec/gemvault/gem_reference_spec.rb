@@ -61,4 +61,26 @@ RSpec.describe Gemvault::GemReference do
       end
     end
   end
+
+  describe "SpecificVersion#eql? / #hash contract" do
+    let(:reference) { described_class::SpecificVersion.new(name: "foo", version: Gem::Version.new("1.0.0")) }
+    let(:duplicate) { described_class::SpecificVersion.new(name: "foo", version: Gem::Version.new("1.0.0")) }
+    let(:different_version) { described_class::SpecificVersion.new(name: "foo", version: Gem::Version.new("2.0.0")) }
+
+    it "treats refs with different versions as not eql?" do
+      expect(reference.eql?(different_version)).to be false
+    end
+
+    it "treats refs with matching name and version as eql?" do
+      expect(reference.eql?(duplicate)).to be true
+    end
+
+    it "keeps hash consistent with eql? across equal refs" do
+      expect(reference.hash).to eq(duplicate.hash)
+    end
+
+    it "produces distinct hashes for refs that are not eql?" do
+      expect(reference.hash).not_to eq(different_version.hash)
+    end
+  end
 end
