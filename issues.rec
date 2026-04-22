@@ -1,0 +1,11 @@
+%rec: Issue
+%key: Id
+%typedef: text_t regexp /^.*$/
+%typedef: Status_t enum open in_progress closed
+%type: Id int
+%type: Name line
+%type: Description text_t
+%type: Status Status_t
+%type: Updated date
+%auto: Id Updated
+%mandatory: Name Description Status
