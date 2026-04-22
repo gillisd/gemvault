@@ -19,17 +19,19 @@ RSpec.describe Gemvault::CLI::Commands::Remove do
     context "when Vault#remove returns zero", :aggregate_failures do
       it "exits 1 and writes 'No matching gem found' to stderr" do
         allow(vault).to receive(:remove).and_return(0)
-        expect {
-          expect(invoke(described_class, "v.gemv", "foo")).to eq(1)
-        }.to output(/No matching gem/).to_stderr
+        exit_status = nil
+        expect { exit_status = invoke(described_class, "v.gemv", "foo") }.to output(/No matching gem/).to_stderr
+        expect(exit_status).to eq(1)
       end
     end
 
     context "when GemReference.parse raises NonExactVersionError", :aggregate_failures do
       it "exits 1 and writes the offending requirement to stderr" do
+        exit_status = nil
         expect {
-          expect(invoke(described_class, "v.gemv", "foo", "--version", "~> 1.0")).to eq(1)
+          exit_status = invoke(described_class, "v.gemv", "foo", "--version", "~> 1.0")
         }.to output(/~> 1\.0/).to_stderr
+        expect(exit_status).to eq(1)
       end
     end
   end

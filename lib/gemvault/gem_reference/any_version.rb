@@ -1,6 +1,7 @@
 module Gemvault
-  module GemReference
+  class GemReference
     # Matches every version of a named gem stored in the vault.
-    AnyVersion = Data.define(:name).freeze
+    class AnyVersion < GemReference
+    end
   end
 end

@@ -78,9 +78,9 @@ module Gemvault
 
     def remove(reference)
       case reference
-      in GemReference::AnyVersion(name:)
+      in GemReference::AnyVersion[name:]
         @db.execute("DELETE FROM gems WHERE name = ?", [name])
-      in GemReference::SpecificVersion(name:, version:)
+      in GemReference::SpecificVersion[name:, version:]
         @db.execute(
           "DELETE FROM gems WHERE name = ? AND version = ?",
           [name, version.to_s],
