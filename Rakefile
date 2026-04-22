@@ -30,10 +30,11 @@ namespace :spec do
 end
 
 namespace :shim do
-  desc "Build the bundler-source-vault shim gem"
-  task :build do
-    Dir.chdir("shim") { sh "gem build bundler-source-vault.gemspec" }
-  end
+  Bundler::GemHelper.install_tasks dir: "shim", name: "bundler-source-vault"
+  CLOBBER.include 'shim/pkg'
 end
+
+Rake::Task[:build].enhance ['shim:build']
+Rake::Task[:release].enhance ['shim:release']
 
 task default: [:test, :spec, :rubocop]

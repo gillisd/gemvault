@@ -1,0 +1,95 @@
+%rec: Issue
+%key: Id
+%typedef: text_t regexp /^.*$/
+%typedef: Status_t enum open in_progress closed
+%type: Id int
+%type: Name line
+%type: Description text_t
+%type: Status Status_t
+%type: Updated date
+%auto: Id Updated
+%mandatory: Name Description Status
+
+Id: 0
+Updated: Tue, 21 Apr 2026 23:24:50 -0400
+Name: removal of gems is not working
+Description: Removal of gems when version is specified is broken. try the following:
++ 
++ ```bash
++ gemvault remove vault.gemv somegemwithversion-1.0.1
++ ```
++ 
++ it will raise a not found error
+Status: open
+
+Id: 1
+Updated: Tue, 21 Apr 2026 23:28:44 -0400
+Name: Getting error when dir structure has slightly changed
+Description: Installing bundler-source-vault 0.1.2
++ The following plugin paths don't exist: /workspace/gemvault/shim/..
++ 
++ This can happen if the plugin was installed with a different version of Ruby that has since been uninstalled.
++ 
++ If you would like to reinstall the plugin, run:
++ 
++ bundler plugin uninstall bundler-source-vault && bundler plugin install bundler-source-vault
++ 
++ Continuing without installing plugin bundler-source-vault.
++ /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/source_list.rb:59:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
++ 
++       add_source_to_list Plugin.source(source).new(options), @plugin_sources
++                                               ^^^^
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/dsl.rb:131:in 'Bundler::Dsl#source'
++ 	from /Users/davidgillis/repos/tries/2026-03-27-5misc/fooz/Gemfile:5:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/dsl.rb:49:in 'BasicObject#instance_eval'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/dsl.rb:49:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/dsl.rb:326:in 'Bundler::Dsl#with_gemfile'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/dsl.rb:47:in 'Bundler::Dsl#eval_gemfile'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/dsl.rb:13:in 'Bundler::Dsl.evaluate'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/definition.rb:40:in 'Bundler::Definition.build'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler.rb:234:in 'Bundler.definition'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/env.rb:36:in 'Bundler::Env.report'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/friendly_errors.rb:71:in 'Bundler::FriendlyErrors.request_issue_report_for'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/friendly_errors.rb:50:in 'Bundler::FriendlyErrors.log_error'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/friendly_errors.rb:124:in 'Bundler.with_friendly_errors'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/exe/bundle:20:in '<top (required)>'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/site_ruby/4.0.0/rubygems.rb:304:in 'Kernel#load'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/site_ruby/4.0.0/rubygems.rb:304:in 'Gem.activate_and_load_bin_path'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/bin/bundle:25:in '<main>'
++ /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/source_list.rb:59:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
++ 
++       add_source_to_list Plugin.source(source).new(options), @plugin_sources
+Status: open
+
+Id: 2
+Updated: Tue, 21 Apr 2026 23:31:42 -0400
+Name: Renaming gemv file breaks bundler config
+Description: Steps to replicate:
++ 1. add vault source with some gems
++ 2. move gemv file to another directory in project, rename, and update Gemfile to reflect
++ 3. Run bundle install
++ 4. An error is raised that looks something like
++ ```bash
++ [dev@5misc2]/workspace/fooz% bundle install
++ Fetching gem metadata from https://rubygems.org/.......
++ Resolving dependencies...
++ Installing command_kit 0.6.0
++ Installing sqlite3 2.9.3 (aarch64-linux-gnu)
++ Installing gemvault 0.1.2
++ Installing bundler-source-vault 0.1.2
++ Could not find vault 'vendored.gemv' referenced in Gemfile (relative to /workspace/fooz)
++ ```
++ 
++ Where vendored.gemv is the name of the old file, and there is still an entry in Gemfile.lock
+Status: open
+
+Id: 3
+Updated: Tue, 21 Apr 2026 23:42:59 -0400
+Name: Name of vault in logs should show relative path
+Description: This vault is in vendor/vendored_gems.gmv, relative to the Gemfile
++ in the logs of bundle install I see:
++ 
++ ```
++ Installing acme 1.0.1 from vault vendored_gems.gemv
++ ```
+Status: open

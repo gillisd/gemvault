@@ -3,6 +3,7 @@ source "https://rubygems.org"
 gemspec
 
 gem "gempilot", require: false
+gem "irb", "~> 1.17", require: false
 gem "minitest", "~> 6.0"
 gem "rake"
 gem "rspec", "~> 3.0"
