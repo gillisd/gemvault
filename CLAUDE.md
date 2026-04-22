@@ -1,5 +1,26 @@
 # CLAUDE.md — Gemvault
 
+## Rubocop
+
+Do NOT modify `.rubocop.yml` or use inline `# rubocop:disable` tags without explicit permission. Fix the code to satisfy the cop instead.
+
+## General rules
+
+1. Specs always come first. Every plan should start with the skeleton of the BDD specs being added, changed or removed. Skeleton means the empty RSpec language, without implementation.
+2. Specs should never have comments. Any urge to put a comment in a spec means that comment should probably be its own spec
+3. DO NOT edit .rubocop.yml or add inline rubocop exemptions without explicit permission
+4. DO NOT run any git command that will rewrite history without explicit permission
+5. PREFER method & class extraction over comments
+6. Making new files, classes, modules, and methods IS NOT overengineering
+7. BEFORE writing code, identify which domain concept owns the behavior. Each class and module should have a single responsibility. If the new behavior doesn't fit an existing class's responsibility, create a new one — don't expand the scope of what's already there.
+8. DO NOT name classes with suffixes like "-er" or "-or" unless using a canonical pattern name (e.g., Parser, Router, Controller)
+9. ALWAYS write specs first. The workflow is: identify the domain concept (rule 5), write specs describing its behavior, then implement. No implementation without a failing spec.
+
+## Additional rules
+
+1. NEVER use Ruby's `sleep` method
+2. NEVER create any class ending in "er" or "or"
+
 ## Project Overview
 
 Multi-gem portable archives backed by SQLite. A single `.gemv` file contains multiple `.gem` files.
@@ -57,7 +78,7 @@ gem install --source file:///path/to/myvault.gemv foo
 ## Testing
 
 ```bash
-bundle exec rake test    # 122 tests, 289 assertions
+bundle exec rake test
 ```
 
 - `test/vault_test.rb` — 33 unit tests for Vault class
