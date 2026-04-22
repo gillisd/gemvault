@@ -27,7 +27,7 @@ RSpec.describe Gemvault::CLI::Commands::Remove do
         expect { invoke("v.gemv", "foo") }.to output(/Removed 3 gem\(s\)/).to_stdout
       end
 
-      it "exits 1 and writes to stderr when the vault has no matching gem" do
+      it "exits 1 and writes to stderr when the vault has no matching gem", :aggregate_failures do
         allow(vault).to receive(:remove).and_return(0)
         expect {
           expect(invoke("v.gemv", "foo")).to eq(1)
@@ -96,7 +96,7 @@ RSpec.describe Gemvault::CLI::Commands::Remove do
     end
 
     context "with a non-exact version requirement" do
-      it "exits 1 without calling Vault#remove and names the offending requirement in stderr" do
+      it "exits 1 without calling Vault#remove and names the offending requirement in stderr", :aggregate_failures do
         expect {
           expect(invoke("v.gemv", "foo", "--version", "~> 1.0")).to eq(1)
         }.to output(/~> 1\.0/).to_stderr
