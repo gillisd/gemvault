@@ -1,6 +1,0 @@
---- a/lib/bundler/plugin.rb
-+++ b/lib/bundler/plugin.rb
-@@ -117,1 +117,3 @@
-+        # gemvault-bundler-patch: skip-reinstalled-plugins
-+        return if definition.dependencies.map(&:name).all? { |n| index.installed?(n) }
-         installed_specs = Installer.new.install_definition(definition)
