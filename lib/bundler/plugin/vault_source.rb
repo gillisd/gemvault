@@ -38,14 +38,14 @@ module Bundler
       def install(spec, opts = {})
         gem_dir = gem_dir_for(spec.full_name)
         if File.directory?(gem_dir) && !opts[:force]
-          Bundler.ui.debug "Using #{version_message(spec)} from vault #{File.basename(@vault_path)}"
+          Bundler.ui.debug "Using #{version_message(spec)} from vault #{@uri}"
           gemspec_in_gem = File.join(gem_dir, "#{spec.full_name}.gemspec")
           spec.full_gem_path = gem_dir
           spec.loaded_from = gemspec_in_gem
           return nil
         end
 
-        Bundler.ui.confirm "Installing #{version_message(spec)} from vault #{File.basename(@vault_path)}"
+        Bundler.ui.confirm "Installing #{version_message(spec)} from vault #{@uri}"
 
         Gemvault::Vault.open(@vault_path) do |vault|
           vault.with_gem_file(spec.name, spec.version.to_s, platform: spec.platform.to_s) do |gem_path|
