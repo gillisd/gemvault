@@ -95,11 +95,10 @@ Description: This vault is in vendor/vendored_gems.gmv, relative to the Gemfile
 Status: open
 
 Id: 4
-<<<<<<< HEAD
 Updated: Wed, 22 Apr 2026 12:16:44 -0400
 Name: Running bundle install reinstalls gemvault deps every single run
 Description: Anytime I run bundle install, I always see:
-+ 
++
 + ```
 + Fetching gem metadata from https://rubygems.org/.......
 + Resolving dependencies...
@@ -108,9 +107,11 @@ Description: Anytime I run bundle install, I always see:
 + Installing gemvault 0.1.2
 + Installing bundler-source-vault 0.1.2
 + ```
-+ 
++
 + This is unacceptable. these should only need to be installed once
-=======
+Status: open
+
+Id: 5
 Updated: Wed, 22 Apr 2026 18:24:09 -0400
 Name: Installing gem via rubygems fails to resolve absolute path
 Description: Consider the following:
@@ -119,7 +120,6 @@ Description: Consider the following:
 + ERROR:  While executing gem ... (Gemvault::Vault::NotFoundError)
 +     Vault not found: /private/tmp/local/ddog/vault:/Users/davidgillis/repos/flipmine/vendor/vendored_gems.gemv
 + ```
-+ 
++
 + Notice an absolute path was passed to --source, yet it tried to resolve locally
->>>>>>> 05cb89a (Another issue)
 Status: open
