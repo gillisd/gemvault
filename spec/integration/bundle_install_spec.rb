@@ -185,6 +185,8 @@ RSpec.describe "bundle install with vault source", :integration do
     end
   end
 
+  BROKEN_PLUGIN_PATH_ERROR = /path .* does not exist|plugin paths don't exist|undefined method.*'new' for nil/i
+
   context "when a path-installed bundler plugin's source directory has been renamed" do
     let(:rename_repro_script) do
       <<~SH
@@ -222,23 +224,22 @@ RSpec.describe "bundle install with vault source", :integration do
         bundle install 2>&1
         echo "===BROKEN_STATE_DONE==="
 
-        bundle plugin uninstall bundler-source-vault 2>&1
         sed -i 's|/tmp/shim-a|/tmp/shim-b|' Gemfile
-        bundle install 2>&1
+        gemvault plugin-heal 2>&1
       SH
     end
 
-    it "crashes until the plugin is uninstalled and reinstalled from the new path" do
+    it "crashes until `gemvault plugin-heal` clears the index and reinstalls the plugin" do
       output, = podman_run(rename_repro_script)
 
       _, _, after_initial = output.partition("===INITIAL_INSTALL_DONE===")
-      broken, _, after_workaround = after_initial.partition("===BROKEN_STATE_DONE===")
+      broken, _, after_heal = after_initial.partition("===BROKEN_STATE_DONE===")
 
-      expect(broken).to match(/path .* does not exist|plugin paths don't exist|undefined method.*'new' for nil/i),
+      expect(broken).to match(BROKEN_PLUGIN_PATH_ERROR),
                         "Expected bundle install to error after the plugin path was renamed. Got:\n#{broken}"
 
-      expect(after_workaround).to include("Bundle complete!"),
-                                  "Expected bundle install to succeed after plugin uninstall/reinstall. Got:\n#{after_workaround}"
+      expect(after_heal).to include("Bundle complete!"),
+                            "Expected `gemvault plugin-heal` to restore a working install. Got:\n#{after_heal}"
     end
   end
 end
