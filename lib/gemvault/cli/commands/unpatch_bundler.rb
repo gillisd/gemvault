@@ -1,20 +1,24 @@
 require_relative "../command"
+require_relative "../../bundler_installation"
 require_relative "../../bundler_patch"
 
 module Gemvault
   class CLI
     module Commands
       class UnpatchBundler < Command
-        description "Revert the Bundler::Plugin.gemfile_install skip-reinstall patch"
+        description "Revert the plugin-reinstall fix from every Bundler installation on this machine"
 
         def run
-          summary, results = BundlerPatch.revert!
-          if summary == :no_bundler
-            print_error("bundler not found in system gems or in ./vendor — nothing to revert")
+          installations = BundlerInstallation.discover
+          if installations.empty?
+            print_error("No bundler installation found in system gems, Ruby stdlib, or ./vendor")
             exit(1)
           end
-          results.each do |file, status|
-            puts "#{format_status(status)} #{file}"
+
+          patch = BundlerPatch.new
+          installations.each do |installation|
+            status = patch.revert_from(installation)
+            puts "#{format_status(status)} #{installation}"
           end
         end
 
@@ -23,7 +27,7 @@ module Gemvault
         def format_status(status)
           case status
           when :reverted     then "Reverted:    "
-          when :not_patched  then "Not patched: "
+          when :not_applied  then "Not patched: "
           end
         end
       end
