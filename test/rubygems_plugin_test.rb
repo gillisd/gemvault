@@ -167,6 +167,17 @@ class RubygemsSourceVaultTest < Minitest::Test
     assert_equal a, b
   end
 
+  def test_vault_uri_strips_scheme
+    source = Gem::Source::Vault.new("vault://#{@vault_path}")
+    assert_equal @vault_path.expand_path.to_s, source.path
+  end
+
+  def test_vault_uri_equals_plain_path
+    a = Gem::Source::Vault.new("vault://#{@vault_path}")
+    b = Gem::Source::Vault.new(@vault_path.to_s)
+    assert_equal a, b
+  end
+
   def test_dependency_resolver_set
     source = Gem::Source::Vault.new(@vault_path)
     set = source.dependency_resolver_set
