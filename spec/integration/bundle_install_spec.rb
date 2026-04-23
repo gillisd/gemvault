@@ -184,4 +184,30 @@ RSpec.describe "bundle install with vault source", :integration do
       expect(status).to be_success, "bundle cache failed:\n#{output}"
     end
   end
+
+  context "when the .gemv file is renamed and the Gemfile updated to match" do
+    it "reinstalls against the new path without crashing on the stale lockfile entry" do
+      output, status = podman_run(<<~SH)
+        #{FixtureScript.preamble(gems: [["vault_rename_gem", "1.0.0"]])}
+        cd $WORKDIR
+        cat > Gemfile <<GEMFILE
+        source "$WORKDIR/test.gemv", type: :vault do
+          gem "vault_rename_gem"
+        end
+        GEMFILE
+        bundle install
+
+        mv $WORKDIR/test.gemv $WORKDIR/renamed.gemv
+        cat > Gemfile <<GEMFILE
+        source "$WORKDIR/renamed.gemv", type: :vault do
+          gem "vault_rename_gem"
+        end
+        GEMFILE
+        bundle install
+      SH
+
+      expect(status).to be_success, "Second bundle install failed:\n#{output}"
+      expect(output).not_to include("Could not find vault")
+    end
+  end
 end
