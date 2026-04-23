@@ -184,4 +184,24 @@ RSpec.describe "bundle install with vault source", :integration do
       expect(status).to be_success, "bundle cache failed:\n#{output}"
     end
   end
+
+  context "when the Gemfile references the vault by a relative path" do
+    it "logs the relative path as written, not the basename" do
+      output, status = podman_run(<<~SH)
+        #{FixtureScript.preamble(gems: [["rel_log_gem", "1.0.0"]])}
+        cd $WORKDIR
+        mkdir vendor
+        mv test.gemv vendor/vendored.gemv
+        cat > Gemfile <<GEMFILE
+        source "vendor/vendored.gemv", type: :vault do
+          gem "rel_log_gem"
+        end
+        GEMFILE
+        bundle install
+      SH
+
+      expect(status).to be_success, "bundle install failed:\n#{output}"
+      expect(output).to include("from vault vendor/vendored.gemv")
+    end
+  end
 end
