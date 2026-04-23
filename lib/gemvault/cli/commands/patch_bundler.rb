@@ -1,31 +1,33 @@
 require_relative "../command"
+require_relative "../../bundler_installation"
 require_relative "../../bundler_patch"
 
 module Gemvault
   class CLI
     module Commands
       class PatchBundler < Command
-        description "Apply the Bundler::Plugin.gemfile_install skip-reinstall patch"
+        description "Apply the plugin-reinstall fix to every Bundler installation on this machine"
 
         def run
-          summary, results = BundlerPatch.apply!
-          if summary == :no_bundler
-            print_error("bundler not found in system gems or in ./vendor — nothing to patch")
+          installations = BundlerInstallation.discover
+          if installations.empty?
+            print_error("No bundler installation found in system gems, Ruby stdlib, or ./vendor")
             exit(1)
           end
-          results.each do |file, status|
-            puts "#{format_status(status)} #{file}"
+
+          patch = BundlerPatch.new
+          installations.each do |installation|
+            status = patch.apply_to(installation)
+            puts "#{format_status(status)} #{installation}"
           end
-          exit(1) if results.any? { |_, s| s == :unknown_bundler }
         end
 
         private
 
         def format_status(status)
           case status
-          when :patched          then "Patched:        "
-          when :already_patched  then "Already patched:"
-          when :unknown_bundler  then "Unsupported:    "
+          when :applied         then "Patched:        "
+          when :already_applied then "Already patched:"
           end
         end
       end
