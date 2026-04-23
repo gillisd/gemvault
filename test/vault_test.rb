@@ -239,7 +239,10 @@ class VaultTest < Minitest::Test
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem_path)
-    count = vault.remove("foo", "1.0.0")
+    ref = Gemvault::GemReference::SpecificVersion.new(
+      name: "foo", version: Gem::Version.new("1.0.0"),
+    )
+    count = vault.remove(ref)
     assert_equal 1, count
     assert_equal 0, vault.size
     vault.close
@@ -253,7 +256,7 @@ class VaultTest < Minitest::Test
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem1)
     vault.add(gem2)
-    count = vault.remove("foo")
+    count = vault.remove(Gemvault::GemReference::AnyVersion.new(name: "foo"))
     assert_equal 2, count
     assert_equal 0, vault.size
     vault.close
@@ -261,7 +264,10 @@ class VaultTest < Minitest::Test
 
   def test_remove_nonexistent_returns_zero
     vault = Gemvault::Vault.new(@vault_path, create: true)
-    count = vault.remove("nope", "1.0.0")
+    ref = Gemvault::GemReference::SpecificVersion.new(
+      name: "nope", version: Gem::Version.new("1.0.0"),
+    )
+    count = vault.remove(ref)
     assert_equal 0, count
     vault.close
   end
@@ -344,7 +350,9 @@ class VaultTest < Minitest::Test
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem_path)
     assert_equal 1, vault.size
-    vault.remove("foo", "1.0.0")
+    vault.remove(Gemvault::GemReference::SpecificVersion.new(
+      name: "foo", version: Gem::Version.new("1.0.0"),
+    ))
     assert_equal 0, vault.size
     vault.close
   end

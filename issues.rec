@@ -11,7 +11,7 @@
 %mandatory: Name Description Status
 
 Id: 0
-Updated: Tue, 21 Apr 2026 23:24:50 -0400
+Updated: Wed, 22 Apr 2026 13:07:40 +0000
 Name: removal of gems is not working
 Description: Removal of gems when version is specified is broken. try the following:
 + 
@@ -20,7 +20,7 @@ Description: Removal of gems when version is specified is broken. try the follow
 + ```
 + 
 + it will raise a not found error
-Status: open
+Status: closed
 
 Id: 1
 Updated: Tue, 21 Apr 2026 23:28:44 -0400
@@ -95,6 +95,7 @@ Description: This vault is in vendor/vendored_gems.gmv, relative to the Gemfile
 Status: open
 
 Id: 4
+<<<<<<< HEAD
 Updated: Wed, 22 Apr 2026 12:16:44 -0400
 Name: Running bundle install reinstalls gemvault deps every single run
 Description: Anytime I run bundle install, I always see:
@@ -109,4 +110,16 @@ Description: Anytime I run bundle install, I always see:
 + ```
 + 
 + This is unacceptable. these should only need to be installed once
+=======
+Updated: Wed, 22 Apr 2026 18:24:09 -0400
+Name: Installing gem via rubygems fails to resolve absolute path
+Description: Consider the following:
++ ```
++  ng command gem install --source vault:///Users/davidgillis/repos/flipmine/vendor/vendored_gems.gemv acme
++ ERROR:  While executing gem ... (Gemvault::Vault::NotFoundError)
++     Vault not found: /private/tmp/local/ddog/vault:/Users/davidgillis/repos/flipmine/vendor/vendored_gems.gemv
++ ```
++ 
++ Notice an absolute path was passed to --source, yet it tried to resolve locally
+>>>>>>> 05cb89a (Another issue)
 Status: open
