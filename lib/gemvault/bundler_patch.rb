@@ -1,56 +1,80 @@
-require "open3"
-
 module Gemvault
-  # The fix for Bundler's plugin-reinstall bug
-  # (rubygems/rubygems#6630, rubygems/rubygems#6957). Ships as a unified
-  # diff next to this file; applied via the canonical `patch` tool so the
-  # actual file surgery, hunk matching, and reversal are handled by
-  # battle-tested upstream utilities. Idempotency is checked in Ruby with
-  # a marker comment because `patch` cannot natively distinguish a pure
-  # insertion that's already been applied from a pristine target.
-  class BundlerPatch
-    DEFAULT_DIFF = Pathname(__dir__).join("bundler_patch.diff").freeze
+  # Patches Bundler's Plugin.gemfile_install in place so it no longer
+  # reinstalls plugin dependencies on every `bundle install`. The upstream
+  # bug (rubygems/rubygems#6630) is that install_definition unconditionally
+  # runs install_from_specs without checking whether the plugins are already
+  # registered. Upstream PR rubygems/rubygems#6957 fixes this properly but
+  # hasn't shipped in a Bundler release.
+  #
+  # The fix here is the three-line short-circuit that the original reporter
+  # proposed: before calling Installer.new.install_definition, filter plugins
+  # that are already in the index and return early if none remain. That's
+  # small, contained, and idempotent.
+  module BundlerPatch
     MARKER = "# gemvault-bundler-patch: skip-reinstalled-plugins".freeze
 
-    attr_reader :diff
+    INSTALL_CALL = "installed_specs = Installer.new.install_definition(definition)".freeze
 
-    def initialize(diff: DEFAULT_DIFF, runner: Open3.method(:capture2e))
-      @diff = Pathname(diff)
-      @runner = runner
+    FIX_INSERT = "#{MARKER}\n" \
+                 "        return if definition.dependencies.map(&:name).all? { |n| index.installed?(n) }\n" \
+                 "        #{INSTALL_CALL}".freeze
+
+    module_function
+
+    def apply!
+      results = plugin_rb_paths.map { |file| [file, patch_file(file)] }
+      return [:no_bundler, []] if results.empty?
+
+      [summarize(results.map(&:last)), results]
     end
 
-    def apply_to(installation)
-      return :already_applied if marker_present?(installation)
+    def revert!
+      results = plugin_rb_paths.map { |file| [file, revert_file(file)] }
+      return [:no_bundler, []] if results.empty?
 
-      run_patch(installation, "--forward")
-      :applied
+      [summarize(results.map(&:last)), results]
     end
 
-    def revert_from(installation)
-      return :not_applied unless marker_present?(installation)
+    def patch_file(file)
+      source = File.read(file)
+      return :already_patched if source.include?(MARKER)
+      return :unknown_bundler unless source.include?(INSTALL_CALL)
 
-      run_patch(installation, "--reverse")
+      File.write(file, source.sub(INSTALL_CALL, FIX_INSERT))
+      :patched
+    end
+
+    def revert_file(file)
+      source = File.read(file)
+      return :not_patched unless source.include?(MARKER)
+
+      File.write(file, source.sub(FIX_INSERT, INSTALL_CALL))
       :reverted
     end
 
-    class PatchFailed < StandardError; end
-
-    private
-
-    attr_reader :runner
-
-    def marker_present?(installation)
-      installation.plugin_rb.read.include?(MARKER)
+    def plugin_rb_paths
+      (system_paths + stdlib_paths + vendored_paths).uniq.select { |path| File.exist?(path) }
     end
 
-    def run_patch(installation, direction)
-      _, status = runner.call(
-        "patch", direction, "--silent", "--no-backup-if-mismatch",
-        "--reject-file=-", installation.plugin_rb.to_s, diff.to_s
-      )
-      return if status.success?
+    def system_paths
+      Gem::Specification.find_all_by_name("bundler")
+                        .map { |spec| File.join(spec.full_gem_path, "lib/bundler/plugin.rb") }
+    end
 
-      raise PatchFailed, "patch #{direction} failed on #{installation}"
+    def stdlib_paths
+      Dir.glob(File.join(RbConfig::CONFIG["rubylibdir"] || "", "bundler/plugin.rb")) +
+        Dir.glob(File.join(RbConfig::CONFIG["sitelibdir"] || "", "bundler/plugin.rb"))
+    end
+
+    def vendored_paths
+      Dir.glob("vendor/ruby/*/gems/bundler-*/lib/bundler/plugin.rb") +
+        Dir.glob(".bundle/ruby/*/gems/bundler-*/lib/bundler/plugin.rb")
+    end
+
+    def summarize(statuses)
+      return statuses.first if statuses.uniq.length == 1
+
+      :mixed
     end
   end
 end

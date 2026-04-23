@@ -1,14 +1,15 @@
 require "test_helper"
-require "gemvault/bundler_installation"
 require "gemvault/bundler_patch"
 
 class BundlerPatchTest < Minitest::Test
-  PRISTINE_PLUGIN_RB = <<~RUBY.freeze
+  PRISTINE_PLUGIN_RB = <<~RUBY
     module Bundler
       module Plugin
-        def gemfile_install
-          Bundler.settings.temporary(frozen: false) do
-            definition = build
+        def gemfile_install(gemfile = nil, &inline)
+          Bundler.settings.temporary(frozen: false, deployment: false) do
+            builder = DSL.new
+            builder.eval_gemfile(gemfile)
+            definition = builder.to_definition(nil, true)
 
             return if definition.dependencies.empty?
 
@@ -26,86 +27,50 @@ class BundlerPatchTest < Minitest::Test
     @tmpdir = Pathname(Dir.mktmpdir("bundler_patch_test"))
     @plugin_rb = @tmpdir / "plugin.rb"
     @plugin_rb.write(PRISTINE_PLUGIN_RB)
-    @installation = Gemvault::BundlerInstallation.new(@plugin_rb)
-    @patch = Gemvault::BundlerPatch.new
   end
 
   def teardown
     FileUtils.rm_rf(@tmpdir)
   end
 
-  def test_apply_to_pristine_installation_returns_applied
-    assert_equal :applied, @patch.apply_to(@installation)
+  def test_patch_file_rewrites_pristine_source_with_skip_check
+    assert_equal :patched, Gemvault::BundlerPatch.patch_file(@plugin_rb.to_s)
+
+    source = @plugin_rb.read
+    assert_includes source, Gemvault::BundlerPatch::MARKER
+    assert_includes source, "return if definition.dependencies.map(&:name).all? { |n| index.installed?(n) }"
   end
 
-  def test_apply_to_pristine_installation_inserts_the_skip_check
-    @patch.apply_to(@installation)
+  def test_patch_file_is_idempotent
+    Gemvault::BundlerPatch.patch_file(@plugin_rb.to_s)
+    after_first = @plugin_rb.read
 
-    assert_includes @plugin_rb.read, Gemvault::BundlerPatch::MARKER
-    assert_includes @plugin_rb.read, "return if definition.dependencies.map(&:name).all?"
+    assert_equal :already_patched, Gemvault::BundlerPatch.patch_file(@plugin_rb.to_s)
+    assert_equal after_first, @plugin_rb.read
   end
 
-  def test_apply_to_already_patched_installation_is_a_noop
-    @patch.apply_to(@installation)
-    before = @plugin_rb.read
+  def test_patch_file_refuses_unknown_bundler_source
+    @plugin_rb.write("module Bundler; module Plugin; def gemfile_install; :something_else; end; end; end")
 
-    assert_equal :already_applied, @patch.apply_to(@installation)
-    assert_equal before, @plugin_rb.read
+    assert_equal :unknown_bundler, Gemvault::BundlerPatch.patch_file(@plugin_rb.to_s)
   end
 
-  def test_revert_from_patched_installation_returns_reverted
-    @patch.apply_to(@installation)
+  def test_revert_file_restores_pristine_source
+    Gemvault::BundlerPatch.patch_file(@plugin_rb.to_s)
 
-    assert_equal :reverted, @patch.revert_from(@installation)
-  end
-
-  def test_revert_from_patched_installation_restores_pristine_content
-    @patch.apply_to(@installation)
-    @patch.revert_from(@installation)
-
+    assert_equal :reverted, Gemvault::BundlerPatch.revert_file(@plugin_rb.to_s)
     assert_equal PRISTINE_PLUGIN_RB, @plugin_rb.read
   end
 
-  def test_revert_from_pristine_installation_is_a_noop
-    assert_equal :not_applied, @patch.revert_from(@installation)
+  def test_revert_file_is_a_noop_on_unpatched_source
+    assert_equal :not_patched, Gemvault::BundlerPatch.revert_file(@plugin_rb.to_s)
     assert_equal PRISTINE_PLUGIN_RB, @plugin_rb.read
   end
 
-  def test_apply_then_revert_round_trips_to_the_exact_byte_stream
-    @patch.apply_to(@installation)
-    @patch.revert_from(@installation)
+  def test_patch_followed_by_revert_round_trips_to_the_exact_byte_stream
+    Gemvault::BundlerPatch.patch_file(@plugin_rb.to_s)
+    Gemvault::BundlerPatch.revert_file(@plugin_rb.to_s)
 
     assert_equal PRISTINE_PLUGIN_RB, @plugin_rb.read
-  end
-end
-
-class BundlerInstallationTest < Minitest::Test
-  def test_installation_exposes_its_plugin_rb_as_a_pathname
-    path = Pathname("/tmp/some/bundler/plugin.rb")
-    installation = Gemvault::BundlerInstallation.new(path)
-
-    assert_equal path, installation.plugin_rb
-    assert_kind_of Pathname, installation.plugin_rb
-  end
-
-  def test_installation_accepts_a_string_and_wraps_it_in_pathname
-    installation = Gemvault::BundlerInstallation.new("/tmp/some/bundler/plugin.rb")
-
-    assert_kind_of Pathname, installation.plugin_rb
-  end
-
-  def test_installations_are_equal_when_plugin_rb_matches
-    a = Gemvault::BundlerInstallation.new("/same/path/plugin.rb")
-    b = Gemvault::BundlerInstallation.new("/same/path/plugin.rb")
-
-    assert_equal a, b
-    assert_equal a.hash, b.hash
-  end
-
-  def test_installations_are_unequal_when_plugin_rb_differs
-    a = Gemvault::BundlerInstallation.new("/one/plugin.rb")
-    b = Gemvault::BundlerInstallation.new("/two/plugin.rb")
-
-    refute_equal a, b
   end
 end
