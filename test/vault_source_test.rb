@@ -39,9 +39,14 @@ class VaultSourceTest < Minitest::Test
     assert_equal "vault at #{@vault_path}", source.to_s
   end
 
-  def test_initialize_missing_vault_raises
+  def test_initialize_does_not_validate_vault_existence
+    create_vault_source(@tmpdir / "nope.gemv")
+  end
+
+  def test_fetch_gemspec_files_raises_when_vault_missing
+    source = create_vault_source(@tmpdir / "nope.gemv")
     assert_raises(Bundler::PathError) do
-      create_vault_source(@tmpdir / "nope.gemv")
+      source.fetch_gemspec_files
     end
   end
 
