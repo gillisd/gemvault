@@ -5,6 +5,8 @@ require_relative "../../bundler_patch"
 module Gemvault
   class CLI
     module Commands
+      # CLI command: applies the bundler plugin-reinstall patch across every
+      # discovered Bundler installation and prints a one-line outcome per file.
       class PatchBundler < Command
         description "Apply the plugin-reinstall fix to every Bundler installation on this machine"
 
@@ -17,17 +19,17 @@ module Gemvault
 
           patch = BundlerPatch.new
           installations.each do |installation|
-            status = patch.apply_to(installation)
-            puts "#{format_status(status)} #{installation}"
+            outcome = patch.apply_to(installation)
+            puts "#{format_outcome(outcome)} #{installation}"
           end
         end
 
         private
 
-        def format_status(status)
-          case status
-          when :applied         then "Patched:        "
-          when :already_applied then "Already patched:"
+        def format_outcome(outcome)
+          case outcome
+          in BundlerPatch::Outcome::Applied        then "Patched:        "
+          in BundlerPatch::Outcome::AlreadyApplied then "Already patched:"
           end
         end
       end
