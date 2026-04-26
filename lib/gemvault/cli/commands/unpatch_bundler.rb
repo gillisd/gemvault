@@ -5,6 +5,8 @@ require_relative "../../bundler_patch"
 module Gemvault
   class CLI
     module Commands
+      # CLI command: reverts the bundler plugin-reinstall patch from every
+      # discovered Bundler installation and prints a one-line outcome per file.
       class UnpatchBundler < Command
         description "Revert the plugin-reinstall fix from every Bundler installation on this machine"
 
@@ -17,17 +19,17 @@ module Gemvault
 
           patch = BundlerPatch.new
           installations.each do |installation|
-            status = patch.revert_from(installation)
-            puts "#{format_status(status)} #{installation}"
+            outcome = patch.revert_from(installation)
+            puts "#{format_outcome(outcome)} #{installation}"
           end
         end
 
         private
 
-        def format_status(status)
-          case status
-          when :reverted     then "Reverted:    "
-          when :not_applied  then "Not patched: "
+        def format_outcome(outcome)
+          case outcome
+          in BundlerPatch::Outcome::Reverted   then "Reverted:    "
+          in BundlerPatch::Outcome::NotApplied then "Not patched: "
           end
         end
       end

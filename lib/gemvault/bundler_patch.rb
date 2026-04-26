@@ -1,5 +1,8 @@
 require "open3"
 
+require_relative "bundler_patch/outcome"
+require_relative "bundler_patch/outcomes"
+
 module Gemvault
   # The fix for Bundler's plugin-reinstall bug
   # (rubygems/rubygems#6630, rubygems/rubygems#6957). Ships as a unified
@@ -20,17 +23,17 @@ module Gemvault
     end
 
     def apply_to(installation)
-      return :already_applied if marker_present?(installation)
+      return Outcome::AlreadyApplied[installation: installation] if marker_present?(installation)
 
       run_patch(installation, "--forward")
-      :applied
+      Outcome::Applied[installation: installation]
     end
 
     def revert_from(installation)
-      return :not_applied unless marker_present?(installation)
+      return Outcome::NotApplied[installation: installation] unless marker_present?(installation)
 
       run_patch(installation, "--reverse")
-      :reverted
+      Outcome::Reverted[installation: installation]
     end
 
     class PatchFailed < StandardError; end
