@@ -1,8 +1,11 @@
+require 'minitest/reporters'
 require "minitest/autorun"
 require "fileutils"
 require "gemvault"
 require "tmpdir"
 require "open3"
+
+Minitest::Reporters.use!
 
 module GemvaultTestHelper
   # Build a real .gem file programmatically.
