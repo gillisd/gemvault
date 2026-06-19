@@ -125,32 +125,17 @@ Description: Consider the following:
 Status: open
 
 Id: 6
-Updated: Thu, 28 May 2026 17:26:55 -0400
-Name: Fatal error when user runs bundle install on project using gemvault
-Description: When running "bundle install" in a repo that depends on gemvault, user gets message:
-+ 
+Updated: Thu, 23 Apr 2026 11:04:39 -0400
+Name: Cannot add gem with non-numerical suffix
+Description: When adding a gem like 'ronin-db-0.2.1.patch1.gem', gemvault successfully adds the gem, but the gem install command fails:
 + ```
-+ --- ERROR REPORT TEMPLATE -------------------------------------------------------
-+ 
++ gemvault add myvault.gemv ronin-db-0.2.1.patch1.gem # success
++ gem install --debug --verbose --clear-sources --source file://myvault.gemv ronin-db # failure
 + ```
-+ NoMethodError: undefined method 'local_only!' for an instance of Bundler::Plugin::VaultSource
-+   /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/source_list.rb:122:in 'Array#each'
-+ /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/source_list.rb:122:in 'Bundler::SourceList#local_only!'
-+           /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/definition.rb:180:in 'Bundler::Definition#check!'
-+           /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/cli/check.rb:18:in 'Bundler::CLI::Check#run'
-+           /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/cli.rb:223:in 'Bundler::CLI#check'
-+           /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/vendor/thor/lib/thor/command.rb:28:in 'Bundler::Thor::Command#run'
-+           /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/vendor/thor/lib/thor/invocation.rb:127:in 'Bundler::Thor::Invocation#invoke_command'
-+           /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/vendor/thor/lib/thor.rb:538:in 'Bundler::Thor.dispatch'
-+           /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/cli.rb:35:in 'Bundler::CLI.dispatch'
-+           /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/vendor/thor/lib/thor/base.rb:584:in 'Bundler::Thor::Base::ClassMethods#start'
-+           /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/cli.rb:29:in 'Bundler::CLI.start'
-+           /usr/local/share/gems/gems/bundler-4.0.12/exe/bundle:28:in 'block in <top (required)>'
-+           /usr/local/share/gems/gems/bundler-4.0.12/lib/bundler/friendly_errors.rb:118:in 'Bundler.with_friendly_errors'
-+           /usr/local/share/gems/gems/bundler-4.0.12/exe/bundle:20:in '<top (required)>'
-+           /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Kernel#load'
-+           /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Gem.activate_and_load_bin_path'
-+           /usr/local/bin/bundle:25:in '<main>'
-+ 
-+ ```
+Status: open
+
+Id: 7
+Updated: Fri, 19 Jun 2026 10:42:46 -0400
+Name: Gemvault pollutes project dir with plugin files in .bundle
+Description: Why is it not using the plugin that is already installed globally?
 Status: open

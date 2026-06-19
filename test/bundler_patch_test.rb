@@ -2,6 +2,7 @@ require "test_helper"
 require "gemvault/bundler_installation"
 require "gemvault/bundler_patch"
 
+# Tests patching and reverting Bundler's plugin.rb to skip plugin reinstalls.
 class BundlerPatchTest < Minitest::Test
   PRISTINE_PLUGIN_RB = <<~RUBY.freeze
     module Bundler
@@ -79,6 +80,7 @@ class BundlerPatchTest < Minitest::Test
   end
 end
 
+# Tests locating a Bundler installation's plugin.rb on disk.
 class BundlerInstallationTest < Minitest::Test
   def test_installation_exposes_its_plugin_rb_as_a_pathname
     path = Pathname("/tmp/some/bundler/plugin.rb")
