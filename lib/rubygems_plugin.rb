@@ -14,28 +14,37 @@ require "rubygems/source_list"
 # 3. SourceList#<< -- route .gemv strings to Gem::Source::Vault
 
 module Gemvault
+  # Lets .gemv paths bypass RubyGems' URI scheme validation.
   module AcceptVaultURI
+    VALID_URI_SCHEMES = ["http", "https", "file", "s3"].freeze
+
     def accept_uri_http
       Gem::OptionParser.accept Gem::URI::HTTP do |value|
         next value if value.to_s.end_with?(".gemv")
 
-        begin
-          uri = Gem::URI.parse value
-        rescue Gem::URI::InvalidURIError
-          raise Gem::OptionParser::InvalidArgument, value
-        end
-
-        valid_uri_schemes = ["http", "https", "file", "s3"]
-        unless valid_uri_schemes.include?(uri.scheme)
-          msg = "Invalid uri scheme for #{value}\nPreface URLs with one of #{valid_uri_schemes.map { |s| "#{s}://" }}"
-          raise ArgumentError, msg
-        end
-
+        uri = parse_uri(value)
+        validate_scheme!(uri, value)
         value
       end
     end
+
+    private
+
+    def parse_uri(value)
+      Gem::URI.parse value
+    rescue Gem::URI::InvalidURIError
+      raise Gem::OptionParser::InvalidArgument, value
+    end
+
+    def validate_scheme!(uri, value)
+      return if VALID_URI_SCHEMES.include?(uri.scheme)
+
+      schemes = VALID_URI_SCHEMES.map { |scheme| "#{scheme}://" }
+      raise ArgumentError, "Invalid uri scheme for #{value}\nPreface URLs with one of #{schemes}"
+    end
   end
 
+  # Skips the trailing-slash append for .gemv source URLs.
   module AddVaultSourceOption
     def add_source_option
       accept_uri_http
@@ -53,6 +62,7 @@ module Gemvault
     end
   end
 
+  # Routes .gemv source strings to Gem::Source::Vault.
   module VaultSourceList
     def <<(obj)
       if obj.is_a?(String) && obj.end_with?(".gemv")
