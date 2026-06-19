@@ -64,4 +64,39 @@ RSpec.describe "bundle install with vault source", :integration do
       expect(status).to be_success, "bundle cache failed:\n#{output}"
     end
   end
+
+  context "when the plugin's gems are only in Bundler's plugin root and not in system gems" do
+    let(:reinstall_repro_script) do
+      <<~SH
+        #{FixtureScript.preamble(gems: [["plugin_reinstall_gem", "1.0.0"]])}
+        gem uninstall bundler-source-vault -x 2>&1 > /dev/null
+        cd $WORKDIR
+        cat > Gemfile <<GEMFILE
+        source "https://rubygems.org"
+        source "$WORKDIR/test.gemv", type: :vault do
+          gem "plugin_reinstall_gem"
+        end
+        GEMFILE
+
+        bundle install
+        echo "===AFTER_FIRST==="
+
+        bundle install
+        echo "===BEFORE_PATCH==="
+
+        gemvault patch-bundler
+        echo "===AFTER_PATCH==="
+
+        bundle install
+      SH
+    end
+
+    it "reinstalls plugin deps until `gemvault patch-bundler` fixes Bundler itself", :aggregate_failures do
+      output, status = podman_run(reinstall_repro_script)
+      bug_run, fixed_run = partition_patch_repro(output)
+      expect(status).to be_success, "bundle install failed:\n#{output}"
+      expect(bug_run).to include("Installing bundler-source-vault"), "pre-patch should reinstall:\n#{bug_run}"
+      expect(fixed_run).not_to include("Installing bundler-source-vault"), "post-patch should skip:\n#{fixed_run}"
+    end
+  end
 end
