@@ -95,7 +95,6 @@ Description: This vault is in vendor/vendored_gems.gmv, relative to the Gemfile
 Status: open
 
 Id: 4
-<<<<<<< HEAD
 Updated: Wed, 22 Apr 2026 12:16:44 -0400
 Name: Running bundle install reinstalls gemvault deps every single run
 Description: Anytime I run bundle install, I always see:
@@ -110,7 +109,9 @@ Description: Anytime I run bundle install, I always see:
 + ```
 + 
 + This is unacceptable. these should only need to be installed once
-=======
+Status: open
+
+Id: 5
 Updated: Wed, 22 Apr 2026 18:24:09 -0400
 Name: Installing gem via rubygems fails to resolve absolute path
 Description: Consider the following:
@@ -121,5 +122,20 @@ Description: Consider the following:
 + ```
 + 
 + Notice an absolute path was passed to --source, yet it tried to resolve locally
->>>>>>> 05cb89a (Another issue)
+Status: open
+
+Id: 6
+Updated: Thu, 23 Apr 2026 11:04:39 -0400
+Name: Cannot add gem with non-numerical suffix
+Description: When adding a gem like 'ronin-db-0.2.1.patch1.gem', gemvault successfully adds the gem, but the gem install command fails:
++ ```
++ gemvault add myvault.gemv ronin-db-0.2.1.patch1.gem # success
++ gem install --debug --verbose --clear-sources --source file://myvault.gemv ronin-db # failure
++ ```
+Status: open
+
+Id: 7
+Updated: Fri, 19 Jun 2026 10:42:46 -0400
+Name: Gemvault pollutes project dir with plugin files in .bundle
+Description: Why is it not using the plugin that is already installed globally?
 Status: open

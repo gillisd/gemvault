@@ -4,40 +4,19 @@ require "rubygems/resolver"
 require "rubygems_plugin"
 require "rubygems/resolver/vault_set"
 
+# Tests for Gem::Source::Vault spec loading, fetching, and comparison.
 class RubygemsSourceVaultTest < Minitest::Test
   include GemvaultTestHelper
+
+  ALPHA_FILES = { "lib/alpha.rb" => "module Alpha; end" }.freeze
+  BETA_FILES = { "lib/beta.rb" => "module Beta; end" }.freeze
 
   def setup
     @tmpdir = Pathname(Dir.mktmpdir("gemvault_rubygems_test"))
     @gem_build_dir = @tmpdir / "gems"
     @gem_build_dir.mkpath
     @vault_path = @tmpdir / "test.gemv"
-
-    # Build two gems and a prerelease, then populate the vault
-    @gem1_path = build_gem("alpha", "1.0.0", dir: @gem_build_dir,
-                                             files: { "lib/alpha.rb" => "module Alpha; end" })
-
-    dir2 = @tmpdir / "gem2"
-    dir2.mkpath
-    @gem2_path = build_gem("alpha", "2.0.0", dir: dir2,
-                                             files: { "lib/alpha.rb" => "module Alpha; end" })
-
-    dir3 = @tmpdir / "gem3"
-    dir3.mkpath
-    @gem3_path = build_gem("beta", "1.0.0", dir: dir3,
-                                            files: { "lib/beta.rb" => "module Beta; end" })
-
-    dir4 = @tmpdir / "gem4"
-    dir4.mkpath
-    @gem_pre_path = build_gem("beta", "2.0.0.pre1", dir: dir4,
-                                                    files: { "lib/beta.rb" => "module Beta; end" })
-
-    vault = Gemvault::Vault.new(@vault_path, create: true)
-    vault.add(@gem1_path)
-    vault.add(@gem2_path)
-    vault.add(@gem3_path)
-    vault.add(@gem_pre_path)
-    vault.close
+    build_fixture_vault
   end
 
   def teardown
@@ -73,17 +52,10 @@ class RubygemsSourceVaultTest < Minitest::Test
   end
 
   def test_load_specs_latest_preserves_platform_variants
-    platform_dir = @tmpdir / "gem_native"
-    platform_dir.mkpath
-    platform_gem = build_gem("alpha", "2.0.0", dir: platform_dir, platform: "x86_64-linux")
-
-    vault = Gemvault::Vault.new(@vault_path)
-    vault.add(platform_gem)
-    vault.close
+    add_native_alpha_to_vault
 
     source = Gem::Source::Vault.new(@vault_path)
-    latest = source.load_specs(:latest)
-    alpha_tuples = latest.select { |t| t.name == "alpha" }
+    alpha_tuples = source.load_specs(:latest).select { |t| t.name == "alpha" }
 
     platforms = alpha_tuples.map { |t| t.platform.to_s }.sort
     assert_includes platforms, "ruby"
@@ -179,29 +151,49 @@ class RubygemsSourceVaultTest < Minitest::Test
     assert_instance_of Gem::Resolver::VaultSet, set
     assert set.prerelease
   end
+
+  private
+
+  def build_fixture_vault
+    @gem1_path = build_gem("alpha", "1.0.0", dir: @gem_build_dir, files: ALPHA_FILES)
+    @gem2_path = build_subdir_gem("alpha", "2.0.0", "gem2", files: ALPHA_FILES)
+    @gem3_path = build_subdir_gem("beta", "1.0.0", "gem3", files: BETA_FILES)
+    @gem_pre_path = build_subdir_gem("beta", "2.0.0.pre1", "gem4", files: BETA_FILES)
+    populate_vault(@vault_path, @gem1_path, @gem2_path, @gem3_path, @gem_pre_path)
+  end
+
+  def build_subdir_gem(name, version, subdir, **options)
+    dir = @tmpdir / subdir
+    dir.mkpath
+    build_gem(name, version, dir: dir, **options)
+  end
+
+  def populate_vault(path, *gem_paths)
+    vault = Gemvault::Vault.new(path, create: true)
+    gem_paths.each { |gem_path| vault.add(gem_path) }
+    vault.close
+  end
+
+  def add_native_alpha_to_vault
+    platform_gem = build_subdir_gem("alpha", "2.0.0", "gem_native", platform: "x86_64-linux")
+    vault = Gemvault::Vault.new(@vault_path)
+    vault.add(platform_gem)
+    vault.close
+  end
 end
 
+# Tests for Gem::Resolver::VaultSet dependency resolution.
 class RubygemsResolverVaultSetTest < Minitest::Test
   include GemvaultTestHelper
+
+  MYGEM_FILES = { "lib/mygem.rb" => "module Mygem; end" }.freeze
 
   def setup
     @tmpdir = Pathname(Dir.mktmpdir("gemvault_vaultset_test"))
     @gem_build_dir = @tmpdir / "gems"
     @gem_build_dir.mkpath
     @vault_path = @tmpdir / "test.gemv"
-
-    gem_path = build_gem("mygem", "1.0.0", dir: @gem_build_dir,
-                                           files: { "lib/mygem.rb" => "module Mygem; end" })
-
-    dir2 = @tmpdir / "gem2"
-    dir2.mkpath
-    gem2_path = build_gem("mygem", "2.0.0", dir: dir2,
-                                            files: { "lib/mygem.rb" => "module Mygem; end" })
-
-    vault = Gemvault::Vault.new(@vault_path, create: true)
-    vault.add(gem_path)
-    vault.add(gem2_path)
-    vault.close
+    build_fixture_vault
   end
 
   def teardown
@@ -209,13 +201,7 @@ class RubygemsResolverVaultSetTest < Minitest::Test
   end
 
   def test_find_all_matching
-    source = Gem::Source::Vault.new(@vault_path)
-    set = Gem::Resolver::VaultSet.new(source)
-
-    dep = Gem::Dependency.new("mygem", ">= 0")
-    req = Gem::Resolver::DependencyRequest.new(dep, nil)
-
-    results = set.find_all(req)
+    results = find_all("mygem", ">= 0")
     assert_equal 2, results.size
     assert(results.all?(Gem::Resolver::IndexSpecification))
     versions = results.map { |r| r.version.to_s }.sort
@@ -223,29 +209,40 @@ class RubygemsResolverVaultSetTest < Minitest::Test
   end
 
   def test_find_all_version_constraint
-    source = Gem::Source::Vault.new(@vault_path)
-    set = Gem::Resolver::VaultSet.new(source)
-
-    dep = Gem::Dependency.new("mygem", "~> 1.0")
-    req = Gem::Resolver::DependencyRequest.new(dep, nil)
-
-    results = set.find_all(req)
+    results = find_all("mygem", "~> 1.0")
     assert_equal 1, results.size
     assert_equal "1.0.0", results.first.version.to_s
   end
 
   def test_find_all_no_match
+    results = find_all("nonexistent", ">= 0")
+    assert_empty results
+  end
+
+  private
+
+  def build_fixture_vault
+    gem_path = build_gem("mygem", "1.0.0", dir: @gem_build_dir, files: MYGEM_FILES)
+    dir2 = @tmpdir / "gem2"
+    dir2.mkpath
+    gem2_path = build_gem("mygem", "2.0.0", dir: dir2, files: MYGEM_FILES)
+
+    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault.add(gem_path)
+    vault.add(gem2_path)
+    vault.close
+  end
+
+  def find_all(name, requirement)
     source = Gem::Source::Vault.new(@vault_path)
     set = Gem::Resolver::VaultSet.new(source)
-
-    dep = Gem::Dependency.new("nonexistent", ">= 0")
+    dep = Gem::Dependency.new(name, requirement)
     req = Gem::Resolver::DependencyRequest.new(dep, nil)
-
-    results = set.find_all(req)
-    assert_empty results
+    set.find_all(req)
   end
 end
 
+# Tests for the RubyGems plugin monkey patches and vault source list handling.
 class RubygemsPluginMonkeyPatchTest < Minitest::Test
   def test_local_remote_options_has_vault_uri_patch
     assert_includes Gem::LocalRemoteOptions.ancestors, Gemvault::AcceptVaultURI

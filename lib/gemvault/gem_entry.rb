@@ -1,4 +1,5 @@
 module Gemvault
+  # Value object for one gem row (name, version, platform, created_at) in a vault.
   class GemEntry
     attr_reader :name, :version, :platform, :created_at
 
