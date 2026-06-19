@@ -1,7 +1,8 @@
 require "test_helper"
 require "gemvault/cli"
 
-class CLITest < Minitest::Test
+# Shared scaffolding for gemvault CLI command tests.
+class CLITestCase < Minitest::Test
   include GemvaultTestHelper
 
   def setup
@@ -17,8 +18,19 @@ class CLITest < Minitest::Test
     FileUtils.rm_rf(@tmpdir)
   end
 
-  # --- new ---
+  private
 
+  def run_cli(*args)
+    result = nil
+    @stdout, @stderr = capture_io do
+      result = Gemvault::CLI.main(args.map(&:to_s))
+    end
+    result
+  end
+end
+
+# Tests for the `gemvault new` command.
+class CLINewTest < CLITestCase
   def test_new_creates_vault
     assert_equal 0, run_cli("new", "myvault")
     assert_path_exists @tmpdir / "myvault.gemv"
@@ -44,9 +56,10 @@ class CLITest < Minitest::Test
   def test_new_errors_without_name
     assert_equal 1, run_cli("new")
   end
+end
 
-  # --- add ---
-
+# Tests for the `gemvault add` command.
+class CLIAddTest < CLITestCase
   def test_add_single_gem
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
     run_cli("new", "test")
@@ -95,8 +108,11 @@ class CLITest < Minitest::Test
     assert_equal 1, run_cli("add", "nope.gemv", gem_path)
     refute_empty @stderr
   end
+end
 
-  # --- list ---
+# Tests for the `gemvault list` command.
+class CLIListTest < CLITestCase
+  PLATFORM_LISTING_PATTERN = /native-1\.0\.0 \(x86_64-linux\)/
 
   def test_list_empty
     run_cli("new", "test")
@@ -121,7 +137,7 @@ class CLITest < Minitest::Test
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
     assert_equal 0, run_cli("list", "test.gemv")
-    assert_match(/native-1\.0\.0 \(x86_64-linux\)/, @stdout)
+    assert_match(PLATFORM_LISTING_PATTERN, @stdout)
   end
 
   def test_list_errors_without_vault
@@ -132,9 +148,10 @@ class CLITest < Minitest::Test
     assert_equal 1, run_cli("list", "nope.gemv")
     refute_empty @stderr
   end
+end
 
-  # --- remove ---
-
+# Tests for the `gemvault remove` command.
+class CLIRemoveTest < CLITestCase
   def test_remove_specific_version
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
     run_cli("new", "test")
@@ -176,8 +193,11 @@ class CLITest < Minitest::Test
     assert_equal 1, run_cli("remove", "nope.gemv", "foo")
     refute_empty @stderr
   end
+end
 
-  # --- extract ---
+# Tests for the `gemvault extract` command.
+class CLIExtractTest < CLITestCase
+  EXTRACTED_GEM_PATTERN = /Extracted foo-1\.0\.0\.gem/
 
   def test_extract_produces_valid_gem
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
@@ -187,7 +207,7 @@ class CLITest < Minitest::Test
 
     output_dir = @tmpdir / "output"
     assert_equal 0, run_cli("extract", "test.gemv", "foo", "1.0.0", "-o", output_dir)
-    assert_match(/Extracted foo-1\.0\.0\.gem/, @stdout)
+    assert_match(EXTRACTED_GEM_PATTERN, @stdout)
 
     extracted = (output_dir / "foo-1.0.0.gem").binread
     assert_equal original, extracted
@@ -231,15 +251,14 @@ class CLITest < Minitest::Test
     assert_equal 1, run_cli("extract", "nope.gemv", "foo")
     refute_empty @stderr
   end
+end
 
-  # --- version ---
-
+# Tests for top-level gemvault commands (version, help, unknown).
+class CLITopLevelTest < CLITestCase
   def test_version
     assert_equal 0, run_cli("--version")
     assert_match(/gemvault #{Gemvault::VERSION}/o, @stdout)
   end
-
-  # --- help ---
 
   def test_help
     assert_equal 0, run_cli("help")
@@ -251,20 +270,8 @@ class CLITest < Minitest::Test
     assert_match(/Usage/, @stdout)
   end
 
-  # --- unknown command ---
-
   def test_unknown_command
     assert_equal 1, run_cli("bogus")
     assert_match(/bogus/, @stderr)
-  end
-
-  private
-
-  def run_cli(*args)
-    result = nil
-    @stdout, @stderr = capture_io do
-      result = Gemvault::CLI.main(args.map(&:to_s))
-    end
-    result
   end
 end
