@@ -8,7 +8,9 @@ end
 
 require "rspec/core/rake_task"
 
-RSpec::Core::RakeTask.new(:spec)
+RSpec::Core::RakeTask.new(:spec) do |t|
+  t.exclude_pattern = "spec/integration/**/*_spec.rb"
+end
 
 require "rubocop/rake_task"
 RuboCop::RakeTask.new
@@ -26,6 +28,11 @@ namespace :spec do
        "-t", CACHED_IMAGE,
        "-f", "Dockerfile.test",
        "."
+  end
+
+  desc "Run container-backed integration specs (requires Podman; run spec:build first)"
+  RSpec::Core::RakeTask.new(:integration) do |t|
+    t.pattern = "spec/integration/**/*_spec.rb"
   end
 end
 

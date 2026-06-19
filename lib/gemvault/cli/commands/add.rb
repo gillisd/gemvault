@@ -3,6 +3,7 @@ require_relative "../command"
 module Gemvault
   class CLI
     module Commands
+      # Adds one or more .gem files into a vault.
       class Add < Command
         description "Add gem files to a vault"
 
