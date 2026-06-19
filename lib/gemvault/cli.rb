@@ -4,6 +4,7 @@ require "command_kit/options/version"
 require_relative "version"
 
 module Gemvault
+  # Command-line entry point that auto-loads and dispatches gemvault subcommands.
   class CLI < CommandKit::Command
     include CommandKit::Commands::AutoLoad.new(
       dir: "#{__dir__}/cli/commands",

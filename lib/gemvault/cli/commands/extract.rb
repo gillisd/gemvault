@@ -4,6 +4,7 @@ require_relative "../command"
 module Gemvault
   class CLI
     module Commands
+      # Extracts gem file(s) from a vault back onto the filesystem.
       class Extract < Command
         description "Extract gem file(s) from a vault"
 
@@ -28,19 +29,29 @@ module Gemvault
 
           with_vault(vault) do |v|
             ::FileUtils.mkdir_p(output_dir)
+            entries = matching_entries(v, name, version)
+            abort_missing_gem(name) if entries.empty?
+            extract_entries(v, entries, output_dir)
+          end
+        end
 
-            entries = v.gem_entries.select { |e| e.name == name }
-            entries = entries.select { |e| e.version == version } if version
-            if entries.empty?
-              print_error("No gem named '#{name}' in vault")
-              exit(1)
-            end
+        private
 
-            entries.each do |entry|
-              data = v.gem_data(entry.name, entry.version, platform: entry.platform)
-              File.binwrite(File.join(output_dir, entry.filename), data)
-              puts "Extracted #{entry.filename}"
-            end
+        def matching_entries(vault, name, version)
+          entries = vault.gem_entries.select { |e| e.name == name }
+          version ? entries.select { |e| e.version == version } : entries
+        end
+
+        def abort_missing_gem(name)
+          print_error("No gem named '#{name}' in vault")
+          exit(1)
+        end
+
+        def extract_entries(vault, entries, output_dir)
+          entries.each do |entry|
+            data = vault.gem_data(entry.name, entry.version, platform: entry.platform)
+            File.binwrite(File.join(output_dir, entry.filename), data)
+            puts "Extracted #{entry.filename}"
           end
         end
       end
