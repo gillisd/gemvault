@@ -147,7 +147,7 @@ class RubygemsSourceVaultTest < Minitest::Test
 
   def test_dependency_resolver_set_with_prerelease
     source = Gem::Source::Vault.new(@vault_path)
-    set = source.dependency_resolver_set(prerelease: true)
+    set = source.dependency_resolver_set(true)
     assert_instance_of Gem::Resolver::VaultSet, set
     assert set.prerelease
   end
