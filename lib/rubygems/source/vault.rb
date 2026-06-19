@@ -50,7 +50,7 @@ class Gem::Source::Vault < Gem::Source
     dest
   end
 
-  def dependency_resolver_set(prerelease: false)
+  def dependency_resolver_set(prerelease = nil)
     require_relative "../resolver/vault_set"
     set = Gem::Resolver::VaultSet.new(self)
     set.prerelease = prerelease
