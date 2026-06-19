@@ -3,6 +3,7 @@ require_relative "../command"
 module Gemvault
   class CLI
     module Commands
+      # Lists the gems stored in a vault.
       class List < Command
         description "List gems in a vault"
 

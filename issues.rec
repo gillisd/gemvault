@@ -98,7 +98,7 @@ Id: 4
 Updated: Wed, 22 Apr 2026 12:16:44 -0400
 Name: Running bundle install reinstalls gemvault deps every single run
 Description: Anytime I run bundle install, I always see:
-+
++ 
 + ```
 + Fetching gem metadata from https://rubygems.org/.......
 + Resolving dependencies...
@@ -107,7 +107,7 @@ Description: Anytime I run bundle install, I always see:
 + Installing gemvault 0.1.2
 + Installing bundler-source-vault 0.1.2
 + ```
-+
++ 
 + This is unacceptable. these should only need to be installed once
 Status: open
 
@@ -120,6 +120,22 @@ Description: Consider the following:
 + ERROR:  While executing gem ... (Gemvault::Vault::NotFoundError)
 +     Vault not found: /private/tmp/local/ddog/vault:/Users/davidgillis/repos/flipmine/vendor/vendored_gems.gemv
 + ```
-+
++ 
 + Notice an absolute path was passed to --source, yet it tried to resolve locally
+Status: open
+
+Id: 6
+Updated: Thu, 23 Apr 2026 11:04:39 -0400
+Name: Cannot add gem with non-numerical suffix
+Description: When adding a gem like 'ronin-db-0.2.1.patch1.gem', gemvault successfully adds the gem, but the gem install command fails:
++ ```
++ gemvault add myvault.gemv ronin-db-0.2.1.patch1.gem # success
++ gem install --debug --verbose --clear-sources --source file://myvault.gemv ronin-db # failure
++ ```
+Status: open
+
+Id: 7
+Updated: Fri, 19 Jun 2026 10:42:46 -0400
+Name: Gemvault pollutes project dir with plugin files in .bundle
+Description: Why is it not using the plugin that is already installed globally?
 Status: open

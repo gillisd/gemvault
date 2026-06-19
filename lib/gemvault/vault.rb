@@ -6,6 +6,7 @@ require_relative "gem_entry"
 require_relative "gem_reference"
 
 module Gemvault
+  # SQLite-backed archive of .gem blobs; supports add/remove/list/extract.
   class Vault
     class Error < StandardError; end
     class NotFoundError < Error; end
@@ -13,6 +14,7 @@ module Gemvault
     class InvalidGemError < Error; end
 
     SCHEMA_VERSION = "1".freeze
+    SQLITE_MAGIC = "SQLite format 3#{0.chr}".freeze
 
     attr_reader :path
 
@@ -29,51 +31,16 @@ module Gemvault
 
     def initialize(path, create: false)
       @path = File.expand_path(path)
-
-      if create
-        raise Error, "Vault already exists: #{@path}" if File.exist?(@path)
-
-        @db = SQLite3::Database.new(@path)
-        @db.results_as_hash = true
-        create_schema
-      else
-        raise NotFoundError, "Vault not found: #{@path}" unless File.exist?(@path)
-
-        validate_sqlite!
-        @db = SQLite3::Database.new(@path)
-        @db.results_as_hash = true
-      end
+      create ? create_vault! : open_vault!
     end
 
     def add(gem_path)
       gem_path = File.expand_path(gem_path)
       raise NotFoundError, "Gem file not found: #{gem_path}" unless File.file?(gem_path)
 
-      begin
-        pkg = Gem::Package.new(gem_path)
-        spec = pkg.spec
-      rescue StandardError => e
-        raise InvalidGemError, "Invalid gem file #{gem_path}: #{e.message}"
-      end
-
-      name = spec.name
-      version = spec.version.to_s
-      platform = spec.platform.to_s
-
-      existing = @db.execute(
-        "SELECT 1 FROM gems WHERE name = ? AND version = ? AND platform = ?",
-        [name, version, platform],
-      )
-      unless existing.empty?
-        raise DuplicateGemError,
-              "Gem already in vault: #{name}-#{version} (#{platform})"
-      end
-
-      data = File.binread(gem_path)
-      @db.execute(
-        "INSERT INTO gems (name, version, platform, data) VALUES (?, ?, ?, ?)",
-        [name, version, platform, SQLite3::Blob.new(data)],
-      )
+      spec = load_gem_spec(gem_path)
+      raise_if_duplicate(spec)
+      insert_gem(gem_path, spec)
     end
 
     def remove(reference)
@@ -120,11 +87,8 @@ module Gemvault
 
     def with_gem_file(name, version, platform: "ruby")
       data = gem_data(name, version, platform: platform)
-      tmpfile = Tempfile.new(["vault_gem", ".gem"])
+      tmpfile = write_tempfile(data)
       begin
-        tmpfile.binmode
-        tmpfile.write(data)
-        tmpfile.close
         yield tmpfile.path
       ensure
         tmpfile.close unless tmpfile.closed?
@@ -139,6 +103,59 @@ module Gemvault
     end
 
     private
+
+    def create_vault!
+      raise Error, "Vault already exists: #{@path}" if File.exist?(@path)
+
+      @db = new_database
+      create_schema
+    end
+
+    def open_vault!
+      raise NotFoundError, "Vault not found: #{@path}" unless File.exist?(@path)
+
+      validate_sqlite!
+      @db = new_database
+    end
+
+    def new_database
+      db = SQLite3::Database.new(@path)
+      db.results_as_hash = true
+      db
+    end
+
+    def load_gem_spec(gem_path)
+      Gem::Package.new(gem_path).spec
+    rescue StandardError => e
+      raise InvalidGemError, "Invalid gem file #{gem_path}: #{e.message}"
+    end
+
+    def raise_if_duplicate(spec)
+      existing = @db.execute(
+        "SELECT 1 FROM gems WHERE name = ? AND version = ? AND platform = ?",
+        [spec.name, spec.version.to_s, spec.platform.to_s],
+      )
+      return if existing.empty?
+
+      raise DuplicateGemError,
+            "Gem already in vault: #{spec.name}-#{spec.version} (#{spec.platform})"
+    end
+
+    def insert_gem(gem_path, spec)
+      data = File.binread(gem_path)
+      @db.execute(
+        "INSERT INTO gems (name, version, platform, data) VALUES (?, ?, ?, ?)",
+        [spec.name, spec.version.to_s, spec.platform.to_s, SQLite3::Blob.new(data)],
+      )
+    end
+
+    def write_tempfile(data)
+      tmpfile = Tempfile.new(["vault_gem", ".gem"])
+      tmpfile.binmode
+      tmpfile.write(data)
+      tmpfile.close
+      tmpfile
+    end
 
     def create_schema
       @db.execute_batch(<<~SQL)
@@ -168,8 +185,7 @@ module Gemvault
     end
 
     def validate_sqlite!
-      magic = File.binread(@path, 16)
-      return if magic == "SQLite format 3\x00"
+      return if File.binread(@path, SQLITE_MAGIC.bytesize) == SQLITE_MAGIC
 
       raise Error, "Not a valid vault file (not SQLite): #{@path}"
     end
