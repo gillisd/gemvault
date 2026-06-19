@@ -6,7 +6,6 @@ require "gemvault/vault"
 # Used by the gemvault RubyGems plugin to support:
 #
 #   gem install --source myvault.gemv activesupport
-
 class Gem::Source::Vault < Gem::Source
   include Gem::UserInteraction
 
@@ -16,27 +15,15 @@ class Gem::Source::Vault < Gem::Source
     path = path.to_s
     path = path.sub(%r{^file://}, "") if path.start_with?("file://")
     @path = File.expand_path(path)
-    @uri  = @path
+    super(@path)
+    @uri = @path
     @specs = nil
   end
 
   def load_specs(type)
     verbose "Loading #{type} specs from vault at #{@path}"
     ensure_specs_loaded
-
-    case type
-    when :released
-      @specs.keys.reject { |t| t.version.prerelease? }
-    when :prerelease
-      @specs.keys.select { |t| t.version.prerelease? }
-    when :latest
-      @specs.keys
-            .group_by { |tuple| [tuple.name, tuple.platform] }
-            .values
-            .map { |tuples| tuples.max_by(&:version) }
-    else
-      @specs.keys
-    end
+    select_tuples(type)
   end
 
   def fetch_spec(name_tuple)
@@ -63,7 +50,7 @@ class Gem::Source::Vault < Gem::Source
     dest
   end
 
-  def dependency_resolver_set(prerelease = false)
+  def dependency_resolver_set(prerelease = nil)
     require_relative "../resolver/vault_set"
     set = Gem::Resolver::VaultSet.new(self)
     set.prerelease = prerelease
@@ -72,15 +59,9 @@ class Gem::Source::Vault < Gem::Source
 
   def <=>(other)
     case other
-    when Gem::Source::Installed,
-         Gem::Source::Lock then
-      -1
-    when Gem::Source::Vault
-      0
-    when Gem::Source::Local
-      -1
-    when Gem::Source
-      1
+    when Gem::Source::Installed, Gem::Source::Lock, Gem::Source::Local then -1
+    when Gem::Source::Vault then 0
+    when Gem::Source then 1
     end
   end
 
@@ -98,16 +79,40 @@ class Gem::Source::Vault < Gem::Source
     "vault at #{@path}"
   end
 
-  def pretty_print(q)
-    q.object_group(self) do
-      q.group 2, "[Vault:", "]" do
-        q.breakable
-        q.text @path
+  def pretty_print(pp)
+    pp.object_group(self) do
+      pp.group 2, "[Vault:", "]" do
+        pp.breakable
+        pp.text @path
       end
     end
   end
 
   private
+
+  def select_tuples(type)
+    case type
+    when :released then released_tuples
+    when :prerelease then prerelease_tuples
+    when :latest then latest_tuples
+    else @specs.keys
+    end
+  end
+
+  def released_tuples
+    @specs.keys.reject { |tuple| tuple.version.prerelease? }
+  end
+
+  def prerelease_tuples
+    @specs.keys.select { |tuple| tuple.version.prerelease? }
+  end
+
+  def latest_tuples
+    @specs.keys
+          .group_by { |tuple| [tuple.name, tuple.platform] }
+          .values
+          .map { |tuples| tuples.max_by(&:version) }
+  end
 
   def ensure_specs_loaded
     return if @specs

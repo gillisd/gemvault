@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  unit:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -22,7 +22,26 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby-version }}
         bundler-cache: true
-    - name: Run specs
+    - name: Run unit tests
+      run: bundle exec rake test
+    - name: Run host specs
       run: bundle exec rake spec
     - name: Run RuboCop
       run: bundle exec rake rubocop
+
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby-version: ['4.0.1']
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby-version }}
+        bundler-cache: true
+    - name: Build test container image
+      run: bundle exec rake spec:build
+    - name: Run integration specs
+      run: bundle exec rake spec:integration
