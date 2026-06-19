@@ -6,7 +6,7 @@ module Gemvault
       # Recovers from a bundler plugin index entry whose stored path no
       # longer exists. Bundler records absolute paths in .bundle/plugin/index
       # for path-installed plugins. Moving or renaming the source directory
-      # leaves an invalid path behind — Bundler::Plugin.load_plugin warns
+      # leaves an invalid path behind -- Bundler::Plugin.load_plugin warns
       # "The following plugin paths don't exist: ..." and silently returns,
       # leaving @sources[<type>] nil. The next `source X, type: :vault`
       # crashes inside Bundler::SourceList#add_plugin_source with

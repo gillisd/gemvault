@@ -2,19 +2,12 @@ require "test_helper"
 require "gemvault/cli"
 require "gemvault/cli/commands/plugin_heal"
 
+# Tests command ordering for `gemvault plugin-heal` (uninstall before install).
 class CLIPluginHealCommandTest < Minitest::Test
   def setup
     @calls = []
-    calls = @calls
     @command = Gemvault::CLI::Commands::PluginHeal.new
-    @command.define_singleton_method(:system) do |*args|
-      calls << [:system, args]
-      true
-    end
-    @command.define_singleton_method(:exec) do |*args|
-      calls << [:exec, args]
-      throw(:exec_called)
-    end
+    stub_command_calls
   end
 
   def test_run_uninstalls_bundler_source_vault_first
@@ -36,5 +29,19 @@ class CLIPluginHealCommandTest < Minitest::Test
     exec_index = @calls.index { |(kind, _)| kind == :exec }
 
     assert_operator system_index, :<, exec_index
+  end
+
+  private
+
+  def stub_command_calls
+    calls = @calls
+    @command.define_singleton_method(:system) do |*args|
+      calls << [:system, args]
+      true
+    end
+    @command.define_singleton_method(:exec) do |*args|
+      calls << [:exec, args]
+      throw(:exec_called)
+    end
   end
 end
