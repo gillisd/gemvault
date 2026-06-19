@@ -3,6 +3,7 @@ require_relative "../vault"
 
 module Gemvault
   class CLI
+    # Base class for gemvault subcommands; opens a vault and reports vault errors.
     class Command < CommandKit::Command
       private
 
