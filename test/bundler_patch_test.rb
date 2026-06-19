@@ -36,7 +36,7 @@ class BundlerPatchTest < Minitest::Test
   end
 
   def test_apply_to_pristine_installation_returns_applied
-    assert_equal :applied, @patch.apply_to(@installation)
+    assert_instance_of Gemvault::BundlerPatch::Outcome::Applied, @patch.apply_to(@installation)
   end
 
   def test_apply_to_pristine_installation_inserts_the_skip_check
@@ -50,14 +50,14 @@ class BundlerPatchTest < Minitest::Test
     @patch.apply_to(@installation)
     before = @plugin_rb.read
 
-    assert_equal :already_applied, @patch.apply_to(@installation)
+    assert_instance_of Gemvault::BundlerPatch::Outcome::AlreadyApplied, @patch.apply_to(@installation)
     assert_equal before, @plugin_rb.read
   end
 
   def test_revert_from_patched_installation_returns_reverted
     @patch.apply_to(@installation)
 
-    assert_equal :reverted, @patch.revert_from(@installation)
+    assert_instance_of Gemvault::BundlerPatch::Outcome::Reverted, @patch.revert_from(@installation)
   end
 
   def test_revert_from_patched_installation_restores_pristine_content
@@ -68,7 +68,7 @@ class BundlerPatchTest < Minitest::Test
   end
 
   def test_revert_from_pristine_installation_is_a_noop
-    assert_equal :not_applied, @patch.revert_from(@installation)
+    assert_instance_of Gemvault::BundlerPatch::Outcome::NotApplied, @patch.revert_from(@installation)
     assert_equal PRISTINE_PLUGIN_RB, @plugin_rb.read
   end
 
