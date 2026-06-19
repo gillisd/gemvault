@@ -4,6 +4,7 @@ gemspec
 
 gem "gempilot", require: false
 gem "minitest", "~> 6.0"
+gem "minitest-reporters", "~> 1.8"
 gem "rake"
 gem "rspec", "~> 3.0"
 gem "rubocop"

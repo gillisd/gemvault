@@ -3,6 +3,7 @@ require_relative "../command"
 module Gemvault
   class CLI
     module Commands
+      # Creates a new, empty vault file.
       class New < Command
         description "Create a new vault"
 
