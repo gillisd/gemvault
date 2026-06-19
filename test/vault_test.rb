@@ -1,6 +1,7 @@
 require "test_helper"
 
-class VaultTest < Minitest::Test
+# Shared scaffolding for Gemvault::Vault tests.
+class VaultTestCase < Minitest::Test
   include GemvaultTestHelper
 
   def setup
@@ -14,17 +15,36 @@ class VaultTest < Minitest::Test
     FileUtils.rm_rf(@tmpdir)
   end
 
-  # --- Create / Open ---
+  private
 
+  def create_vault
+    Gemvault::Vault.new(@vault_path, create: true)
+  end
+
+  def specific_version_ref(name, version)
+    Gemvault::GemReference::SpecificVersion.new(
+      name: name, version: Gem::Version.new(version),
+    )
+  end
+
+  def build_gem_in_subdir(name, version, subdir, **options)
+    dir = @gem_build_dir / subdir
+    dir.mkpath
+    build_gem(name, version, dir: dir, **options)
+  end
+end
+
+# Tests for creating, opening, and closing a vault.
+class VaultLifecycleTest < VaultTestCase
   def test_create_new_vault
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     assert_path_exists @vault_path
     assert_equal 0, vault.size
     vault.close
   end
 
   def test_open_existing_vault
-    Gemvault::Vault.new(@vault_path, create: true).close
+    create_vault.close
     vault = Gemvault::Vault.new(@vault_path)
     assert_equal 0, vault.size
     vault.close
@@ -32,7 +52,7 @@ class VaultTest < Minitest::Test
 
   def test_reopen_vault_preserves_data
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
     vault.close
 
@@ -56,16 +76,14 @@ class VaultTest < Minitest::Test
   end
 
   def test_create_existing_raises
-    Gemvault::Vault.new(@vault_path, create: true).close
+    create_vault.close
     assert_raises(Gemvault::Vault::Error) do
-      Gemvault::Vault.new(@vault_path, create: true)
+      create_vault
     end
   end
 
-  # --- Vault.open ---
-
   def test_open_yields_vault_and_closes
-    Gemvault::Vault.new(@vault_path, create: true).close
+    create_vault.close
     yielded_vault = nil
     Gemvault::Vault.open(@vault_path) do |vault|
       assert_instance_of Gemvault::Vault, vault
@@ -75,7 +93,7 @@ class VaultTest < Minitest::Test
   end
 
   def test_open_closes_on_raise
-    Gemvault::Vault.new(@vault_path, create: true).close
+    create_vault.close
     yielded_vault = nil
     assert_raises(RuntimeError) do
       Gemvault::Vault.open(@vault_path) do |vault|
@@ -87,17 +105,24 @@ class VaultTest < Minitest::Test
   end
 
   def test_open_without_block_raises
-    Gemvault::Vault.new(@vault_path, create: true).close
+    create_vault.close
     assert_raises(ArgumentError) do
       Gemvault::Vault.open(@vault_path)
     end
   end
 
-  # --- Add ---
+  def test_close_is_idempotent
+    vault = create_vault
+    vault.close
+    vault.close
+  end
+end
 
+# Tests for adding, removing, and counting gems in a vault.
+class VaultMutationTest < VaultTestCase
   def test_add_single_gem
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
     assert_equal 1, vault.size
     vault.close
@@ -106,7 +131,7 @@ class VaultTest < Minitest::Test
   def test_add_multiple_gems
     gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
     gem2 = build_gem("bar", "2.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem1)
     vault.add(gem2)
     assert_equal 2, vault.size
@@ -115,7 +140,7 @@ class VaultTest < Minitest::Test
 
   def test_add_duplicate_raises
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
     assert_raises(Gemvault::Vault::DuplicateGemError) do
       vault.add(gem_path)
@@ -124,7 +149,7 @@ class VaultTest < Minitest::Test
   end
 
   def test_add_nonexistent_gem_raises
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     assert_raises(Gemvault::Vault::NotFoundError) do
       vault.add(@tmpdir / "nonexistent.gem")
     end
@@ -134,17 +159,63 @@ class VaultTest < Minitest::Test
   def test_add_invalid_gem_raises
     bad_gem = @tmpdir / "bad.gem"
     bad_gem.write("not a gem")
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     assert_raises(Gemvault::Vault::InvalidGemError) do
       vault.add(bad_gem)
     end
     vault.close
   end
 
-  # --- gem_entries ---
+  def test_remove_by_name_and_version
+    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    vault = create_vault
+    vault.add(gem_path)
+    count = vault.remove(specific_version_ref("foo", "1.0.0"))
+    assert_equal 1, count
+    assert_equal 0, vault.size
+    vault.close
+  end
 
+  def test_remove_by_name_only
+    gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem2 = build_gem_in_subdir("foo", "2.0.0", "v2")
+    vault = create_vault
+    vault.add(gem1)
+    vault.add(gem2)
+    count = vault.remove(Gemvault::GemReference::AnyVersion.new(name: "foo"))
+    assert_equal 2, count
+    assert_equal 0, vault.size
+    vault.close
+  end
+
+  def test_remove_nonexistent_returns_zero
+    vault = create_vault
+    count = vault.remove(specific_version_ref("nope", "1.0.0"))
+    assert_equal 0, count
+    vault.close
+  end
+
+  def test_size_empty
+    vault = create_vault
+    assert_equal 0, vault.size
+    vault.close
+  end
+
+  def test_size_after_add_and_remove
+    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    vault = create_vault
+    vault.add(gem_path)
+    assert_equal 1, vault.size
+    vault.remove(specific_version_ref("foo", "1.0.0"))
+    assert_equal 0, vault.size
+    vault.close
+  end
+end
+
+# Tests for gem_entries, GemEntry, and with_gem_file.
+class VaultEntriesTest < VaultTestCase
   def test_gem_entries_empty
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     assert_equal [], vault.gem_entries
     vault.close
   end
@@ -152,26 +223,20 @@ class VaultTest < Minitest::Test
   def test_gem_entries_returns_gem_entry_objects
     gem1 = build_gem("alpha", "1.0.0", dir: @gem_build_dir)
     gem2 = build_gem("beta", "2.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem1)
     vault.add(gem2)
 
     entries = vault.gem_entries
     assert_equal 2, entries.length
-
-    entry = entries.first
-    assert_instance_of Gemvault::GemEntry, entry
-    assert_equal "alpha", entry.name
-    assert_equal "1.0.0", entry.version
-    assert_equal "ruby", entry.platform
-    refute_nil entry.created_at
+    assert_alpha_entry(entries.first)
     assert_equal "beta", entries[1].name
     vault.close
   end
 
   def test_gem_entry_full_name
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
 
     entry = vault.gem_entries.first
@@ -182,7 +247,7 @@ class VaultTest < Minitest::Test
 
   def test_gem_entry_full_name_with_platform
     gem_path = build_gem("native", "1.0.0", dir: @gem_build_dir, platform: "x86_64-linux")
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
 
     entry = vault.gem_entries.first
@@ -201,11 +266,9 @@ class VaultTest < Minitest::Test
     assert_equal "native-1.0.0 (x86_64-linux)", entry.to_s
   end
 
-  # --- with_gem_file ---
-
   def test_with_gem_file_yields_path
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
 
     vault.with_gem_file("foo", "1.0.0") do |path|
@@ -219,9 +282,25 @@ class VaultTest < Minitest::Test
 
   def test_with_gem_file_unlinks_on_raise
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
 
+    saved_path = capture_raised_gem_file_path(vault)
+    refute_path_exists saved_path
+    vault.close
+  end
+
+  private
+
+  def assert_alpha_entry(entry)
+    assert_instance_of Gemvault::GemEntry, entry
+    assert_equal "alpha", entry.name
+    assert_equal "1.0.0", entry.version
+    assert_equal "ruby", entry.platform
+    refute_nil entry.created_at
+  end
+
+  def capture_raised_gem_file_path(vault)
     saved_path = nil
     assert_raises(RuntimeError) do
       vault.with_gem_file("foo", "1.0.0") do |path|
@@ -229,55 +308,16 @@ class VaultTest < Minitest::Test
         raise "boom"
       end
     end
-    refute_path_exists saved_path
-    vault.close
+    saved_path
   end
+end
 
-  # --- Remove ---
-
-  def test_remove_by_name_and_version
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
-    vault.add(gem_path)
-    ref = Gemvault::GemReference::SpecificVersion.new(
-      name: "foo", version: Gem::Version.new("1.0.0"),
-    )
-    count = vault.remove(ref)
-    assert_equal 1, count
-    assert_equal 0, vault.size
-    vault.close
-  end
-
-  def test_remove_by_name_only
-    gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    dir2 = @gem_build_dir / "v2"
-    dir2.mkpath
-    gem2 = build_gem("foo", "2.0.0", dir: dir2)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
-    vault.add(gem1)
-    vault.add(gem2)
-    count = vault.remove(Gemvault::GemReference::AnyVersion.new(name: "foo"))
-    assert_equal 2, count
-    assert_equal 0, vault.size
-    vault.close
-  end
-
-  def test_remove_nonexistent_returns_zero
-    vault = Gemvault::Vault.new(@vault_path, create: true)
-    ref = Gemvault::GemReference::SpecificVersion.new(
-      name: "nope", version: Gem::Version.new("1.0.0"),
-    )
-    count = vault.remove(ref)
-    assert_equal 0, count
-    vault.close
-  end
-
-  # --- gem_data ---
-
+# Tests for gem_data, specs, platform gems, and dependencies.
+class VaultContentTest < VaultTestCase
   def test_gem_data_returns_matching_bytes
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
     original = gem_path.binread
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
     retrieved = vault.gem_data("foo", "1.0.0")
     assert_equal original, retrieved
@@ -285,18 +325,16 @@ class VaultTest < Minitest::Test
   end
 
   def test_gem_data_not_found_raises
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     assert_raises(Gemvault::Vault::NotFoundError) do
       vault.gem_data("nope", "1.0.0")
     end
     vault.close
   end
 
-  # --- specs ---
-
   def test_specs_returns_gem_specifications
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
 
     specs = vault.specs
@@ -307,11 +345,9 @@ class VaultTest < Minitest::Test
     vault.close
   end
 
-  # --- Platform gem ---
-
   def test_platform_specific_gem
     gem_path = build_gem("native", "1.0.0", dir: @gem_build_dir, platform: "x86_64-linux")
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
 
     entries = vault.gem_entries
@@ -322,46 +358,16 @@ class VaultTest < Minitest::Test
     vault.close
   end
 
-  # --- Gem with dependencies ---
-
   def test_gem_with_dependencies
     gem_path = build_gem("depgem", "1.0.0", dir: @gem_build_dir,
                                             dependencies: [["rake", ">= 13.0"]])
-    vault = Gemvault::Vault.new(@vault_path, create: true)
+    vault = create_vault
     vault.add(gem_path)
 
     spec = vault.specs.first
     dep = spec.dependencies.find { |d| d.name == "rake" }
     refute_nil dep
     assert_equal Gem::Requirement.new(">= 13.0"), dep.requirement
-    vault.close
-  end
-
-  # --- size ---
-
-  def test_size_empty
-    vault = Gemvault::Vault.new(@vault_path, create: true)
-    assert_equal 0, vault.size
-    vault.close
-  end
-
-  def test_size_after_add_and_remove
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    vault = Gemvault::Vault.new(@vault_path, create: true)
-    vault.add(gem_path)
-    assert_equal 1, vault.size
-    vault.remove(Gemvault::GemReference::SpecificVersion.new(
-      name: "foo", version: Gem::Version.new("1.0.0"),
-    ))
-    assert_equal 0, vault.size
-    vault.close
-  end
-
-  # --- close ---
-
-  def test_close_is_idempotent
-    vault = Gemvault::Vault.new(@vault_path, create: true)
-    vault.close
     vault.close
   end
 end
