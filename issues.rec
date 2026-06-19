@@ -133,3 +133,9 @@ Description: When adding a gem like 'ronin-db-0.2.1.patch1.gem', gemvault succes
 + gem install --debug --verbose --clear-sources --source file://myvault.gemv ronin-db # failure
 + ```
 Status: open
+
+Id: 7
+Updated: Fri, 19 Jun 2026 10:42:46 -0400
+Name: Gemvault pollutes project dir with plugin files in .bundle
+Description: Why is it not using the plugin that is already installed globally?
+Status: open
