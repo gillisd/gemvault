@@ -117,4 +117,12 @@ RSpec.describe "bundle install with vault source", :integration do
       expect(after_heal).to include("Bundle complete!"), "plugin-heal should restore install:\n#{after_heal}"
     end
   end
+
+  context "when the .gemv file is renamed and the Gemfile updated to match" do
+    it "reinstalls against the new path without crashing on the stale lockfile entry", :aggregate_failures do
+      output, status = install_after_vault_rename
+      expect(status).to be_success, "Second bundle install failed:\n#{output}"
+      expect(output).not_to include("Could not find vault")
+    end
+  end
 end
