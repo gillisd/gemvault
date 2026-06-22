@@ -1,3 +1,5 @@
+BROKEN_PLUGIN_PATH_ERROR = /path .* does not exist|plugin paths don't exist|undefined method.*'new' for nil/i
+
 RSpec.describe "bundle install with vault source", :integration do
   it "installs a gem and makes it loadable", :aggregate_failures do
     output, status = install_and_require_single_gem
@@ -62,6 +64,57 @@ RSpec.describe "bundle install with vault source", :integration do
     it "succeeds" do
       output, status = cache_to_vendor
       expect(status).to be_success, "bundle cache failed:\n#{output}"
+    end
+  end
+
+  context "when a path-installed bundler plugin's source directory has been renamed" do
+    let(:rename_repro_script) do
+      <<~SH
+        #{FixtureScript.preamble(gems: [["path_change_gem", "1.0.0"]])}
+        set +e
+        mkdir -p /tmp/shim-a
+        cat > /tmp/shim-a/bundler-source-vault.gemspec <<'GEMSPEC'
+        Gem::Specification.new do |s|
+          s.name = "bundler-source-vault"
+          s.version = "99.0.0"
+          s.summary = "test shim"
+          s.authors = ["t"]
+          s.files = ["plugins.rb"]
+          s.require_paths = ["."]
+          s.add_dependency "gemvault"
+        end
+        GEMSPEC
+        cat > /tmp/shim-a/plugins.rb <<'PLUGINSRB'
+        require "bundler/plugin/vault_source"
+        Bundler::Plugin::API.source("vault", Bundler::Plugin::VaultSource)
+        PLUGINSRB
+
+        cd $WORKDIR
+        cat > Gemfile <<GEMFILE
+        source "https://rubygems.org"
+        plugin "bundler-source-vault", path: "/tmp/shim-a"
+        source "$WORKDIR/test.gemv", type: :vault do
+          gem "path_change_gem"
+        end
+        GEMFILE
+        bundle install 2>&1
+        echo "===INITIAL_INSTALL_DONE==="
+
+        mv /tmp/shim-a /tmp/shim-b
+        bundle install 2>&1
+        echo "===BROKEN_STATE_DONE==="
+
+        sed -i 's|/tmp/shim-a|/tmp/shim-b|' Gemfile
+        gemvault plugin-heal 2>&1
+      SH
+    end
+
+    it "crashes until `gemvault plugin-heal` clears the index and reinstalls the plugin", :aggregate_failures do
+      output, = podman_run(rename_repro_script)
+      _, _, after_initial = output.partition("===INITIAL_INSTALL_DONE===")
+      broken, _, after_heal = after_initial.partition("===BROKEN_STATE_DONE===")
+      expect(broken).to match(BROKEN_PLUGIN_PATH_ERROR), "renamed plugin path should error:\n#{broken}"
+      expect(after_heal).to include("Bundle complete!"), "plugin-heal should restore install:\n#{after_heal}"
     end
   end
 
