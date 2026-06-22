@@ -12,8 +12,7 @@ class Gem::Source::Vault < Gem::Source
   attr_reader :path
 
   def initialize(path)
-    path = path.to_s
-    path = path.sub(%r{^file://}, "") if path.start_with?("file://")
+    path = path.to_s.sub(%r{^(?:file|vault)://}, "")
     @path = File.expand_path(path)
     super(@path)
     @uri = @path

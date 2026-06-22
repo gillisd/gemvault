@@ -16,4 +16,10 @@ RSpec.describe "gem install with vault source", :integration do
     expect(status).to be_success, "Failed:\n#{output}"
     expect(output).to match(/installed vault_fileuri/i)
   end
+
+  it "accepts a vault:// URI with an absolute path", :aggregate_failures do
+    output, status = run_gem_install("vault_uri_abs", "--source vault://$WORKDIR/test.gemv", "true")
+    expect(status).to be_success, "Failed:\n#{output}"
+    expect(output).to match(/installed vault_uri_abs/i)
+  end
 end
