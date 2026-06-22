@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.3] - 2026-06-22
 
 ### Added
-- `gemvault plugin-heal` command to recover from a broken `bundler-source-vault`
+- `gemvault doctor` command to recover from a broken `bundler-source-vault`
   plugin index entry after its path-installed source directory has been renamed
   (issue #1).
 

@@ -15,11 +15,11 @@ module Gemvault
       # Uninstalling clears the broken entry; re-running bundle install
       # triggers Bundler to reinstall the plugin against whatever the
       # current Gemfile declares. Run this from the project directory.
-      class PluginHeal < Command
+      class Doctor < Command
         description "Clear a broken bundler-source-vault plugin index entry and reinstall it"
 
         def run
-          system("bundle", "plugin", "uninstall", "bundler-source-vault")
+          system("bundle", "plugin", "uninstall", "bundler-source-vault", exception: true)
           exec("bundle", "install")
         end
       end

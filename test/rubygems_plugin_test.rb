@@ -4,7 +4,6 @@ require "rubygems/resolver"
 require "rubygems_plugin"
 require "rubygems/resolver/vault_set"
 
-# Tests for Gem::Source::Vault spec loading, fetching, and comparison.
 class RubygemsSourceVaultTest < Minitest::Test
   include GemvaultTestHelper
 
@@ -22,8 +21,6 @@ class RubygemsSourceVaultTest < Minitest::Test
   def teardown
     FileUtils.rm_rf(@tmpdir)
   end
-
-  # --- Gem::Source::Vault ---
 
   def test_load_specs_released
     source = Gem::Source::Vault.new(@vault_path)
@@ -46,7 +43,6 @@ class RubygemsSourceVaultTest < Minitest::Test
     source = Gem::Source::Vault.new(@vault_path)
     latest = source.load_specs(:latest)
     by_name = latest.map { |t| [t.name, t.version.to_s] }.sort
-    # latest alpha should be 2.0.0
     assert_includes by_name, ["alpha", "2.0.0"]
     refute_includes by_name, ["alpha", "1.0.0"]
   end
@@ -171,7 +167,6 @@ class RubygemsSourceVaultTest < Minitest::Test
   end
 end
 
-# Tests for file:// and vault:// scheme handling in Gem::Source::Vault.
 class RubygemsSourceVaultUriTest < Minitest::Test
   def setup
     @vault_path = Pathname(Dir.mktmpdir("gemvault_uri_test")) / "test.gemv"
@@ -204,7 +199,6 @@ class RubygemsSourceVaultUriTest < Minitest::Test
   end
 end
 
-# Tests for Gem::Resolver::VaultSet dependency resolution.
 class RubygemsResolverVaultSetTest < Minitest::Test
   include GemvaultTestHelper
 
@@ -264,7 +258,6 @@ class RubygemsResolverVaultSetTest < Minitest::Test
   end
 end
 
-# Tests for the RubyGems plugin monkey patches and vault source list handling.
 class RubygemsPluginMonkeyPatchTest < Minitest::Test
   def test_local_remote_options_has_vault_uri_patch
     assert_includes Gem::LocalRemoteOptions.ancestors, Gemvault::AcceptVaultURI

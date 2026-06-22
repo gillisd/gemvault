@@ -3,10 +3,8 @@ require "bundler"
 require "bundler/plugin/api"
 require "bundler/plugin/vault_source"
 
-# Include the Source module directly to avoid plugin registry side effects.
 Bundler::Plugin::VaultSource.include(Bundler::Plugin::API::Source)
 
-# Shared scaffolding for Bundler vault source tests.
 class VaultSourceTestCase < Minitest::Test
   include GemvaultTestHelper
 
@@ -63,7 +61,6 @@ class VaultSourceTestCase < Minitest::Test
   end
 end
 
-# Tests for vault source identity, locking, and comparison.
 class VaultSourceMetadataTest < VaultSourceTestCase
   def test_initialize_resolves_path
     source = create_vault_source(@vault_path)
@@ -114,7 +111,6 @@ class VaultSourceMetadataTest < VaultSourceTestCase
   end
 end
 
-# Tests for fetching gemspecs and building the spec index.
 class VaultSourceGemspecTest < VaultSourceTestCase
   def test_fetch_gemspec_files_returns_all_gems
     source = create_vault_source(@vault_path)
@@ -158,7 +154,6 @@ class VaultSourceGemspecTest < VaultSourceTestCase
   end
 end
 
-# Tests for installing gems from a vault source.
 class VaultSourceInstallTest < VaultSourceTestCase
   def test_install_extracts_to_bundle_path
     source = create_vault_source(@vault_path)
