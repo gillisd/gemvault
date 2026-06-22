@@ -128,17 +128,6 @@ class RubygemsSourceVaultTest < Minitest::Test
     assert_equal "vault at #{@vault_path.expand_path}", source.to_s
   end
 
-  def test_file_uri_strips_scheme
-    source = Gem::Source::Vault.new("file://#{@vault_path}")
-    assert_equal @vault_path.expand_path.to_s, source.path
-  end
-
-  def test_file_uri_equals_plain_path
-    a = Gem::Source::Vault.new("file://#{@vault_path}")
-    b = Gem::Source::Vault.new(@vault_path.to_s)
-    assert_equal a, b
-  end
-
   def test_dependency_resolver_set
     source = Gem::Source::Vault.new(@vault_path)
     set = source.dependency_resolver_set
@@ -179,6 +168,39 @@ class RubygemsSourceVaultTest < Minitest::Test
     vault = Gemvault::Vault.new(@vault_path)
     vault.add(platform_gem)
     vault.close
+  end
+end
+
+# Tests for file:// and vault:// scheme handling in Gem::Source::Vault.
+class RubygemsSourceVaultUriTest < Minitest::Test
+  def setup
+    @vault_path = Pathname(Dir.mktmpdir("gemvault_uri_test")) / "test.gemv"
+  end
+
+  def teardown
+    FileUtils.rm_rf(@vault_path.dirname)
+  end
+
+  def test_file_uri_strips_scheme
+    source = Gem::Source::Vault.new("file://#{@vault_path}")
+    assert_equal @vault_path.expand_path.to_s, source.path
+  end
+
+  def test_file_uri_equals_plain_path
+    a = Gem::Source::Vault.new("file://#{@vault_path}")
+    b = Gem::Source::Vault.new(@vault_path.to_s)
+    assert_equal a, b
+  end
+
+  def test_vault_uri_strips_scheme
+    source = Gem::Source::Vault.new("vault://#{@vault_path}")
+    assert_equal @vault_path.expand_path.to_s, source.path
+  end
+
+  def test_vault_uri_equals_plain_path
+    a = Gem::Source::Vault.new("vault://#{@vault_path}")
+    b = Gem::Source::Vault.new(@vault_path.to_s)
+    assert_equal a, b
   end
 end
 
