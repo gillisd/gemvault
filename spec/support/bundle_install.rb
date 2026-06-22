@@ -19,6 +19,18 @@ module BundleInstall
     'source "$WORKDIR/test.gemv", type: :vault do; gem "vault_test_gem"; end'
   end
 
+  def install_with_relative_vault_path
+    run_bundle(
+      <<~GEMFILE,
+        source "vendor/vendored.gemv", type: :vault do
+          gem "rel_log_gem"
+        end
+      GEMFILE
+      "mkdir vendor\nmv test.gemv vendor/vendored.gemv\nbundle install",
+      gems: [["rel_log_gem", "1.0.0"]],
+    )
+  end
+
   def install_after_vault_rename
     run_bundle(
       <<~GEMFILE,

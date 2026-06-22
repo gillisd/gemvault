@@ -22,7 +22,7 @@ module Bundler
         gem_dir = gem_dir_for(spec.full_name)
         return use_installed_gem(spec, gem_dir) if File.directory?(gem_dir) && !opts[:force]
 
-        Bundler.ui.confirm "Installing #{version_message(spec)} from vault #{File.basename(@vault_path)}"
+        Bundler.ui.confirm "Installing #{version_message(spec)} from vault #{@uri}"
         install_into_bundle(spec, opts)
         spec.post_install_message
       end
@@ -59,7 +59,7 @@ module Bundler
       end
 
       def use_installed_gem(spec, gem_dir)
-        Bundler.ui.debug "Using #{version_message(spec)} from vault #{File.basename(@vault_path)}"
+        Bundler.ui.debug "Using #{version_message(spec)} from vault #{@uri}"
         spec.full_gem_path = gem_dir
         spec.loaded_from = File.join(gem_dir, "#{spec.full_name}.gemspec")
         nil

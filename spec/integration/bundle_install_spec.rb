@@ -125,4 +125,12 @@ RSpec.describe "bundle install with vault source", :integration do
       expect(output).not_to include("Could not find vault")
     end
   end
+
+  context "when the Gemfile references the vault by a relative path" do
+    it "logs the relative path as written, not the basename", :aggregate_failures do
+      output, status = install_with_relative_vault_path
+      expect(status).to be_success, "bundle install failed:\n#{output}"
+      expect(output).to include("from vault vendor/vendored.gemv")
+    end
+  end
 end
