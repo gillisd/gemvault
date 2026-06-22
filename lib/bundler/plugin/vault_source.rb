@@ -8,10 +8,11 @@ module Bundler
       def initialize(opts)
         super
         @vault_path = resolve_vault_path(@uri)
-        validate_vault_exists!
       end
 
       def fetch_gemspec_files
+        validate_vault_exists!
+
         Gemvault::Vault.open(@vault_path) do |vault|
           vault.gem_entries.map { |entry| gemspec_file_for(vault, entry) }
         end
