@@ -140,7 +140,7 @@ Name: Gemvault pollutes project dir with plugin files in .bundle
 Description: Why is it not using the plugin that is already installed globally?
 Status: open
 
-Id: 5
+Id: 8
 Updated: Wed, 22 Apr 2026 18:24:09 -0400
 Name: Installing gem via rubygems fails to resolve absolute path
 Description: Consider the following:
@@ -151,4 +151,10 @@ Description: Consider the following:
 + ```
 + 
 + Notice an absolute path was passed to --source, yet it tried to resolve locally
+Status: open
+
+Id: 9
+Updated: Sun, 28 Jun 2026 00:17:27 -0400
+Name: Gemvault commands should also be able to accept a uri
+Description: e.g. gemvault list vault:///Users/davidgillis/repos/vault/rubylib/myvault.gemv
 Status: open
