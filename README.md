@@ -58,7 +58,7 @@ When Bundler sees `type: :vault` in your Gemfile, it auto-installs the `bundler-
 
 The RubyGems plugin works similarly: `gem install --source vault.gemv` loads specs and extracts gems on demand.
 
-## Recovering from a broken bundler plugin path: `gemvault plugin-heal`
+## Recovering from a broken bundler plugin path: `gemvault doctor`
 
 If you installed `bundler-source-vault` from a local path (e.g. `plugin "bundler-source-vault", path: "/path/to/gemvault"` in a Gemfile), bundler records that absolute path in its plugin index. Moving, renaming, or deleting the source directory afterwards invalidates the stored path, and the next `bundle install` prints:
 
@@ -72,10 +72,10 @@ Once the plugin skips loading, bundler crashes with `NoMethodError: undefined me
 To recover, update the Gemfile to point at the new path and run:
 
 ```bash
-gemvault plugin-heal
+gemvault doctor
 ```
 
-`plugin-heal` clears the broken entry from bundler's plugin index (`bundle plugin uninstall bundler-source-vault`) and then re-runs `bundle install`, which reinstalls the plugin against whatever the current Gemfile declares. Run it from your project directory.
+`doctor` clears the broken entry from bundler's plugin index (`bundle plugin uninstall bundler-source-vault`) and then re-runs `bundle install`, which reinstalls the plugin against whatever the current Gemfile declares. Run it from your project directory.
 
 The published `bundler-source-vault` gem installed from rubygems.org is immune to this: it lives in a bundler-managed directory that does not move.
 

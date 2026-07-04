@@ -1,6 +1,5 @@
 require "test_helper"
 
-# Shared scaffolding for Gemvault::Vault tests.
 class VaultTestCase < Minitest::Test
   include GemvaultTestHelper
 
@@ -34,7 +33,6 @@ class VaultTestCase < Minitest::Test
   end
 end
 
-# Tests for creating, opening, and closing a vault.
 class VaultLifecycleTest < VaultTestCase
   def test_create_new_vault
     vault = create_vault
@@ -118,7 +116,6 @@ class VaultLifecycleTest < VaultTestCase
   end
 end
 
-# Tests for adding, removing, and counting gems in a vault.
 class VaultMutationTest < VaultTestCase
   def test_add_single_gem
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
@@ -212,7 +209,6 @@ class VaultMutationTest < VaultTestCase
   end
 end
 
-# Tests for gem_entries, GemEntry, and with_gem_file.
 class VaultEntriesTest < VaultTestCase
   def test_gem_entries_empty
     vault = create_vault
@@ -312,7 +308,6 @@ class VaultEntriesTest < VaultTestCase
   end
 end
 
-# Tests for gem_data, specs, platform gems, and dependencies.
 class VaultContentTest < VaultTestCase
   def test_gem_data_returns_matching_bytes
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)

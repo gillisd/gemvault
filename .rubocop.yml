@@ -146,6 +146,7 @@ Style/Documentation:
   Enabled: true
   Exclude:
     - "spec/**/*"
+    - "test/**/*"
 
 # Trailing commas in multiline literals and arguments.
 Style/TrailingCommaInArrayLiteral:

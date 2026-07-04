@@ -105,16 +105,16 @@ RSpec.describe "bundle install with vault source", :integration do
         echo "===BROKEN_STATE_DONE==="
 
         sed -i 's|/tmp/shim-a|/tmp/shim-b|' Gemfile
-        gemvault plugin-heal 2>&1
+        gemvault doctor 2>&1
       SH
     end
 
-    it "crashes until `gemvault plugin-heal` clears the index and reinstalls the plugin", :aggregate_failures do
+    it "crashes until `gemvault doctor` clears the index and reinstalls the plugin", :aggregate_failures do
       output, = podman_run(rename_repro_script)
       _, _, after_initial = output.partition("===INITIAL_INSTALL_DONE===")
       broken, _, after_heal = after_initial.partition("===BROKEN_STATE_DONE===")
       expect(broken).to match(BROKEN_PLUGIN_PATH_ERROR), "renamed plugin path should error:\n#{broken}"
-      expect(after_heal).to include("Bundle complete!"), "plugin-heal should restore install:\n#{after_heal}"
+      expect(after_heal).to include("Bundle complete!"), "doctor should restore install:\n#{after_heal}"
     end
   end
 

@@ -1,4 +1,5 @@
 require "gemvault/vault"
+require "uri"
 
 ##
 # A source backed by a .gemv vault file (SQLite archive of .gem blobs).
@@ -9,11 +10,12 @@ require "gemvault/vault"
 class Gem::Source::Vault < Gem::Source
   include Gem::UserInteraction
 
+  VAULT_URI_SCHEMES = %w[file vault].freeze
+
   attr_reader :path
 
   def initialize(path)
-    path = path.to_s.sub(%r{^(?:file|vault)://}, "")
-    @path = File.expand_path(path)
+    @path = File.expand_path(filesystem_path(path))
     super(@path)
     @uri = @path
     @specs = nil
@@ -88,6 +90,13 @@ class Gem::Source::Vault < Gem::Source
   end
 
   private
+
+  def filesystem_path(path)
+    uri = URI.parse(path.to_s)
+    VAULT_URI_SCHEMES.include?(uri.scheme) ? uri.path : path.to_s
+  rescue URI::InvalidURIError
+    path.to_s
+  end
 
   def select_tuples(type)
     case type

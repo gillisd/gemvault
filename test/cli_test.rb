@@ -1,7 +1,6 @@
 require "test_helper"
 require "gemvault/cli"
 
-# Shared scaffolding for gemvault CLI command tests.
 class CLITestCase < Minitest::Test
   include GemvaultTestHelper
 
@@ -29,7 +28,6 @@ class CLITestCase < Minitest::Test
   end
 end
 
-# Tests for the `gemvault new` command.
 class CLINewTest < CLITestCase
   def test_new_creates_vault
     assert_equal 0, run_cli("new", "myvault")
@@ -58,7 +56,6 @@ class CLINewTest < CLITestCase
   end
 end
 
-# Tests for the `gemvault add` command.
 class CLIAddTest < CLITestCase
   def test_add_single_gem
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
@@ -110,7 +107,6 @@ class CLIAddTest < CLITestCase
   end
 end
 
-# Tests for the `gemvault list` command.
 class CLIListTest < CLITestCase
   PLATFORM_LISTING_PATTERN = /native-1\.0\.0 \(x86_64-linux\)/
 
@@ -150,7 +146,6 @@ class CLIListTest < CLITestCase
   end
 end
 
-# Tests for the `gemvault remove` command.
 class CLIRemoveTest < CLITestCase
   def test_remove_specific_version
     gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
@@ -195,7 +190,6 @@ class CLIRemoveTest < CLITestCase
   end
 end
 
-# Tests for the `gemvault extract` command.
 class CLIExtractTest < CLITestCase
   EXTRACTED_GEM_PATTERN = /Extracted foo-1\.0\.0\.gem/
 
@@ -253,7 +247,6 @@ class CLIExtractTest < CLITestCase
   end
 end
 
-# Tests for top-level gemvault commands (version, help, unknown).
 class CLITopLevelTest < CLITestCase
   def test_version
     assert_equal 0, run_cli("--version")
