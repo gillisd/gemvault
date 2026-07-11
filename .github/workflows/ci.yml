@@ -45,3 +45,23 @@ jobs:
       run: bundle exec rake spec:build
     - name: Run integration specs
       run: bundle exec rake spec:integration
+
+  jruby:
+    runs-on: ubuntu-latest
+    env:
+      JAVA_OPTS: "--enable-native-access=ALL-UNNAMED"
+      BUNDLE_FROZEN: "false"
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '21'
+    - name: Set up JRuby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: jruby-10.1.0.0
+        bundler-cache: true
+    - name: Run unit tests
+      run: bundle exec rake test
