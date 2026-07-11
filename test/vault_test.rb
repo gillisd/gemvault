@@ -87,7 +87,7 @@ class VaultLifecycleTest < VaultTestCase
       assert_instance_of Gemvault::Vault, vault
       yielded_vault = vault
     end
-    assert_raises(ArgumentError) { yielded_vault.size }
+    assert_predicate yielded_vault, :closed?
   end
 
   def test_open_closes_on_raise
@@ -99,7 +99,7 @@ class VaultLifecycleTest < VaultTestCase
         raise "boom"
       end
     end
-    assert_raises(ArgumentError) { yielded_vault.size }
+    assert_predicate yielded_vault, :closed?
   end
 
   def test_open_without_block_raises
