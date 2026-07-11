@@ -1,6 +1,5 @@
 require_relative "../../test/support/gem_factory"
 require "tmpdir"
-require "pathname"
 require "fileutils"
 
 module GemFixtures
@@ -18,7 +17,7 @@ module GemFixtures
 
   def corrupt_gem_blob(path)
     data = File.binread(path)
-    idx = data.index("PK") || data.bytesize - 1
+    idx = data.bytesize / 2
     data.setbyte(idx, data.getbyte(idx) ^ 0xFF)
     File.binwrite(path, data)
   end

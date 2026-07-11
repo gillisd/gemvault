@@ -3,8 +3,12 @@ require "gemvault/manifest"
 RSpec.describe Gemvault::Manifest do
   let(:record) do
     Gemvault::Manifest::Record.new(
-      name: "foo", version: "1.0.0", platform: "ruby",
-      created_at: "2026-07-11 00:00:00", sha256: "abc", encrypted: false,
+      name: "foo",
+      version: "1.0.0",
+      platform: "ruby",
+      created_at: "2026-07-11 00:00:00",
+      sha256: "abc",
+      encrypted: false,
     )
   end
 
