@@ -61,4 +61,20 @@ RSpec.describe Gemvault::Manifest do
       expect(described_class.parse(manifest.to_json).records).to eq([record])
     end
   end
+
+  describe "#format_version" do
+    it "defaults to the current FORMAT_VERSION for a new manifest" do
+      expect(described_class.empty(created_at: "t").format_version).to eq(2)
+    end
+
+    it "reads the declared version from parsed JSON (as an integer)" do
+      json = described_class.empty(created_at: "t").to_json.sub('"vault_version": 2', '"vault_version": 7')
+      expect(described_class.parse(json).format_version).to eq(7)
+    end
+
+    it "tolerates a legacy string vault_version" do
+      json = %({"vault_version":"2","format":"tarvault","created_at":"t","gems":[]})
+      expect(described_class.parse(json).format_version).to eq(2)
+    end
+  end
 end

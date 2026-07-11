@@ -8,7 +8,7 @@ module Gemvault
   # checks never require reading every gem blob.
   class Manifest
     FILENAME = "manifest.json".freeze
-    FORMAT_VERSION = "2".freeze
+    FORMAT_VERSION = 2
     DIGEST = "SHA256".freeze
 
     # One gem's metadata inside a manifest.
@@ -33,22 +33,27 @@ module Gemvault
     def self.parse(json)
       data = JSON.parse(json)
       records = data.fetch("gems", []).map { |g| Record.new(**g.transform_keys(&:to_sym)) }
-      new(created_at: data["created_at"], records: records)
+      new(
+        created_at: data["created_at"],
+        records: records,
+        format_version: (data["vault_version"] || FORMAT_VERSION).to_i,
+      )
     end
 
-    attr_reader :records, :created_at
+    attr_reader :records, :created_at, :format_version
 
-    def initialize(created_at:, records:)
+    def initialize(created_at:, records:, format_version: FORMAT_VERSION)
       @created_at = created_at
       @records = records
+      @format_version = format_version
     end
 
     def with(record)
-      self.class.new(created_at: created_at, records: records + [record])
+      self.class.new(created_at: created_at, records: records + [record], format_version: format_version)
     end
 
     def without(dropped)
-      self.class.new(created_at: created_at, records: records - dropped)
+      self.class.new(created_at: created_at, records: records - dropped, format_version: format_version)
     end
 
     def find(name, version, platform)
