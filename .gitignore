@@ -11,5 +11,6 @@
 Gemfile.lock
 *.gem
 *.gemv
+!spec/fixtures/*.gemv
 .rspec_status
 references
