@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Tarball vault format ("Tarvault"): new vaults are portable tarballs with a
+  `manifest.json` index and per-gem SHA256 integrity, with no sqlite3 dependency
+  on the read/write path (works on JRuby). The original SQLite format
+  ("Dbvault") is still read transparently.
+- Vaults carry an explicit on-disk **format version**, decoupled from the gem
+  version and validated on open; gemvault refuses a vault written by a newer
+  gemvault instead of misreading it.
+- `gemvault upgrade` migrates a vault to the current format (e.g. SQLite → tar),
+  preserving every gem and timestamp, writing a `.bak` backup by default, with
+  `--dry-run` and `--no-backup` flags. It is a no-op on an already-current vault.
+
 ## [0.1.3] - 2026-06-22
 
 ### Added

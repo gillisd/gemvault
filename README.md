@@ -2,7 +2,9 @@
 
 A gem server in a file. No HTTP. No infrastructure.
 
-A `.gemv` file is a SQLite database that contains Ruby gems. Commit it to your repo, drop it on S3, email it, put it on a USB drive — Bundler and RubyGems read from it directly. Private gems without running a server.
+A `.gemv` file is a self-contained archive that contains Ruby gems. Commit it to your repo, drop it on S3, email it, put it on a USB drive — Bundler and RubyGems read from it directly. Private gems without running a server.
+
+New vaults are portable tarballs (no runtime dependencies, works on JRuby); the original SQLite format is still read transparently. See [Vault format versioning](#vault-format-versioning).
 
 ## Installation
 
@@ -44,14 +46,30 @@ gemvault add myvault.gemv foo.gem bar.gem     # add .gem files
 gemvault list myvault.gemv                    # list contents
 gemvault remove myvault.gemv foo 1.0.0        # remove a gem
 gemvault extract myvault.gemv foo -o vendor/  # extract .gem file to disk
+gemvault upgrade myvault.gemv                 # migrate to the current format
 ```
+
+## Vault format versioning
+
+Every vault records an on-disk **format version** — `1` for the original SQLite format, `2` for the current tarball format. This version lives inside the file and is **independent of the gemvault gem version**: it changes only when the storage layout changes, so upgrading the gem never invalidates your vaults.
+
+gemvault reads any format up to the one it understands and **refuses a vault written by a newer gemvault** with a clear message (rather than silently misreading it). To migrate an older vault to the current format:
+
+```bash
+gemvault upgrade myvault.gemv              # e.g. SQLite (v1) -> tarball (v2)
+gemvault upgrade myvault.gemv --dry-run    # show the plan, change nothing
+gemvault upgrade myvault.gemv --no-backup  # skip the default myvault.gemv.bak copy
+```
+
+`upgrade` preserves every gem and its timestamp, writes `myvault.gemv.bak` by default, and is a no-op on an already-current vault.
 
 ## How It Works
 
-A `.gemv` file is a SQLite database containing gem metadata and raw `.gem` blobs. You can inspect it directly:
+A `.gemv` file is a self-contained archive of gem metadata and raw `.gem` blobs. A current-format (tarball) vault has a `manifest.json` first entry followed by the `.gem` files, inspectable with standard tools:
 
 ```bash
-sqlite3 myvault.gemv "SELECT name, version, platform FROM gems"
+tar -tf myvault.gemv                 # tarball (v2) vault
+sqlite3 myvault.gemv "SELECT name, version, platform FROM gems"   # SQLite (v1) vault
 ```
 
 When Bundler sees `type: :vault` in your Gemfile, it auto-installs the `bundler-source-vault` plugin from rubygems.org. The plugin implements the `Bundler::Plugin::API::Source` interface — it reads gemspecs from the vault, participates in dependency resolution, then extracts and installs gems from the vault's blob storage.

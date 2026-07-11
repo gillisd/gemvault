@@ -148,3 +148,22 @@ spike scope.
 - List-time integrity verification, if wanted.
 - Unify the two backends' error taxonomy and temp-file logic once Tarvault is
   confirmed as "the way."
+
+## Update — format versioning & `gemvault upgrade` (implemented)
+
+A follow-up shipped explicit format versioning and a migration command:
+
+- Each vault records an on-disk **format version** (`1` = Dbvault, `2` = Tarvault)
+  read and validated on open. It is **decoupled from the gemvault gem version** —
+  it bumps only when the byte layout changes. `Vault::UnsupportedVersionError` is
+  raised for a vault newer than `Vault::CURRENT_FORMAT` instead of misreading it,
+  closing the "reads fail open" hole.
+- `Vault.backend_for` now positively identifies the container (`:sqlite`/`:tar`/
+  `:unknown`) ahead of parsing and refuses unrecognized envelopes.
+- `Gemvault::VaultUpgrade` (+ `gemvault upgrade`) reads a vault through its
+  existing backend and rewrites it in the current format with an atomic swap,
+  a default `.bak` backup, `--dry-run`, idempotency, and `created_at` preservation
+  (the write path gained `add(created_at:)`).
+
+Still open from the list above: optional `--format` on `new`, streaming rewrite,
+optional `sqlite3` dependency, and encryption.
