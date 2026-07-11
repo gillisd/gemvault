@@ -8,9 +8,7 @@ end
 
 require "rspec/core/rake_task"
 
-RSpec::Core::RakeTask.new(:spec) do |t|
-  t.exclude_pattern = "spec/integration/**/*_spec.rb"
-end
+RSpec::Core::RakeTask.new(:spec)
 
 require "rubocop/rake_task"
 RuboCop::RakeTask.new
@@ -29,18 +27,14 @@ namespace :spec do
        "-f", "Dockerfile.test",
        "."
   end
-
-  desc "Run container-backed integration specs (requires Podman; run spec:build first)"
-  RSpec::Core::RakeTask.new(:integration) do |t|
-    t.pattern = "spec/integration/**/*_spec.rb"
-  end
 end
 
 namespace :shim do
-  desc "Build the bundler-source-vault shim gem"
-  task :build do
-    Dir.chdir("shim") { sh "gem build bundler-source-vault.gemspec" }
-  end
+  Bundler::GemHelper.install_tasks dir: "shim", name: "bundler-source-vault"
+  CLOBBER.include 'shim/pkg'
 end
+
+Rake::Task[:build].enhance ['shim:build']
+Rake::Task[:release].enhance ['shim:release']
 
 task default: [:test, :spec, :rubocop]
