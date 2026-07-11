@@ -19,14 +19,28 @@ module Gemvault
         def run(vault)
           upgrade = Gemvault::VaultUpgrade.new(vault, backup: !options[:no_backup])
           summary = upgrade.plan
-          return puts("#{vault} is already current (format #{summary.to_version})") if summary.no_op?
-          return puts("Would upgrade #{vault}: #{summary} (#{summary.gem_count} gems)") if options[:dry_run]
+          return report_no_op(vault, summary) if summary.no_op?
+          return report_dry_run(vault, summary) if options[:dry_run]
 
           upgrade.call
-          puts "Upgraded #{vault}: #{summary} (#{summary.gem_count} gems)"
+          report_upgraded(vault, summary)
         rescue Gemvault::Vault::Error => e
           print_error(e.message)
           exit(1)
+        end
+
+        private
+
+        def report_no_op(vault, summary)
+          puts "#{vault} is already current (format #{summary.to_version})"
+        end
+
+        def report_dry_run(vault, summary)
+          puts "Would upgrade #{vault}: #{summary} (#{summary.gem_count} gems)"
+        end
+
+        def report_upgraded(vault, summary)
+          puts "Upgraded #{vault}: #{summary} (#{summary.gem_count} gems)"
         end
       end
     end
