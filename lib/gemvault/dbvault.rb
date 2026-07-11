@@ -1,6 +1,5 @@
 require "sqlite3"
 require "rubygems/package"
-require "fileutils"
 require_relative "vault"
 require_relative "vault_session"
 require_relative "gem_extraction"
@@ -27,7 +26,7 @@ module Gemvault
       gem_path = File.expand_path(gem_path)
       raise Vault::NotFoundError, "Gem file not found: #{gem_path}" unless File.file?(gem_path)
 
-      spec = load_gem_spec(gem_path)
+      spec = spec_from_gem_file(gem_path)
       raise_if_duplicate(spec)
       insert_gem(gem_path, spec)
     end
@@ -50,10 +49,6 @@ module Gemvault
       raise Vault::NotFoundError, "Gem not found: #{name}-#{version} (#{platform})" unless row
 
       row["data"]
-    end
-
-    def specs
-      gem_entries.map { |entry| spec_from_blob(entry.name, entry.version, entry.platform) }
     end
 
     def gem_entries
@@ -94,12 +89,6 @@ module Gemvault
       db = SQLite3::Database.new(@path)
       db.results_as_hash = true
       db
-    end
-
-    def load_gem_spec(gem_path)
-      Gem::Package.new(gem_path).spec
-    rescue StandardError => e
-      raise Vault::InvalidGemError, "Invalid gem file #{gem_path}: #{e.message}"
     end
 
     def raise_if_duplicate(spec)

@@ -27,7 +27,7 @@ module Gemvault
       gem_path = File.expand_path(gem_path)
       raise Vault::NotFoundError, "Gem file not found: #{gem_path}" unless File.file?(gem_path)
 
-      spec = load_spec(gem_path)
+      spec = spec_from_gem_file(gem_path)
       raise_if_duplicate(spec)
       store(spec, File.binread(gem_path))
     end
@@ -50,10 +50,6 @@ module Gemvault
 
     def gem_entries
       @manifest.gem_entries
-    end
-
-    def specs
-      gem_entries.map { |e| spec_from_blob(e.name, e.version, e.platform) }
     end
 
     def size
@@ -138,12 +134,6 @@ module Gemvault
       return bytes if Manifest.digest(bytes) == record.sha256
 
       raise Vault::Error, "Integrity check failed for #{record.filename}"
-    end
-
-    def load_spec(gem_path)
-      Gem::Package.new(gem_path).spec
-    rescue StandardError => e
-      raise Vault::InvalidGemError, "Invalid gem file #{gem_path}: #{e.message}"
     end
 
     def timestamp
