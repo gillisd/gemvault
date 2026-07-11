@@ -1,4 +1,5 @@
 require_relative "gemvault/version"
+require_relative "gemvault/deprecation"
 require_relative "gemvault/vault"
 
 ##

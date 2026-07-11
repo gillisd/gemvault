@@ -15,6 +15,7 @@ module Gemvault
     class DuplicateGemError < Error; end
     class InvalidGemError < Error; end
     class UnsupportedVersionError < Error; end
+    class ReadOnlyError < Error; end
 
     SQLITE_MAGIC = "SQLite format 3#{0.chr}".freeze
     TAR_MAGIC = "ustar".freeze

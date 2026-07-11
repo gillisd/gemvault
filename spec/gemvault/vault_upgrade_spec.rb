@@ -53,6 +53,12 @@ RSpec.describe Gemvault::VaultUpgrade do
       expect(File.exist?("#{vault_path}.bak")).to be(true)
     end
 
+    it "does not emit the SQLite deprecation warning while migrating" do
+      build_dbvault(["foo", "1.0.0"])
+      described_class.new(vault_path).call
+      expect(Gemvault::Deprecation.output.string).to be_empty
+    end
+
     it "skips the backup when backup: false" do
       build_dbvault(["foo", "1.0.0"])
       described_class.new(vault_path, backup: false).call

@@ -5,6 +5,7 @@ require_relative "vault_session"
 require_relative "gem_extraction"
 require_relative "gem_entry"
 require_relative "gem_reference"
+require_relative "deprecation"
 
 module Gemvault
   # SQLite-backed vault (a "Dbvault"): stores .gem blobs and metadata in a
@@ -19,10 +20,12 @@ module Gemvault
 
     def initialize(path, create: false)
       @path = File.expand_path(path)
+      @writable = create
       create ? create_vault! : open_vault!
     end
 
     def add(gem_path, created_at: nil)
+      ensure_writable!
       gem_path = File.expand_path(gem_path)
       raise Vault::NotFoundError, "Gem file not found: #{gem_path}" unless File.file?(gem_path)
 
@@ -32,6 +35,7 @@ module Gemvault
     end
 
     def remove(reference)
+      ensure_writable!
       case reference
       in GemReference::AnyVersion[name:]
         @db.execute("DELETE FROM gems WHERE name = ?", [name])
@@ -89,6 +93,19 @@ module Gemvault
       validate_sqlite!
       @db = new_database
       Vault.assert_readable!(format_version, @path)
+      Deprecation.warn_once(deprecation_message)
+    end
+
+    def ensure_writable!
+      return if @writable
+
+      raise Vault::ReadOnlyError,
+            "#{@path} uses the deprecated read-only SQLite format. Migrate it first: gemvault upgrade #{@path}"
+    end
+
+    def deprecation_message
+      "SQLite vaults are deprecated and read-only; support will be removed in a future release (0.3-0.5). " \
+        "Migrate #{@path} with: gemvault upgrade #{@path}"
     end
 
     def new_database

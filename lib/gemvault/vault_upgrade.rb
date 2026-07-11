@@ -1,5 +1,6 @@
 require "fileutils"
 require_relative "vault"
+require_relative "deprecation"
 
 module Gemvault
   # Migrates a vault to the current storage format by reading it through its
@@ -24,8 +25,10 @@ module Gemvault
     end
 
     def plan
-      Vault.open(@path) do |vault|
-        Plan.new(from_version: vault.format_version, to_version: Vault::CURRENT_FORMAT, gem_count: vault.size)
+      Deprecation.silence do
+        Vault.open(@path) do |vault|
+          Plan.new(from_version: vault.format_version, to_version: Vault::CURRENT_FORMAT, gem_count: vault.size)
+        end
       end
     end
 
@@ -58,10 +61,12 @@ module Gemvault
     end
 
     def copy_current_format(tmp)
-      Vault.open(@path) do |old|
-        target = Vault.new(tmp, create: true)
-        old.gem_entries.each { |entry| copy_gem(old, target, entry) }
-        target.close
+      Deprecation.silence do
+        Vault.open(@path) do |old|
+          target = Vault.new(tmp, create: true)
+          old.gem_entries.each { |entry| copy_gem(old, target, entry) }
+          target.close
+        end
       end
     end
 
