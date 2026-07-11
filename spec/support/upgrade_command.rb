@@ -14,6 +14,13 @@ module UpgradeCommand
     SH
   end
 
+  def run_on_dbvault(gems:, command:)
+    podman_run(<<~SH)
+      #{dbvault_preamble(gems)}
+      #{command}
+    SH
+  end
+
   def dbvault_preamble(gems)
     gem_builds = gems.map { |name, version| FixtureScript.build_gem(name, version, {}, {}) }.join("\n")
     paths = gems.map { |name, version| "$WORKDIR/gems/#{name}/#{name}-#{version}.gem" }.join(" ")

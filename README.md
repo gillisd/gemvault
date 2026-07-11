@@ -53,7 +53,9 @@ gemvault upgrade myvault.gemv                 # migrate to the current format
 
 Every vault records an on-disk **format version** — `1` for the original SQLite format, `2` for the current tarball format. This version lives inside the file and is **independent of the gemvault gem version**: it changes only when the storage layout changes, so upgrading the gem never invalidates your vaults.
 
-gemvault reads any format up to the one it understands and **refuses a vault written by a newer gemvault** with a clear message (rather than silently misreading it). To migrate an older vault to the current format:
+gemvault reads any format up to the one it understands and **refuses a vault written by a newer gemvault** with a clear message (rather than silently misreading it).
+
+The SQLite format (`1`) is **deprecated and read-only**: you can still read and migrate an existing SQLite vault, but `add`/`remove` are refused and print `gemvault upgrade`. Opening one shows a one-time deprecation notice (silence it with `GEMVAULT_SILENCE_DEPRECATIONS=1`). SQLite support will be removed in a future release (0.3–0.5). To migrate a vault to the current format:
 
 ```bash
 gemvault upgrade myvault.gemv              # e.g. SQLite (v1) -> tarball (v2)

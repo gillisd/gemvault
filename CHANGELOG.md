@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the tarball path (including JRuby); `sqlite3` is loaded lazily only to read a
   legacy SQLite vault, with a clear error if it is not installed.
 
+### Deprecated
+- The SQLite vault format is deprecated and now **read-only**: existing SQLite
+  vaults can be read and migrated but no longer written (`add`/`remove` raise and
+  point at `gemvault upgrade`). Opening one prints a one-time deprecation notice
+  (silenceable with `GEMVAULT_SILENCE_DEPRECATIONS=1`). SQLite support will be
+  removed in a future release (0.3-0.5); migrate with `gemvault upgrade`.
+
 ## [0.1.3] - 2026-06-22
 
 ### Added

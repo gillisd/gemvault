@@ -170,5 +170,17 @@ A follow-up shipped explicit format versioning and a migration command:
   (the write path gained `add(created_at:)`).
 
 `sqlite3` is now optional (removed from the gemspec, loaded lazily, clear error
-when absent). Still open: streaming rewrite and encryption. There is no
-`gemvault new --format` flag by design — Tarvault is the only write format.
+when absent). There is no `gemvault new --format` flag by design — Tarvault is
+the only write format.
+
+The Dbvault deprecation lifecycle is decided and phase 1 is shipped:
+
+- **Now:** SQLite vaults are **read-only** (`Dbvault#add`/`#remove` raise
+  `Vault::ReadOnlyError` → `gemvault upgrade`), reads still work, and opening one
+  emits a once-per-process notice via `Gemvault::Deprecation` (stderr, silenceable
+  with `GEMVAULT_SILENCE_DEPRECATIONS=1`, suppressed during `gemvault upgrade`).
+  "Writable" tracks *created-this-session* so migration/legacy tooling that
+  constructs a Dbvault directly still works.
+- **0.3–0.5:** Dbvault removed entirely.
+
+Still open: streaming rewrite and encryption.
