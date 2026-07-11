@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.description = "SQLite-backed .gemv archives for bundling and distributing multiple gems as a single file"
   spec.homepage = "https://github.com/gillisd/gemvault"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 4.0.1"
+  spec.required_ruby_version = ">= 3.4.8"
 
   gemspec_file = File.basename(__FILE__)
   files = begin
