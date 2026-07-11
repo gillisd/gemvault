@@ -40,9 +40,9 @@ module Gemvault
 
     private
 
-    def each_entry(&block)
+    def each_entry(&)
       File.open(@path, "rb") do |io|
-        Gem::Package::TarReader.new(io) { |reader| reader.each_entry(&block) }
+        Gem::Package::TarReader.new(io) { |reader| reader.each_entry(&) }
       end
     end
 
