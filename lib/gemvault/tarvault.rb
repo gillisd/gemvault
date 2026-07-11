@@ -23,13 +23,13 @@ module Gemvault
       create ? create_vault! : load_manifest!
     end
 
-    def add(gem_path)
+    def add(gem_path, created_at: nil)
       gem_path = File.expand_path(gem_path)
       raise Vault::NotFoundError, "Gem file not found: #{gem_path}" unless File.file?(gem_path)
 
       spec = spec_from_gem_file(gem_path)
       raise_if_duplicate(spec)
-      store(spec, File.binread(gem_path))
+      store(spec, File.binread(gem_path), created_at || timestamp)
     end
 
     def remove(reference)
@@ -93,8 +93,8 @@ module Gemvault
       json
     end
 
-    def store(spec, bytes)
-      record = build_record(spec, bytes)
+    def store(spec, bytes, created_at)
+      record = build_record(spec, bytes, created_at)
       @manifest = @manifest.with(record)
       rewrite(@archive.gem_pairs + [[record.filename, bytes]])
     end
@@ -108,12 +108,12 @@ module Gemvault
       @archive.gem_pairs.reject { |pair| names.include?(pair.first) }
     end
 
-    def build_record(spec, bytes)
+    def build_record(spec, bytes, created_at)
       Manifest::Record.new(
         name: spec.name,
         version: spec.version.to_s,
         platform: spec.platform.to_s,
-        created_at: timestamp,
+        created_at: created_at,
         sha256: Manifest.digest(bytes),
         encrypted: false,
       )

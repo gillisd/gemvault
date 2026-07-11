@@ -38,6 +38,13 @@ RSpec.describe Gemvault::Tarvault do
       create { |v| expect { v.add(gem_file) }.to change { v.size }.from(0).to(1) }
     end
 
+    it "preserves a supplied created_at" do
+      create do |v|
+        v.add(gem_file, created_at: "2000-01-01 00:00:00")
+        expect(v.gem_entries.first.created_at).to eq("2000-01-01 00:00:00")
+      end
+    end
+
     it "raises Vault::NotFoundError for a missing gem file" do
       create { |v| expect { v.add(gem_dir / "nope.gem") }.to raise_error(Gemvault::Vault::NotFoundError) }
     end

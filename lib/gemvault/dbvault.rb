@@ -22,13 +22,13 @@ module Gemvault
       create ? create_vault! : open_vault!
     end
 
-    def add(gem_path)
+    def add(gem_path, created_at: nil)
       gem_path = File.expand_path(gem_path)
       raise Vault::NotFoundError, "Gem file not found: #{gem_path}" unless File.file?(gem_path)
 
       spec = spec_from_gem_file(gem_path)
       raise_if_duplicate(spec)
-      insert_gem(gem_path, spec)
+      insert_gem(gem_path, spec, created_at || timestamp)
     end
 
     def remove(reference)
@@ -108,12 +108,16 @@ module Gemvault
             "Gem already in vault: #{spec.name}-#{spec.version} (#{spec.platform})"
     end
 
-    def insert_gem(gem_path, spec)
-      data = File.binread(gem_path)
+    def insert_gem(gem_path, spec, created_at)
       @db.execute(
-        "INSERT INTO gems (name, version, platform, data) VALUES (?, ?, ?, ?)",
-        [spec.name, spec.version.to_s, spec.platform.to_s, SQLite3::Blob.new(data)],
+        "INSERT INTO gems (name, version, platform, data, created_at) VALUES (?, ?, ?, ?, ?)",
+        [spec.name, spec.version.to_s, spec.platform.to_s,
+         SQLite3::Blob.new(File.binread(gem_path)), created_at],
       )
+    end
+
+    def timestamp
+      Time.now.utc.strftime("%Y-%m-%d %H:%M:%S")
     end
 
     def create_schema
@@ -134,10 +138,7 @@ module Gemvault
       SQL
 
       @db.execute("INSERT INTO metadata (key, value) VALUES (?, ?)", ["vault_version", FORMAT_VERSION])
-      @db.execute(
-        "INSERT INTO metadata (key, value) VALUES (?, ?)",
-        ["created_at", Time.now.utc.strftime("%Y-%m-%d %H:%M:%S")],
-      )
+      @db.execute("INSERT INTO metadata (key, value) VALUES (?, ?)", ["created_at", timestamp])
     end
 
     def validate_sqlite!
