@@ -1,4 +1,5 @@
 require_relative "gemvault/version"
+require_relative "gemvault/database"
 require_relative "gemvault/vault"
 
 ##

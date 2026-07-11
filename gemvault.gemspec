@@ -31,7 +31,14 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "bundler", ">= 2.0"
   spec.add_dependency "command_kit", "~> 0.6"
-  spec.add_dependency "sqlite3", "~> 2.0"
+  spec.add_dependency "sequel", "~> 5.0"
+
+  if RUBY_ENGINE == "jruby"
+    spec.platform = "java"
+    spec.add_dependency "jdbc-sqlite3", "~> 3.46"
+  else
+    spec.add_dependency "sqlite3", "~> 2.0"
+  end
 
   spec.metadata = {
     "rubygems_mfa_required" => "true",
