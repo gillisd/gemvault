@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   preserving every gem and timestamp, writing a `.bak` backup by default, with
   `--dry-run` and `--no-backup` flags. It is a no-op on an already-current vault.
 
+### Changed
+- `sqlite3` is no longer a runtime dependency. Gemvault runs dependency-free on
+  the tarball path (including JRuby); `sqlite3` is loaded lazily only to read a
+  legacy SQLite vault, with a clear error if it is not installed.
+
 ## [0.1.3] - 2026-06-22
 
 ### Added

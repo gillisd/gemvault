@@ -9,3 +9,7 @@ RUN cd /tmp/build \
     && gem build bundler-source-vault.gemspec \
     && gem install --no-document bundler-source-vault-*.gem \
     && rm -rf /tmp/build
+
+# sqlite3 is not a gemvault runtime dependency; install it here so the upgrade
+# integration test can build a legacy SQLite (Dbvault) fixture to migrate.
+RUN gem install --no-document sqlite3

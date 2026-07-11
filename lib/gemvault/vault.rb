@@ -68,6 +68,10 @@ module Gemvault
     def self.build_dbvault(path)
       require_relative "dbvault"
       Dbvault.new(path, create: false)
+    rescue LoadError => e
+      raise Error,
+            "#{path} is a legacy SQLite vault; it needs the sqlite3 gem (#{e.message}). " \
+            "Install sqlite3, or upgrade the vault with a gemvault that includes it."
     end
 
     def self.build_tarvault(path, create:)

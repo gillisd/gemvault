@@ -93,7 +93,7 @@ Integration tests use a manually-written Bundler plugin index to avoid rubygems.
 
 ## Dependencies
 
-- `sqlite3` (~> 2.0) — runtime
 - `bundler` (>= 2.0) — runtime
 - `command_kit` (~> 0.6) — runtime (CLI)
+- `sqlite3` (~> 2.0) — NOT a runtime dependency; loaded lazily only to read a legacy SQLite (Dbvault) vault. Declared in the Gemfile for development/test.
 - `minitest`, `rake` — development

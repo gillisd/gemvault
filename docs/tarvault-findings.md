@@ -125,9 +125,11 @@ The tar path uses only pure-Ruby rubygems tooling (`Gem::Package::TarReader`/
 `require`s `dbvault` (hence `sqlite3`) **only** when opening an existing SQLite
 file, so a JRuby process that only touches Tarvaults never loads `sqlite3`.
 
-**Follow-on:** to fully realize the portability win, make `sqlite3` an optional
-runtime dependency in `gemvault.gemspec` once Dbvault read-compat is no longer
-required.
+**Done:** `sqlite3` is no longer a runtime dependency. It is removed from the
+gemspec and loaded lazily only to read a legacy SQLite vault; if it is absent,
+`Vault.build_dbvault` raises a clear "install sqlite3 or upgrade the vault"
+error. A process that only touches Tarvaults never loads it (verified by a
+subprocess spec asserting `defined?(SQLite3)` is `nil`).
 
 ## Atomicity & locking
 
@@ -140,14 +142,16 @@ spike scope.
 
 ## Follow-on / productionization notes
 
-- Optional `gemvault new --format {tar,db}` (default currently tar).
 - Streaming rewrite: the current model reads all gem blobs into memory during a
   rewrite — fine for a spike; large vaults would want a copy-through stream.
-- Make `sqlite3` optional in the gemspec (portability payoff).
 - Encryption (`encrypted` flag → real cipher params).
 - List-time integrity verification, if wanted.
 - Unify the two backends' error taxonomy and temp-file logic once Tarvault is
   confirmed as "the way."
+
+There is deliberately **no** format-selection flag on `gemvault new`. Tarvault is
+the way forward; new vaults are always Tarvaults. A user who needs a SQLite vault
+uses an older gemvault.
 
 ## Update — format versioning & `gemvault upgrade` (implemented)
 
@@ -165,5 +169,6 @@ A follow-up shipped explicit format versioning and a migration command:
   a default `.bak` backup, `--dry-run`, idempotency, and `created_at` preservation
   (the write path gained `add(created_at:)`).
 
-Still open from the list above: optional `--format` on `new`, streaming rewrite,
-optional `sqlite3` dependency, and encryption.
+`sqlite3` is now optional (removed from the gemspec, loaded lazily, clear error
+when absent). Still open: streaming rewrite and encryption. There is no
+`gemvault new --format` flag by design — Tarvault is the only write format.
