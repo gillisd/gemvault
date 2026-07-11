@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.description = "Registers the :vault source type with Bundler, enabling gem installation from .gemv vault files"
   spec.homepage = "https://github.com/gillisd/gemvault"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 4.0.1"
+  spec.required_ruby_version = ">= 3.4.8"
 
   spec.files = ["plugins.rb"]
   spec.require_paths = ["."]
