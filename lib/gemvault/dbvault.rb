@@ -13,7 +13,7 @@ module Gemvault
     extend VaultSession
     include GemExtraction
 
-    SCHEMA_VERSION = "1".freeze
+    FORMAT_VERSION = 1
 
     attr_reader :path
 
@@ -69,6 +69,11 @@ module Gemvault
       @db.nil? || @db.closed?
     end
 
+    def format_version
+      row = @db.execute("SELECT value FROM metadata WHERE key = 'vault_version'").first
+      row ? row["value"].to_i : FORMAT_VERSION
+    end
+
     private
 
     def create_vault!
@@ -83,6 +88,7 @@ module Gemvault
 
       validate_sqlite!
       @db = new_database
+      Vault.assert_readable!(format_version, @path)
     end
 
     def new_database
@@ -127,7 +133,7 @@ module Gemvault
         );
       SQL
 
-      @db.execute("INSERT INTO metadata (key, value) VALUES (?, ?)", ["vault_version", SCHEMA_VERSION])
+      @db.execute("INSERT INTO metadata (key, value) VALUES (?, ?)", ["vault_version", FORMAT_VERSION])
       @db.execute(
         "INSERT INTO metadata (key, value) VALUES (?, ?)",
         ["created_at", Time.now.utc.strftime("%Y-%m-%d %H:%M:%S")],

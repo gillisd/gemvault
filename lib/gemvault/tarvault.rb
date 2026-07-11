@@ -52,6 +52,10 @@ module Gemvault
       @manifest.gem_entries
     end
 
+    def format_version
+      @manifest.format_version
+    end
+
     def size
       @manifest.records.size
     end
@@ -77,6 +81,7 @@ module Gemvault
       raise Vault::NotFoundError, "Vault not found: #{@path}" unless File.exist?(@path)
 
       @manifest = Manifest.parse(read_manifest_json)
+      Vault.assert_readable!(@manifest.format_version, @path)
     rescue JSON::ParserError, Gem::Package::TarInvalidError, ArgumentError, Errno::EINVAL
       raise Vault::Error, "Not a valid Tarvault: #{@path}"
     end

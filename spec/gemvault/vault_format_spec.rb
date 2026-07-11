@@ -1,0 +1,41 @@
+require "gemvault"
+require "gemvault/dbvault"
+require "gemvault/tarvault"
+require "sqlite3"
+require "json"
+
+RSpec.describe "vault format versioning" do
+  it "reports format_version 2 for a Tarvault" do
+    Gemvault::Vault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+    Gemvault::Vault.open(vault_path) { |v| expect(v.format_version).to eq(2) }
+  end
+
+  it "reports format_version 1 for a Dbvault" do
+    Gemvault::Dbvault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+    Gemvault::Vault.open(vault_path) { |v| expect(v.format_version).to eq(1) }
+  end
+
+  it "refuses a Tarvault whose declared version is newer than READABLE_FORMATS" do
+    Gemvault::Vault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+    bump_tarvault_version(vault_path, 99)
+    expect { Gemvault::Vault.open(vault_path) { |v| v } }.to raise_error(Gemvault::Vault::UnsupportedVersionError)
+  end
+
+  it "refuses a Dbvault whose declared version is newer than READABLE_FORMATS" do
+    Gemvault::Dbvault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+    SQLite3::Database.new(vault_path.to_s) { |db| db.execute("UPDATE metadata SET value='99' WHERE key='vault_version'") }
+    expect { Gemvault::Vault.open(vault_path) { |v| v } }.to raise_error(Gemvault::Vault::UnsupportedVersionError)
+  end
+
+  it "refuses an unrecognized container (neither SQLite nor tar)" do
+    File.binwrite(vault_path, "this is not a vault, just bytes " * 20)
+    expect { Gemvault::Vault.open(vault_path) { |v| v } }.to raise_error(Gemvault::Vault::Error, /Unrecognized/)
+  end
+
+  def bump_tarvault_version(path, version)
+    archive = Gemvault::TarArchive.new(path.to_s)
+    manifest = JSON.parse(archive.read("manifest.json"))
+    manifest["vault_version"] = version
+    archive.write([["manifest.json", JSON.generate(manifest)], *archive.gem_pairs])
+  end
+end
