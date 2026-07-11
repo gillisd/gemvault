@@ -16,7 +16,7 @@ RSpec.describe Gemvault::Vault do
     end
 
     it "opens an existing SQLite file as a Dbvault-backed vault" do
-      Gemvault::Dbvault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+      legacy_dbvault
       expect(backend(described_class.new(vault_path))).to be_a(Gemvault::Dbvault)
     end
   end

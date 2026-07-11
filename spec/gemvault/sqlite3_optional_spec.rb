@@ -1,5 +1,4 @@
 require "gemvault"
-require "gemvault/dbvault"
 
 RSpec.describe "sqlite3 as an optional dependency" do
   def sqlite3_state_after_tarvault(path)
@@ -17,7 +16,7 @@ RSpec.describe "sqlite3 as an optional dependency" do
   end
 
   it "raises a helpful error opening a legacy Dbvault when sqlite3 is unavailable" do
-    Gemvault::Dbvault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+    legacy_dbvault
     allow(Gemvault::Vault).to receive(:require_relative).with("dbvault")
                                                         .and_raise(LoadError.new("cannot load such file -- sqlite3"))
     expect { Gemvault::Vault.open(vault_path) { |v| v } }.to raise_error(Gemvault::Vault::Error, /sqlite3/)

@@ -1,5 +1,4 @@
 require "gemvault"
-require "gemvault/dbvault"
 require "gemvault/tarvault"
 require "sqlite3"
 require "json"
@@ -11,7 +10,7 @@ RSpec.describe "vault format versioning" do
   end
 
   it "reports format_version 1 for a Dbvault" do
-    Gemvault::Dbvault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+    legacy_dbvault
     Gemvault::Vault.open(vault_path) { |v| expect(v.format_version).to eq(1) }
   end
 
@@ -22,7 +21,7 @@ RSpec.describe "vault format versioning" do
   end
 
   it "refuses a Dbvault whose declared version is newer than READABLE_FORMATS" do
-    Gemvault::Dbvault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+    legacy_dbvault
     SQLite3::Database.new(vault_path.to_s) { |db| db.execute("UPDATE metadata SET value='99' WHERE key='vault_version'") }
     expect { Gemvault::Vault.open(vault_path) { |v| v } }.to raise_error(Gemvault::Vault::UnsupportedVersionError)
   end

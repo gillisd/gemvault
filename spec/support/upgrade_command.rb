@@ -1,7 +1,7 @@
 module UpgradeCommand
-  def run_upgrade(gems:, upgrade_args: "", followup: "")
+  def run_upgrade(upgrade_args: "", followup: "")
     podman_run(<<~SH)
-      #{dbvault_preamble(gems)}
+      #{dbvault_preamble}
       gemvault upgrade $V #{upgrade_args}
       #{followup}
     SH
@@ -14,22 +14,22 @@ module UpgradeCommand
     SH
   end
 
-  def run_on_dbvault(gems:, command:)
+  def run_on_dbvault(command:)
     podman_run(<<~SH)
-      #{dbvault_preamble(gems)}
+      #{dbvault_preamble}
       #{command}
     SH
   end
 
-  def dbvault_preamble(gems)
-    gem_builds = gems.map { |name, version| FixtureScript.build_gem(name, version, {}, {}) }.join("\n")
-    paths = gems.map { |name, version| "$WORKDIR/gems/#{name}/#{name}-#{version}.gem" }.join(" ")
+  # Copies the committed legacy (format-1 SQLite) vault fixture into the
+  # container. Reading it still requires the sqlite3 gem (installed in the
+  # test image); no gem-building or SQLite writing happens at test time.
+  def dbvault_preamble
     <<~SH
       set -e
       export WORKDIR=$(mktemp -d)
       export V=$WORKDIR/test.gemv
-      #{gem_builds}
-      ruby -e 'require "gemvault/dbvault"; Gemvault::Dbvault.open(ENV["V"], create: true){|v| ARGV.each{|g| v.add(g)}}' #{paths}
+      cp /gem/spec/fixtures/legacy-v1.gemv $V
     SH
   end
 end
