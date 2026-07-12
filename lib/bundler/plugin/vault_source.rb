@@ -8,14 +8,26 @@ module Bundler
       def initialize(opts)
         super
         @vault_path = resolve_vault_path(@uri)
+        @allow_remote = false
       end
 
       def fetch_gemspec_files
         validate_vault_exists!
 
         Gemvault::Vault.open(@vault_path) do |vault|
-          vault.gem_entries.map { |entry| gemspec_file_for(vault, entry) }
+          vault.gem_entries.filter_map { |entry| gemspec_file_for(vault, entry) }
         end
+      end
+
+      # Bundler first asks a source, in local mode, which gems are already
+      # unpacked so it can tell what still needs installing, then switches to
+      # remote mode to resolve and install the rest. A vault gem is not on the
+      # load path until it is unpacked, so advertising one that still lives only
+      # inside the archive makes Bundler believe it is installed: it skips the
+      # install and the later require fails. Advertise not-yet-unpacked gems
+      # only once Bundler has asked for remote specs.
+      def remote!
+        @allow_remote = true
       end
 
       def install(spec, opts = {})
@@ -46,6 +58,7 @@ module Bundler
         spec = vault.spec_from_blob(entry.name, entry.version, entry.platform)
         gem_dir = gem_dir_for(spec.full_name)
         return anchor_gemspec(gem_dir, spec.full_name, spec.to_ruby) if File.directory?(gem_dir)
+        return nil unless @allow_remote
 
         write_tmp_gemspec(spec.full_name, spec.to_ruby)
       end

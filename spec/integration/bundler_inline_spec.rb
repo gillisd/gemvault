@@ -4,4 +4,12 @@ RSpec.describe "bundler/inline with vault source", :integration do
     expect(status).to be_success, "Failed:\n#{output}"
     expect(output).to include("1.0.0")
   end
+
+  context "when the inline gemfile does not force installation" do
+    it "still makes the vault gem requireable", :aggregate_failures do
+      output, status = run_inline_install_without_force
+      expect(status).to be_success, "Failed:\n#{output}"
+      expect(output).to include("1.0.0")
+    end
+  end
 end

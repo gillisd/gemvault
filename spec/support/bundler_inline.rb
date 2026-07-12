@@ -1,16 +1,19 @@
 module BundlerInline
   def run_inline_install
-    podman_run(inline_install_script)
+    podman_run(inline_script("gemfile(true)"))
   end
 
-  def inline_install_script
-    preamble = FixtureScript.preamble
+  def run_inline_install_without_force
+    podman_run(inline_script("gemfile"))
+  end
+
+  def inline_script(gemfile_call)
     <<~SH
-      #{preamble}
+      #{FixtureScript.preamble}
       cat > $WORKDIR/inline_test.rb <<RUBY
       require "bundler/inline"
 
-      gemfile(true) do
+      #{gemfile_call} do
         source "$WORKDIR/test.gemv", type: :vault do
           gem "vault_test_gem"
         end
