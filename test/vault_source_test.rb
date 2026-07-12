@@ -42,21 +42,22 @@ class VaultSourceTestCase < Minitest::Test
     vault.close
   end
 
-  def vault_source_with_gem(name, version, subdir, **options)
+  def vault_source_with_gem(name, version, subdir, remote: true, **options)
     gem_path = build_subdir_gem(name, version, subdir, **options)
     vault_path = @tmpdir / "#{name}.gemv"
     populate_vault(vault_path, gem_path)
-    create_vault_source(vault_path)
+    create_vault_source(vault_path, remote: remote)
   end
 
   def find_spec(source, name)
     source.specs.to_a.find { |s| s.name == name }
   end
 
-  def create_vault_source(path, dependency_names: [])
+  def create_vault_source(path, dependency_names: [], remote: true)
     opts = { "uri" => path.to_s, "type" => "vault" }
     source = Bundler::Plugin::VaultSource.new(opts)
     source.dependency_names = dependency_names
+    source.remote! if remote
     source
   end
 end
@@ -151,6 +152,19 @@ class VaultSourceGemspecTest < VaultSourceTestCase
     dep = spec.dependencies.find { |d| d.name == "rake" }
     refute_nil dep
     assert_equal Gem::Requirement.new(">= 13.0"), dep.requirement
+  end
+end
+
+class VaultSourceModeTest < VaultSourceTestCase
+  def test_local_mode_hides_gems_not_yet_installed
+    source = vault_source_with_gem("localmode", "1.0.0", "local_dir", remote: false)
+    assert_empty source.fetch_gemspec_files
+  end
+
+  def test_remote_mode_advertises_gems_not_yet_installed
+    source = vault_source_with_gem("remotemode", "1.0.0", "remote_dir", remote: false)
+    source.remote!
+    assert_equal 1, source.fetch_gemspec_files.length
   end
 end
 
