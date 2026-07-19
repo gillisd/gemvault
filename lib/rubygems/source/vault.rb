@@ -1,5 +1,6 @@
 require "gemvault/vault"
-require "uri"
+require "gemvault/vault_path"
+require "pathname"
 
 ##
 # A source backed by a .gemv vault file (SQLite archive of .gem blobs).
@@ -10,12 +11,10 @@ require "uri"
 class Gem::Source::Vault < Gem::Source
   include Gem::UserInteraction
 
-  VAULT_URI_SCHEMES = %w[file vault].freeze
-
   attr_reader :path
 
   def initialize(path)
-    @path = File.expand_path(filesystem_path(path))
+    @path = Pathname(Gemvault::VaultPath.resolve(path)).expand_path.to_s
     super(@path)
     @uri = @path
     @specs = nil
@@ -38,17 +37,13 @@ class Gem::Source::Vault < Gem::Source
 
   def download(spec, dir = Dir.pwd)
     verbose "Extracting #{spec.file_name} from vault at #{@path}"
-    cache_dir = File.join(dir, "cache")
-    FileUtils.mkdir_p(cache_dir)
-
-    dest = File.join(cache_dir, spec.file_name)
+    dest = Pathname(dir).join("cache").tap(&:mkpath).join(spec.file_name)
 
     Gemvault::Vault.open(@path) do |vault|
-      data = vault.gem_data(spec.name, spec.version.to_s, platform: spec.platform.to_s)
-      File.binwrite(dest, data)
+      dest.binwrite(vault.gem_data(spec.name, spec.version.to_s, platform: spec.platform.to_s))
     end
 
-    dest
+    dest.to_s
   end
 
   def dependency_resolver_set(prerelease = nil)
@@ -90,13 +85,6 @@ class Gem::Source::Vault < Gem::Source
   end
 
   private
-
-  def filesystem_path(path)
-    uri = URI.parse(path.to_s)
-    VAULT_URI_SCHEMES.include?(uri.scheme) ? uri.path : path.to_s
-  rescue URI::InvalidURIError
-    path.to_s
-  end
 
   def select_tuples(type)
     case type
