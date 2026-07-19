@@ -20,7 +20,8 @@ module Gemvault
 
     def spec_from_blob(entry)
       bytes = gem_data(entry)
-      Gem::Package.new(StringIO.new(bytes)).spec
+      io = StringIO.new(bytes)
+      Gem::Package.new(io).spec
     end
 
     def specs

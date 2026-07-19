@@ -29,7 +29,7 @@ module Gemvault
           begin
             version = options[:version] || positional_version
             reference = Gemvault::GemReference.parse(name, version:)
-            with_vault(vault) { |v| report_removal(v.remove(reference)) }
+            remove_matching(vault:, reference:)
           rescue Gemvault::GemReference::NonExactVersionError => e
             print_error(e.message)
             exit(1)
@@ -37,6 +37,13 @@ module Gemvault
         end
 
         private
+
+        def remove_matching(vault:, reference:)
+          with_vault(vault) do |v|
+            removed = v.remove(reference)
+            report_removal(removed)
+          end
+        end
 
         def report_removal(count)
           if count.zero?

@@ -43,7 +43,9 @@ class Gem::Source::Vault < Gem::Source
     dest = Pathname(dir).join("cache").tap(&:mkpath).join(spec.file_name)
 
     Gemvault::Vault.open(@path) do |vault|
-      dest.binwrite(vault.gem_data(entry_for(spec)))
+      entry = entry_for(spec)
+      bytes = vault.gem_data(entry)
+      dest.binwrite(bytes)
     end
 
     dest.to_s

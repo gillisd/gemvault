@@ -22,6 +22,17 @@ module Gemvault
       end
     end
 
+    # Copies gems from a source vault into a target vault, preserving each
+    # gem's stored timestamp. Holds the two endpoints so the per-gem call
+    # takes only the entry.
+    class GemCopy < Data.define(:source, :target)
+      def call(entry)
+        source.with_gem_file(entry) do |gem_path|
+          target.add(gem_path, created_at: entry.created_at)
+        end
+      end
+    end
+
     def initialize(path, backup: true)
       @path = Pathname(path).expand_path
       @backup = backup
@@ -65,15 +76,10 @@ module Gemvault
       Deprecation.silence do
         Vault.open(@path) do |old|
           target = Vault.new(tmp, create: true)
-          old.gem_entries.each { |entry| copy_gem(old:, target:, entry:) }
+          copy = GemCopy.new(source: old, target:)
+          old.gem_entries.each { |entry| copy.call(entry) }
           target.close
         end
-      end
-    end
-
-    def copy_gem(old:, target:, entry:)
-      old.with_gem_file(entry) do |gem_path|
-        target.add(gem_path, created_at: entry.created_at)
       end
     end
 

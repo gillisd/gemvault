@@ -40,7 +40,8 @@ module Gemvault
       return 0 if dropped.empty?
 
       @manifest = @manifest.without(dropped)
-      rewrite(survivors_excluding(dropped))
+      remaining = survivors_excluding(dropped)
+      rewrite(remaining)
       dropped.size
     end
 
