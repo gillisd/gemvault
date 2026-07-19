@@ -43,9 +43,19 @@ namespace :spec do
   task(:teardown) { destroy_cached_image if cached_image_exists? }
 end
 
+directory "pkg" do
+  mkdir "pkg"
+end
+
 namespace :shim do
   Bundler::GemHelper.install_tasks dir: "shim", name: "bundler-source-vault"
   CLOBBER.include "shim/pkg"
+
+  Rake::Task[:build].enhance ["pkg"] do
+    FileList["shim/pkg/*.gem"].each do |g|
+      mv g, "pkg", verbose: false
+    end
+  end
 end
 
 Rake::Task[:spec].enhance ["spec:setup"]
