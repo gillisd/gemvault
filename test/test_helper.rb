@@ -16,7 +16,11 @@ module GemvaultTestHelper
   # @param version [String] gem version
   # @param options [Hash] forwarded to GemFactory (dir:, platform:, files:, dependencies:)
   # @return [Pathname] absolute path to the built .gem file
-  def build_gem(name, version, **options)
-    GemFactory.new(name, version, **options).build
+  def build_gem(name:, version:, **options)
+    GemFactory.new(name: name, version: version, **options).build
+  end
+
+  def gem_entry(name:, version:)
+    Gemvault::GemEntry.new(name: name, version: version)
   end
 end

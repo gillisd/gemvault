@@ -1,76 +1,76 @@
 require "json"
-require "openssl"
+require "digest"
 require_relative "gem_entry"
 
 module Gemvault
   # The manifest.json stored as the first entry of a Tarvault. Records each
   # gem's identity, timestamp, and SHA256 digest so listing and integrity
   # checks never require reading every gem blob.
-  class Manifest
+  class Manifest < Data.define(:created_at, :records, :format_version)
     FILENAME = "manifest.json".freeze
     FORMAT_VERSION = 2
-    DIGEST = "SHA256".freeze
 
-    # One gem's metadata inside a manifest.
-    Record = Struct.new(:name, :version, :platform, :created_at, :sha256, :encrypted, keyword_init: true) do
-      def to_gem_entry
-        GemEntry.new(name: name, version: version, platform: platform, created_at: created_at)
+    # One stored gem: its identity (a GemEntry) plus the integrity digest and
+    # encryption flag the manifest keeps alongside it.
+    class StoredGem < Data.define(:gem, :sha256, :encrypted)
+      def self.from_h(hash)
+        entry = GemEntry.new(
+          name: hash[:name], version: hash[:version],
+          platform: hash[:platform], created_at: hash[:created_at]
+        )
+        new(gem: entry, sha256: hash[:sha256], encrypted: hash[:encrypted])
       end
 
-      def filename
-        to_gem_entry.filename
+      def filename = gem.filename
+
+      def matches?(bytes) = Manifest.digest(bytes) == sha256
+
+      def to_h
+        {
+          name: gem.name, version: gem.version, platform: gem.platform,
+          created_at: gem.created_at, sha256: sha256, encrypted: encrypted
+        }
       end
     end
 
-    def self.digest(bytes)
-      OpenSSL::Digest.new(DIGEST).hexdigest(bytes)
-    end
+    def self.digest(bytes) = Digest::SHA256.hexdigest(bytes)
 
-    def self.empty(created_at:)
-      new(created_at: created_at, records: [])
-    end
+    def self.empty(created_at:) = new(created_at: created_at, records: [])
 
     def self.parse(json)
-      data = JSON.parse(json)
-      records = data.fetch("gems", []).map { |g| Record.new(**g.transform_keys(&:to_sym)) }
+      data = JSON.parse(json, symbolize_names: true)
       new(
-        created_at: data["created_at"],
-        records: records,
-        format_version: (data["vault_version"] || FORMAT_VERSION).to_i,
+        created_at: data[:created_at],
+        records: data.fetch(:gems, []).map { |gem| StoredGem.from_h(gem) },
+        format_version: (data[:vault_version] || FORMAT_VERSION).to_i,
       )
     end
 
-    attr_reader :records, :created_at, :format_version
-
     def initialize(created_at:, records:, format_version: FORMAT_VERSION)
-      @created_at = created_at
-      @records = records
-      @format_version = format_version
+      super
     end
 
-    def with(record)
-      self.class.new(created_at: created_at, records: records + [record], format_version: format_version)
-    end
+    def with_record(record) = with(records: records + [record])
 
-    def without(dropped)
-      self.class.new(created_at: created_at, records: records - dropped, format_version: format_version)
-    end
+    def without(dropped) = with(records: records - dropped)
 
-    def find(name, version, platform)
-      records.find { |r| r.name == name && r.version == version && r.platform == platform }
+    def find(entry)
+      records.find { |record| record.gem.same_identity_as?(entry) }
     end
 
     def gem_entries
-      records.sort_by { |r| [r.name, r.version] }.map(&:to_gem_entry)
+      records.map(&:gem).sort_by { |gem| [gem.name, gem.version] }
     end
 
-    def to_json(*_args)
-      JSON.pretty_generate(
-        "vault_version" => FORMAT_VERSION,
-        "format" => "tarvault",
-        "created_at" => created_at,
-        "gems" => records.map(&:to_h),
-      )
+    def to_h
+      {
+        vault_version: FORMAT_VERSION,
+        format: "tarvault",
+        created_at: created_at,
+        gems: records.map(&:to_h),
+      }
     end
+
+    def to_json(*_args) = JSON.pretty_generate(to_h)
   end
 end

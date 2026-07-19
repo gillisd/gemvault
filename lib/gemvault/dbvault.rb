@@ -1,4 +1,5 @@
 require "sqlite3"
+require "pathname"
 require_relative "vault"
 require_relative "vault_session"
 require_relative "gem_extraction"
@@ -18,7 +19,7 @@ module Gemvault
     attr_reader :path
 
     def initialize(path)
-      @path = File.expand_path(path)
+      @path = Pathname(path).expand_path
       open_vault!
     end
 
@@ -30,12 +31,12 @@ module Gemvault
       raise Vault::ReadOnlyError, read_only_message
     end
 
-    def gem_data(name, version, platform: "ruby")
+    def gem_data(entry)
       row = @db.execute(
         "SELECT data FROM gems WHERE name = ? AND version = ? AND platform = ?",
-        [name, version, platform],
+        [entry.name, entry.version, entry.platform],
       ).first
-      raise Vault::NotFoundError, "Gem not found: #{name}-#{version} (#{platform})" unless row
+      raise Vault::NotFoundError, "Gem not found: #{entry}" unless row
 
       row["data"]
     end
@@ -66,22 +67,22 @@ module Gemvault
     private
 
     def open_vault!
-      raise Vault::NotFoundError, "Vault not found: #{@path}" unless File.exist?(@path)
+      raise Vault::NotFoundError, "Vault not found: #{@path}" unless @path.exist?
 
       validate_sqlite!
       @db = new_database
-      Vault.assert_readable!(format_version, @path)
+      Vault.assert_readable!(version: format_version, path: @path)
       Deprecation.warn_once(deprecation_message)
     end
 
     def new_database
-      db = SQLite3::Database.new(@path)
+      db = SQLite3::Database.new(@path.to_s)
       db.results_as_hash = true
       db
     end
 
     def validate_sqlite!
-      return if File.binread(@path, Vault::SQLITE_MAGIC.bytesize) == Vault::SQLITE_MAGIC
+      return if @path.binread(Vault::SQLITE_MAGIC.bytesize) == Vault::SQLITE_MAGIC
 
       raise Vault::Error, "Not a valid vault file (not SQLite): #{@path}"
     end

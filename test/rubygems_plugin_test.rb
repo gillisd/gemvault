@@ -140,27 +140,27 @@ class RubygemsSourceVaultTest < Minitest::Test
   private
 
   def build_fixture_vault
-    @gem1_path = build_gem("alpha", "1.0.0", dir: @gem_build_dir, files: ALPHA_FILES)
-    @gem2_path = build_subdir_gem("alpha", "2.0.0", "gem2", files: ALPHA_FILES)
-    @gem3_path = build_subdir_gem("beta", "1.0.0", "gem3", files: BETA_FILES)
-    @gem_pre_path = build_subdir_gem("beta", "2.0.0.pre1", "gem4", files: BETA_FILES)
-    populate_vault(@vault_path, @gem1_path, @gem2_path, @gem3_path, @gem_pre_path)
+    @gem1_path = build_gem(name: "alpha", version: "1.0.0", dir: @gem_build_dir, files: ALPHA_FILES)
+    @gem2_path = build_subdir_gem(name: "alpha", version: "2.0.0", subdir: "gem2", files: ALPHA_FILES)
+    @gem3_path = build_subdir_gem(name: "beta", version: "1.0.0", subdir: "gem3", files: BETA_FILES)
+    @gem_pre_path = build_subdir_gem(name: "beta", version: "2.0.0.pre1", subdir: "gem4", files: BETA_FILES)
+    populate_vault(path: @vault_path, gem_paths: [@gem1_path, @gem2_path, @gem3_path, @gem_pre_path])
   end
 
-  def build_subdir_gem(name, version, subdir, **options)
+  def build_subdir_gem(name:, version:, subdir:, **options)
     dir = @tmpdir / subdir
     dir.mkpath
-    build_gem(name, version, dir: dir, **options)
+    build_gem(name: name, version: version, dir: dir, **options)
   end
 
-  def populate_vault(path, *gem_paths)
+  def populate_vault(path:, gem_paths:)
     vault = Gemvault::Vault.new(path, create: true)
     gem_paths.each { |gem_path| vault.add(gem_path) }
     vault.close
   end
 
   def add_native_alpha_to_vault
-    platform_gem = build_subdir_gem("alpha", "2.0.0", "gem_native", platform: "x86_64-linux")
+    platform_gem = build_subdir_gem(name: "alpha", version: "2.0.0", subdir: "gem_native", platform: "x86_64-linux")
     vault = Gemvault::Vault.new(@vault_path)
     vault.add(platform_gem)
     vault.close
@@ -217,7 +217,7 @@ class RubygemsResolverVaultSetTest < Minitest::Test
   end
 
   def test_find_all_matching
-    results = find_all("mygem", ">= 0")
+    results = find_all(name: "mygem", requirement: ">= 0")
     assert_equal 2, results.size
     assert(results.all?(Gem::Resolver::IndexSpecification))
     versions = results.map { |r| r.version.to_s }.sort
@@ -225,23 +225,23 @@ class RubygemsResolverVaultSetTest < Minitest::Test
   end
 
   def test_find_all_version_constraint
-    results = find_all("mygem", "~> 1.0")
+    results = find_all(name: "mygem", requirement: "~> 1.0")
     assert_equal 1, results.size
     assert_equal "1.0.0", results.first.version.to_s
   end
 
   def test_find_all_no_match
-    results = find_all("nonexistent", ">= 0")
+    results = find_all(name: "nonexistent", requirement: ">= 0")
     assert_empty results
   end
 
   private
 
   def build_fixture_vault
-    gem_path = build_gem("mygem", "1.0.0", dir: @gem_build_dir, files: MYGEM_FILES)
+    gem_path = build_gem(name: "mygem", version: "1.0.0", dir: @gem_build_dir, files: MYGEM_FILES)
     dir2 = @tmpdir / "gem2"
     dir2.mkpath
-    gem2_path = build_gem("mygem", "2.0.0", dir: dir2, files: MYGEM_FILES)
+    gem2_path = build_gem(name: "mygem", version: "2.0.0", dir: dir2, files: MYGEM_FILES)
 
     vault = Gemvault::Vault.new(@vault_path, create: true)
     vault.add(gem_path)
@@ -249,7 +249,7 @@ class RubygemsResolverVaultSetTest < Minitest::Test
     vault.close
   end
 
-  def find_all(name, requirement)
+  def find_all(name:, requirement:)
     source = Gem::Source::Vault.new(@vault_path)
     set = Gem::Resolver::VaultSet.new(source)
     dep = Gem::Dependency.new(name, requirement)

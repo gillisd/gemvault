@@ -1,4 +1,5 @@
 require "forwardable"
+require "pathname"
 require_relative "vault_session"
 
 module Gemvault
@@ -29,7 +30,7 @@ module Gemvault
                    :spec_from_blob, :with_gem_file, :size, :close, :closed?,
                    :path, :format_version
 
-    def self.assert_readable!(version, path)
+    def self.assert_readable!(version:, path:)
       return if version.between?(MIN_READABLE_FORMAT, CURRENT_FORMAT)
 
       raise UnsupportedVersionError,
@@ -38,7 +39,7 @@ module Gemvault
 
     def self.backend_for(path, create:)
       return build_tarvault(path, create: true) if create
-      raise NotFoundError, "Vault not found: #{path}" unless File.exist?(path)
+      raise NotFoundError, "Vault not found: #{path}" unless path.exist?
 
       case container_kind(path)
       when :sqlite then build_dbvault(path)
@@ -56,23 +57,25 @@ module Gemvault
     end
 
     def self.sqlite?(path)
-      File.exist?(path) && File.binread(path, SQLITE_MAGIC.bytesize) == SQLITE_MAGIC
+      path.exist? && path.binread(SQLITE_MAGIC.bytesize) == SQLITE_MAGIC
     end
 
     def self.tar?(path)
-      return false unless File.exist?(path)
+      return false unless path.exist?
 
-      header = File.binread(path, TAR_MAGIC_OFFSET + TAR_MAGIC.bytesize)
+      header = path.binread(TAR_MAGIC_OFFSET + TAR_MAGIC.bytesize)
       header.to_s[TAR_MAGIC_OFFSET, TAR_MAGIC.bytesize] == TAR_MAGIC
     end
 
     def self.build_dbvault(path)
-      require_relative "dbvault"
-      Dbvault.new(path)
-    rescue LoadError => e
-      raise Error,
-            "#{path} is a legacy SQLite vault; it needs the sqlite3 gem (#{e.message}). " \
-            "Install sqlite3, or upgrade the vault with a gemvault that includes it."
+      begin
+        require_relative "dbvault"
+        Dbvault.new(path)
+      rescue LoadError => e
+        raise Error,
+              "#{path} is a legacy SQLite vault; it needs the sqlite3 gem (#{e.message}). " \
+              "Install sqlite3, or upgrade the vault with a gemvault that includes it."
+      end
     end
 
     def self.build_tarvault(path, create:)
@@ -81,7 +84,8 @@ module Gemvault
     end
 
     def initialize(path, create: false)
-      @backend = self.class.backend_for(File.expand_path(path), create: create)
+      absolute_path = Pathname(path).expand_path
+      @backend = self.class.backend_for(absolute_path, create: create)
     end
   end
 end

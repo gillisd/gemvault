@@ -16,8 +16,9 @@ RSpec.describe "deprecated SQLite (Dbvault) format" do
 
   it "refuses add on an existing SQLite vault" do
     legacy_dbvault
+    gem = build_gem(name: "baz", version: "3.0.0")
     Gemvault::Vault.open(vault_path) do |v|
-      expect { v.add(build_gem("baz", "3.0.0")) }.to raise_error(Gemvault::Vault::ReadOnlyError, /upgrade/)
+      expect { v.add(gem) }.to raise_error(Gemvault::Vault::ReadOnlyError, /upgrade/)
     end
   end
 

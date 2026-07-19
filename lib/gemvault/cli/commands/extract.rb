@@ -1,4 +1,4 @@
-require "fileutils"
+require "pathname"
 require_relative "../command"
 
 module Gemvault
@@ -25,21 +25,21 @@ module Gemvault
                         desc: "Output directory"
 
         def run(vault, name, version = nil)
-          output_dir = options[:output]
+          output_dir = Pathname(options[:output])
 
           with_vault(vault) do |v|
-            ::FileUtils.mkdir_p(output_dir)
-            entries = matching_entries(v, name, version)
+            output_dir.mkpath
+            entries = matching_entries(vault: v, name: name, version: version)
             abort_missing_gem(name) if entries.empty?
-            extract_entries(v, entries, output_dir)
+            extract_entries(vault: v, entries: entries, output_dir: output_dir)
           end
         end
 
         private
 
-        def matching_entries(vault, name, version)
-          entries = vault.gem_entries.select { |e| e.name == name }
-          version ? entries.select { |e| e.version == version } : entries
+        def matching_entries(vault:, name:, version:)
+          entries = vault.gem_entries.select { |entry| entry.name == name }
+          version ? entries.select { |entry| entry.version == version } : entries
         end
 
         def abort_missing_gem(name)
@@ -47,10 +47,10 @@ module Gemvault
           exit(1)
         end
 
-        def extract_entries(vault, entries, output_dir)
+        def extract_entries(vault:, entries:, output_dir:)
           entries.each do |entry|
-            data = vault.gem_data(entry.name, entry.version, platform: entry.platform)
-            File.binwrite(File.join(output_dir, entry.filename), data)
+            data = vault.gem_data(entry)
+            (output_dir / entry.filename).binwrite(data)
             puts "Extracted #{entry.filename}"
           end
         end

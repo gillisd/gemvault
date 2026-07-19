@@ -20,16 +20,16 @@ class VaultTestCase < Minitest::Test
     Gemvault::Vault.new(@vault_path, create: true)
   end
 
-  def specific_version_ref(name, version)
+  def specific_version_ref(name:, version:)
     Gemvault::GemReference::SpecificVersion.new(
       name: name, version: Gem::Version.new(version),
     )
   end
 
-  def build_gem_in_subdir(name, version, subdir, **options)
+  def build_gem_in_subdir(name:, version:, subdir:, **options)
     dir = @gem_build_dir / subdir
     dir.mkpath
-    build_gem(name, version, dir: dir, **options)
+    build_gem(name: name, version: version, dir: dir, **options)
   end
 end
 
@@ -49,7 +49,7 @@ class VaultLifecycleTest < VaultTestCase
   end
 
   def test_reopen_vault_preserves_data
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem_path)
     vault.close
@@ -118,7 +118,7 @@ end
 
 class VaultMutationTest < VaultTestCase
   def test_add_single_gem
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem_path)
     assert_equal 1, vault.size
@@ -126,8 +126,8 @@ class VaultMutationTest < VaultTestCase
   end
 
   def test_add_multiple_gems
-    gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    gem2 = build_gem("bar", "2.0.0", dir: @gem_build_dir)
+    gem1 = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
+    gem2 = build_gem(name: "bar", version: "2.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem1)
     vault.add(gem2)
@@ -136,7 +136,7 @@ class VaultMutationTest < VaultTestCase
   end
 
   def test_add_duplicate_raises
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem_path)
     assert_raises(Gemvault::Vault::DuplicateGemError) do
@@ -164,18 +164,18 @@ class VaultMutationTest < VaultTestCase
   end
 
   def test_remove_by_name_and_version
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem_path)
-    count = vault.remove(specific_version_ref("foo", "1.0.0"))
+    count = vault.remove(specific_version_ref(name: "foo", version: "1.0.0"))
     assert_equal 1, count
     assert_equal 0, vault.size
     vault.close
   end
 
   def test_remove_by_name_only
-    gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
-    gem2 = build_gem_in_subdir("foo", "2.0.0", "v2")
+    gem1 = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
+    gem2 = build_gem_in_subdir(name: "foo", version: "2.0.0", subdir: "v2")
     vault = create_vault
     vault.add(gem1)
     vault.add(gem2)
@@ -187,7 +187,7 @@ class VaultMutationTest < VaultTestCase
 
   def test_remove_nonexistent_returns_zero
     vault = create_vault
-    count = vault.remove(specific_version_ref("nope", "1.0.0"))
+    count = vault.remove(specific_version_ref(name: "nope", version: "1.0.0"))
     assert_equal 0, count
     vault.close
   end
@@ -199,11 +199,11 @@ class VaultMutationTest < VaultTestCase
   end
 
   def test_size_after_add_and_remove
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem_path)
     assert_equal 1, vault.size
-    vault.remove(specific_version_ref("foo", "1.0.0"))
+    vault.remove(specific_version_ref(name: "foo", version: "1.0.0"))
     assert_equal 0, vault.size
     vault.close
   end
@@ -217,8 +217,8 @@ class VaultEntriesTest < VaultTestCase
   end
 
   def test_gem_entries_returns_gem_entry_objects
-    gem1 = build_gem("alpha", "1.0.0", dir: @gem_build_dir)
-    gem2 = build_gem("beta", "2.0.0", dir: @gem_build_dir)
+    gem1 = build_gem(name: "alpha", version: "1.0.0", dir: @gem_build_dir)
+    gem2 = build_gem(name: "beta", version: "2.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem1)
     vault.add(gem2)
@@ -231,7 +231,7 @@ class VaultEntriesTest < VaultTestCase
   end
 
   def test_gem_entry_full_name
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem_path)
 
@@ -242,7 +242,7 @@ class VaultEntriesTest < VaultTestCase
   end
 
   def test_gem_entry_full_name_with_platform
-    gem_path = build_gem("native", "1.0.0", dir: @gem_build_dir, platform: "x86_64-linux")
+    gem_path = build_gem(name: "native", version: "1.0.0", dir: @gem_build_dir, platform: "x86_64-linux")
     vault = create_vault
     vault.add(gem_path)
 
@@ -263,11 +263,11 @@ class VaultEntriesTest < VaultTestCase
   end
 
   def test_with_gem_file_yields_path
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem_path)
 
-    vault.with_gem_file("foo", "1.0.0") do |path|
+    vault.with_gem_file(gem_entry(name: "foo", version: "1.0.0")) do |path|
       assert_path_exists path
       assert path.end_with?(".gem")
       spec = Gem::Package.new(path).spec
@@ -277,7 +277,7 @@ class VaultEntriesTest < VaultTestCase
   end
 
   def test_with_gem_file_unlinks_on_raise
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem_path)
 
@@ -299,7 +299,7 @@ class VaultEntriesTest < VaultTestCase
   def capture_raised_gem_file_path(vault)
     saved_path = nil
     assert_raises(RuntimeError) do
-      vault.with_gem_file("foo", "1.0.0") do |path|
+      vault.with_gem_file(gem_entry(name: "foo", version: "1.0.0")) do |path|
         saved_path = path
         raise "boom"
       end
@@ -310,11 +310,11 @@ end
 
 class VaultContentTest < VaultTestCase
   def test_gem_data_returns_matching_bytes
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     original = gem_path.binread
     vault = create_vault
     vault.add(gem_path)
-    retrieved = vault.gem_data("foo", "1.0.0")
+    retrieved = vault.gem_data(gem_entry(name: "foo", version: "1.0.0"))
     assert_equal original, retrieved
     vault.close
   end
@@ -322,13 +322,13 @@ class VaultContentTest < VaultTestCase
   def test_gem_data_not_found_raises
     vault = create_vault
     assert_raises(Gemvault::Vault::NotFoundError) do
-      vault.gem_data("nope", "1.0.0")
+      vault.gem_data(gem_entry(name: "nope", version: "1.0.0"))
     end
     vault.close
   end
 
   def test_specs_returns_gem_specifications
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     vault = create_vault
     vault.add(gem_path)
 
@@ -341,7 +341,7 @@ class VaultContentTest < VaultTestCase
   end
 
   def test_platform_specific_gem
-    gem_path = build_gem("native", "1.0.0", dir: @gem_build_dir, platform: "x86_64-linux")
+    gem_path = build_gem(name: "native", version: "1.0.0", dir: @gem_build_dir, platform: "x86_64-linux")
     vault = create_vault
     vault.add(gem_path)
 
@@ -354,8 +354,8 @@ class VaultContentTest < VaultTestCase
   end
 
   def test_gem_with_dependencies
-    gem_path = build_gem("depgem", "1.0.0", dir: @gem_build_dir,
-                                            dependencies: [["rake", ">= 13.0"]])
+    gem_path = build_gem(name: "depgem", version: "1.0.0", dir: @gem_build_dir,
+                         dependencies: [["rake", ">= 13.0"]])
     vault = create_vault
     vault.add(gem_path)
 

@@ -4,42 +4,37 @@ require "stringio"
 require_relative "vault"
 
 module Gemvault
-  # Shared vault behavior: turn gem bytes (stored or on disk) into gemspecs and
-  # temporary files. Host classes must implement #gem_data(name, version,
-  # platform:) and #gem_entries.
+  # Shared vault behavior: turn a gem entry (stored or on disk) into gemspecs
+  # and temporary files. Host classes must implement #gem_data(entry) and
+  # #gem_entries.
   module GemExtraction
-    def with_gem_file(name, version, platform: "ruby")
-      tmpfile = write_tempfile(gem_data(name, version, platform: platform))
-      begin
+    def with_gem_file(entry)
+      data = gem_data(entry)
+      Tempfile.create(["vault_gem", ".gem"]) do |tmpfile|
+        tmpfile.binmode
+        tmpfile.write(data)
+        tmpfile.flush
         yield tmpfile.path
-      ensure
-        tmpfile.close unless tmpfile.closed?
-        tmpfile.unlink
       end
     end
 
-    def spec_from_blob(name, version, platform = "ruby")
-      Gem::Package.new(StringIO.new(gem_data(name, version, platform: platform))).spec
+    def spec_from_blob(entry)
+      bytes = gem_data(entry)
+      Gem::Package.new(StringIO.new(bytes)).spec
     end
 
     def specs
-      gem_entries.map { |entry| spec_from_blob(entry.name, entry.version, entry.platform) }
+      gem_entries.map { |entry| spec_from_blob(entry) }
     end
 
     private
 
     def spec_from_gem_file(gem_path)
-      Gem::Package.new(gem_path).spec
-    rescue StandardError => e
-      raise Vault::InvalidGemError, "Invalid gem file #{gem_path}: #{e.message}"
-    end
-
-    def write_tempfile(data)
-      tmpfile = Tempfile.new(["vault_gem", ".gem"])
-      tmpfile.binmode
-      tmpfile.write(data)
-      tmpfile.close
-      tmpfile
+      begin
+        Gem::Package.new(gem_path.to_s).spec
+      rescue StandardError => e
+        raise Vault::InvalidGemError, "Invalid gem file #{gem_path}: #{e.message}"
+      end
     end
   end
 end

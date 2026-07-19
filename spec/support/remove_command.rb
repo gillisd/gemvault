@@ -1,6 +1,6 @@
 module RemoveCommand
   def run_remove(gems:, remove_args:, followup: "")
-    podman_run(remove_script(gems, remove_args, followup))
+    podman_run(remove_script(gems: gems, remove_args: remove_args, followup: followup))
   end
 
   def remove_with_version_override
@@ -11,7 +11,7 @@ module RemoveCommand
     )
   end
 
-  def remove_script(gems, remove_args, followup)
+  def remove_script(gems:, remove_args:, followup:)
     preamble = FixtureScript.preamble(gems: gems)
     <<~SH
       #{preamble}

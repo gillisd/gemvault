@@ -15,7 +15,8 @@ $LOAD_PATH.unshift(gemvault_lib.to_s) if gemvault_lib.directory? && !$LOAD_PATH.
 # also candidates because `Bundler::Plugin.root` is the project-local root even
 # when the plugin actually loads from the global one.
 plugin_roots = defined?(Bundler::Plugin) ? [Bundler::Plugin.root, Bundler::Plugin.global_root] : []
-candidate_dirs = [Pathname(__dir__).parent.parent, *plugin_roots]
+gem_root = Pathname(__dir__).parent.parent
+candidate_dirs = [gem_root, *plugin_roots]
                  .map { |root| Pathname(root.to_s).join("specifications") }
                  .uniq
                  .select(&:directory?)

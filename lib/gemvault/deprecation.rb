@@ -13,18 +13,20 @@ module Gemvault
       end
 
       def warn_once(message)
-        return if silenced? || seen.include?(message)
+        return if silenced?
+        return unless seen.add?(message)
 
-        seen << message
         output.puts("gemvault: #{message}")
       end
 
       def silence
         previous = @silenced
         @silenced = true
-        yield
-      ensure
-        @silenced = previous
+        begin
+          yield
+        ensure
+          @silenced = previous
+        end
       end
 
       def silenced?
@@ -32,14 +34,14 @@ module Gemvault
       end
 
       def reset!
-        @seen = []
+        @seen = Set.new
         @silenced = false
       end
 
       private
 
       def seen
-        @seen ||= []
+        @seen ||= Set.new
       end
     end
   end

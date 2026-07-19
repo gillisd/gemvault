@@ -1,20 +1,19 @@
 require "gemvault/manifest"
 
 RSpec.describe Gemvault::Manifest do
-  let(:record) do
-    Gemvault::Manifest::Record.new(
-      name: "foo",
-      version: "1.0.0",
-      platform: "ruby",
-      created_at: "2026-07-11 00:00:00",
-      sha256: "abc",
-      encrypted: false,
+  let(:entry) do
+    Gemvault::GemEntry.new(
+      name: "foo", version: "1.0.0", platform: "ruby", created_at: "2026-07-11 00:00:00",
     )
+  end
+
+  let(:record) do
+    Gemvault::Manifest::StoredGem.new(gem: entry, sha256: "abc", encrypted: false)
   end
 
   describe ".digest" do
     it "returns the SHA256 hexdigest of the bytes" do
-      expect(described_class.digest("x")).to eq(OpenSSL::Digest.new("SHA256").hexdigest("x"))
+      expect(described_class.digest("x")).to eq(Digest::SHA256.hexdigest("x"))
     end
   end
 
@@ -24,41 +23,63 @@ RSpec.describe Gemvault::Manifest do
     end
   end
 
-  describe "#with / #without", :aggregate_failures do
+  describe "#with_record / #without", :aggregate_failures do
     it "adds a record without mutating the original" do
       base = described_class.empty(created_at: "t")
-      expect(base.with(record).records).to eq([record])
+      expect(base.with_record(record).records).to eq([record])
       expect(base.records).to eq([])
     end
 
     it "removes the given records" do
-      one = described_class.empty(created_at: "t").with(record)
+      one = described_class.empty(created_at: "t").with_record(record)
       expect(one.without([record]).records).to eq([])
     end
   end
 
   describe "#find" do
-    it "matches on name, version, and platform" do
-      manifest = described_class.empty(created_at: "t").with(record)
-      expect(manifest.find("foo", "1.0.0", "ruby")).to eq(record)
+    it "matches an entry on name, version, and platform ignoring created_at" do
+      manifest = described_class.empty(created_at: "t").with_record(record)
+      query = Gemvault::GemEntry.new(name: "foo", version: "1.0.0")
+      expect(manifest.find(query)).to eq(record)
     end
 
     it "returns nil when absent" do
-      expect(described_class.empty(created_at: "t").find("x", "1", "ruby")).to be_nil
+      query = Gemvault::GemEntry.new(name: "x", version: "1")
+      expect(described_class.empty(created_at: "t").find(query)).to be_nil
     end
   end
 
   describe "#gem_entries" do
-    it "maps records to GemEntry objects sorted by name then version" do
-      manifest = described_class.empty(created_at: "t").with(record)
-      expect(manifest.gem_entries).to eq([record.to_gem_entry])
+    it "returns the stored gems' entries sorted by name then version" do
+      manifest = described_class.empty(created_at: "t").with_record(record)
+      expect(manifest.gem_entries).to eq([entry])
     end
   end
 
   describe "round-trip .parse / #to_json" do
-    it "preserves records, platform, checksum, and created_at" do
-      manifest = described_class.empty(created_at: "t").with(record)
+    it "preserves identity, checksum, and created_at" do
+      manifest = described_class.empty(created_at: "t").with_record(record)
       expect(described_class.parse(manifest.to_json).records).to eq([record])
+    end
+  end
+
+  describe "#to_h" do
+    it "mirrors the on-disk JSON structure with symbol keys", :aggregate_failures do
+      manifest = described_class.empty(created_at: "t").with_record(record)
+      expect(manifest.to_h).to include(vault_version: 2, format: "tarvault", created_at: "t")
+      expect(manifest.to_h[:gems].first)
+        .to include(name: "foo", version: "1.0.0", platform: "ruby", sha256: "abc", encrypted: false)
+    end
+  end
+
+  describe "StoredGem#matches?" do
+    it "is true when the bytes hash to the stored digest" do
+      stored = Gemvault::Manifest::StoredGem.new(gem: entry, sha256: described_class.digest("data"), encrypted: false)
+      expect(stored.matches?("data")).to be(true)
+    end
+
+    it "is false when the bytes have changed" do
+      expect(record.matches?("tampered")).to be(false)
     end
   end
 

@@ -24,7 +24,7 @@ RSpec.describe Gemvault::Vault do
   describe "delegation" do
     it "forwards the vault contract to the backend" do
       described_class.open(vault_path, create: true) do |v|
-        v.add(build_gem("foo", "1.0.0"))
+        v.add(build_gem(name: "foo", version: "1.0.0"))
         expect(v.gem_entries.map(&:name)).to eq(["foo"])
       end
     end

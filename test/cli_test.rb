@@ -58,17 +58,17 @@ end
 
 class CLIAddTest < CLITestCase
   def test_add_single_gem
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     run_cli("new", "test")
     assert_equal 0, run_cli("add", "test.gemv", gem_path)
     assert_match(/Added foo-1\.0\.0/, @stdout)
   end
 
   def test_add_multiple_gems
-    gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem1 = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     dir2 = @gem_build_dir / "bar_dir"
     dir2.mkpath
-    gem2 = build_gem("bar", "2.0.0", dir: dir2)
+    gem2 = build_gem(name: "bar", version: "2.0.0", dir: dir2)
     run_cli("new", "test")
     assert_equal 0, run_cli("add", "test.gemv", gem1, gem2)
     assert_match(/Added foo-1\.0\.0/, @stdout)
@@ -93,7 +93,7 @@ class CLIAddTest < CLITestCase
   end
 
   def test_add_duplicate_gem_errors
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
     assert_equal 1, run_cli("add", "test.gemv", gem_path)
@@ -101,7 +101,7 @@ class CLIAddTest < CLITestCase
   end
 
   def test_add_to_nonexistent_vault_errors
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     assert_equal 1, run_cli("add", "nope.gemv", gem_path)
     refute_empty @stderr
   end
@@ -117,10 +117,10 @@ class CLIListTest < CLITestCase
   end
 
   def test_list_with_gems
-    gem1 = build_gem("alpha", "1.0.0", dir: @gem_build_dir)
+    gem1 = build_gem(name: "alpha", version: "1.0.0", dir: @gem_build_dir)
     dir2 = @gem_build_dir / "beta_dir"
     dir2.mkpath
-    gem2 = build_gem("beta", "2.0.0", dir: dir2)
+    gem2 = build_gem(name: "beta", version: "2.0.0", dir: dir2)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem1, gem2)
     assert_equal 0, run_cli("list", "test.gemv")
@@ -129,7 +129,7 @@ class CLIListTest < CLITestCase
   end
 
   def test_list_platform_gem
-    gem_path = build_gem("native", "1.0.0", dir: @gem_build_dir, platform: "x86_64-linux")
+    gem_path = build_gem(name: "native", version: "1.0.0", dir: @gem_build_dir, platform: "x86_64-linux")
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
     assert_equal 0, run_cli("list", "test.gemv")
@@ -148,7 +148,7 @@ end
 
 class CLIRemoveTest < CLITestCase
   def test_remove_specific_version
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
     assert_equal 0, run_cli("remove", "test.gemv", "foo", "1.0.0")
@@ -156,10 +156,10 @@ class CLIRemoveTest < CLITestCase
   end
 
   def test_remove_all_versions
-    gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem1 = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     dir2 = @gem_build_dir / "v2"
     dir2.mkpath
-    gem2 = build_gem("foo", "2.0.0", dir: dir2)
+    gem2 = build_gem(name: "foo", version: "2.0.0", dir: dir2)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem1, gem2)
     assert_equal 0, run_cli("remove", "test.gemv", "foo")
@@ -167,7 +167,7 @@ class CLIRemoveTest < CLITestCase
   end
 
   def test_remove_combined_name_version_subprocess_smoke
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
     assert_equal 0, run_cli("remove", "test.gemv", "foo-1.0.0")
@@ -194,7 +194,7 @@ class CLIExtractTest < CLITestCase
   EXTRACTED_GEM_PATTERN = /Extracted foo-1\.0\.0\.gem/
 
   def test_extract_produces_valid_gem
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     original = gem_path.binread
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
@@ -208,7 +208,7 @@ class CLIExtractTest < CLITestCase
   end
 
   def test_extract_output_flag
-    gem_path = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
 
@@ -218,10 +218,10 @@ class CLIExtractTest < CLITestCase
   end
 
   def test_extract_all_versions
-    gem1 = build_gem("foo", "1.0.0", dir: @gem_build_dir)
+    gem1 = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     dir2 = @gem_build_dir / "v2"
     dir2.mkpath
-    gem2 = build_gem("foo", "2.0.0", dir: dir2)
+    gem2 = build_gem(name: "foo", version: "2.0.0", dir: dir2)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem1, gem2)
 

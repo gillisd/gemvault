@@ -1,10 +1,12 @@
 require "time"
-require "json"
+require "pathname"
 require_relative "vault"
 require_relative "vault_session"
 require_relative "gem_extraction"
 require_relative "manifest"
-require_relative "tar_archive"
+require_relative "tarball"
+require_relative "archive_entry"
+require_relative "gem_entry"
 require_relative "gem_reference"
 
 module Gemvault
@@ -17,19 +19,19 @@ module Gemvault
     attr_reader :path
 
     def initialize(path, create: false)
-      @path = File.expand_path(path)
-      @archive = TarArchive.new(@path)
+      @path = Pathname(path).expand_path
+      @archive = Tarball.new(@path)
       @closed = false
       create ? create_vault! : load_manifest!
     end
 
     def add(gem_path, created_at: nil)
-      gem_path = File.expand_path(gem_path)
-      raise Vault::NotFoundError, "Gem file not found: #{gem_path}" unless File.file?(gem_path)
+      gem_path = Pathname(gem_path).expand_path
+      raise Vault::NotFoundError, "Gem file not found: #{gem_path}" unless gem_path.file?
 
       spec = spec_from_gem_file(gem_path)
       raise_if_duplicate(spec)
-      store(spec, File.binread(gem_path), created_at || timestamp)
+      store(spec: spec, bytes: gem_path.binread, created_at: created_at || timestamp)
     end
 
     def remove(reference)
@@ -41,11 +43,14 @@ module Gemvault
       dropped.size
     end
 
-    def gem_data(name, version, platform: "ruby")
-      record = @manifest.find(name, version, platform)
-      raise Vault::NotFoundError, "Gem not found: #{name}-#{version} (#{platform})" unless record
+    def gem_data(entry)
+      record = @manifest.find(entry)
+      raise Vault::NotFoundError, "Gem not found: #{entry}" unless record
 
-      verify(@archive.read(record.filename), record)
+      bytes = @archive.read(record.filename)
+      raise Vault::Error, "Integrity check failed for #{record.filename}" unless record.matches?(bytes)
+
+      bytes
     end
 
     def gem_entries
@@ -71,19 +76,21 @@ module Gemvault
     private
 
     def create_vault!
-      raise Vault::Error, "Vault already exists: #{@path}" if File.exist?(@path)
+      raise Vault::Error, "Vault already exists: #{@path}" if @path.exist?
 
       @manifest = Manifest.empty(created_at: timestamp)
       rewrite([])
     end
 
     def load_manifest!
-      raise Vault::NotFoundError, "Vault not found: #{@path}" unless File.exist?(@path)
+      begin
+        raise Vault::NotFoundError, "Vault not found: #{@path}" unless @path.exist?
 
-      @manifest = Manifest.parse(read_manifest_json)
-      Vault.assert_readable!(@manifest.format_version, @path)
-    rescue JSON::ParserError, Gem::Package::TarInvalidError, ArgumentError, Errno::EINVAL
-      raise Vault::Error, "Not a valid Tarvault: #{@path}"
+        @manifest = Manifest.parse(read_manifest_json)
+        Vault.assert_readable!(version: @manifest.format_version, path: @path)
+      rescue JSON::ParserError, Gem::Package::TarInvalidError, ArgumentError, Errno::EINVAL
+        raise Vault::Error, "Not a valid Tarvault: #{@path}"
+      end
     end
 
     def read_manifest_json
@@ -93,52 +100,49 @@ module Gemvault
       json
     end
 
-    def store(spec, bytes, created_at)
-      record = build_record(spec, bytes, created_at)
-      @manifest = @manifest.with(record)
-      rewrite(@archive.gem_pairs + [[record.filename, bytes]])
+    def store(spec:, bytes:, created_at:)
+      record = build_record(spec: spec, bytes: bytes, created_at: created_at)
+      @manifest = @manifest.with_record(record)
+      rewrite(survivors + [ArchiveEntry.new(name: record.filename, bytes: bytes)])
     end
 
-    def rewrite(gem_pairs)
-      @archive.write([[Manifest::FILENAME, @manifest.to_json]] + gem_pairs)
+    def rewrite(gems)
+      manifest_entry = ArchiveEntry.new(name: Manifest::FILENAME, bytes: @manifest.to_json)
+      @archive.write([manifest_entry] + gems)
+    end
+
+    def survivors
+      @archive.entries.reject { |entry| entry.name == Manifest::FILENAME }
     end
 
     def survivors_excluding(dropped)
       names = dropped.map(&:filename)
-      @archive.gem_pairs.reject { |pair| names.include?(pair.first) }
+      survivors.reject { |entry| names.include?(entry.name) }
     end
 
-    def build_record(spec, bytes, created_at)
-      Manifest::Record.new(
-        name: spec.name,
-        version: spec.version.to_s,
-        platform: spec.platform.to_s,
-        created_at: created_at,
-        sha256: Manifest.digest(bytes),
-        encrypted: false,
+    def build_record(spec:, bytes:, created_at:)
+      entry = GemEntry.new(
+        name: spec.name, version: spec.version.to_s,
+        platform: spec.platform.to_s, created_at: created_at
       )
+      Manifest::StoredGem.new(gem: entry, sha256: Manifest.digest(bytes), encrypted: false)
     end
 
     def matching_records(reference)
       case reference
       in GemReference::AnyVersion[name:]
-        @manifest.records.select { |r| r.name == name }
+        @manifest.records.select { |record| record.gem.name == name }
       in GemReference::SpecificVersion[name:, version:]
-        @manifest.records.select { |r| r.name == name && r.version == version.to_s }
+        @manifest.records.select { |record| record.gem.name == name && record.gem.version == version.to_s }
       end
     end
 
     def raise_if_duplicate(spec)
-      return unless @manifest.find(spec.name, spec.version.to_s, spec.platform.to_s)
+      entry = GemEntry.new(name: spec.name, version: spec.version.to_s, platform: spec.platform.to_s)
+      return unless @manifest.find(entry)
 
       raise Vault::DuplicateGemError,
             "Gem already in vault: #{spec.name}-#{spec.version} (#{spec.platform})"
-    end
-
-    def verify(bytes, record)
-      return bytes if Manifest.digest(bytes) == record.sha256
-
-      raise Vault::Error, "Integrity check failed for #{record.filename}"
     end
 
     def timestamp

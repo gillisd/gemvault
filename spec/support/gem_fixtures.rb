@@ -9,8 +9,8 @@ module GemFixtures
     @gem_dir ||= Pathname(Dir.mktmpdir("gemvault_spec", TMP_ROOT.tap(&:mkpath).to_s))
   end
 
-  def build_gem(name, version, **options)
-    GemFactory.new(name, version, dir: gem_dir, **options).build
+  def build_gem(name:, version:, **options)
+    GemFactory.new(name: name, version: version, dir: gem_dir, **options).build
   end
 
   def vault_path
@@ -18,10 +18,10 @@ module GemFixtures
   end
 
   def corrupt_gem_blob(path)
-    data = File.binread(path)
-    idx = data.bytesize / 2
-    data.setbyte(idx, data.getbyte(idx) ^ 0xFF)
-    File.binwrite(path, data)
+    bytes = File.binread(path)
+    middle = bytes.bytesize / 2
+    bytes.setbyte(middle, bytes.getbyte(middle) ^ 0xFF)
+    File.binwrite(path, bytes)
   end
 end
 

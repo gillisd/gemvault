@@ -7,7 +7,9 @@ module FixtureScript
   #   files: hash of {name => {path => content}} overrides
   #   dependencies: hash of {name => [[dep_name, requirement]]}
   def self.preamble(gems: [["vault_test_gem", "1.0.0"]], files: {}, dependencies: {})
-    gem_builds = gems.map { |name, version| build_gem(name, version, files, dependencies) }.join("\n")
+    gem_builds = gems.map { |name, version|
+      build_gem(name: name, version: version, files: files, dependencies: dependencies)
+    }.join("\n")
     vault_adds = vault_add_commands(gems)
 
     <<~SH
@@ -18,20 +20,20 @@ module FixtureScript
     SH
   end
 
-  def self.build_gem(name, version, files, dependencies)
+  def self.build_gem(name:, version:, files:, dependencies:)
     gem_files = files.fetch(name, { "lib/#{name}.rb" => "module #{camelize(name)}; VERSION = \"#{version}\"; end" })
     deps = dependencies.fetch(name, [])
 
     <<~SH
-      #{file_write_commands(name, gem_files)}
+      #{file_write_commands(name: name, gem_files: gem_files)}
       cd $WORKDIR/gems/#{name} && cat > #{name}.gemspec <<'GEMSPEC'
-      #{gemspec_body(name, version, gem_files, deps)}
+      #{gemspec_body(name: name, version: version, gem_files: gem_files, deps: deps)}
       GEMSPEC
       gem build #{name}.gemspec 2>&1
     SH
   end
 
-  def self.gemspec_body(name, version, gem_files, deps)
+  def self.gemspec_body(name:, version:, gem_files:, deps:)
     dep_lines = deps.map { |dep_name, req| "s.add_dependency '#{dep_name}', '#{req}'" }.join("; ")
 
     <<~GEMSPEC.chomp
@@ -48,7 +50,7 @@ module FixtureScript
     GEMSPEC
   end
 
-  def self.file_write_commands(name, gem_files)
+  def self.file_write_commands(name:, gem_files:)
     gem_files.map { |path, content|
       "mkdir -p $(dirname $WORKDIR/gems/#{name}/#{path}) && " \
         "cat > $WORKDIR/gems/#{name}/#{path} <<'FILECONTENT'\n#{content}\nFILECONTENT"

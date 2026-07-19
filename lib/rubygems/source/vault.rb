@@ -1,5 +1,6 @@
 require "gemvault/vault"
 require "gemvault/vault_path"
+require "gemvault/gem_entry"
 require "pathname"
 
 ##
@@ -15,7 +16,8 @@ class Gem::Source::Vault < Gem::Source
   attr_reader :path
 
   def initialize(path)
-    @path = Pathname(Gemvault::VaultPath.resolve(path)).expand_path.to_s
+    resolved = Gemvault::VaultPath.resolve(path)
+    @path = Pathname(resolved).expand_path.to_s
     super(@path)
     @uri = @path
     @specs = nil
@@ -24,7 +26,7 @@ class Gem::Source::Vault < Gem::Source
   def load_specs(type)
     verbose "Loading #{type} specs from vault at #{@path}"
     ensure_specs_loaded
-    select_tuples(type)
+    select_candidates(type)
   end
 
   def fetch_spec(name_tuple)
@@ -41,7 +43,7 @@ class Gem::Source::Vault < Gem::Source
     dest = Pathname(dir).join("cache").tap(&:mkpath).join(spec.file_name)
 
     Gemvault::Vault.open(@path) do |vault|
-      dest.binwrite(vault.gem_data(spec.name, spec.version.to_s, platform: spec.platform.to_s))
+      dest.binwrite(vault.gem_data(entry_for(spec)))
     end
 
     dest.to_s
@@ -87,28 +89,32 @@ class Gem::Source::Vault < Gem::Source
 
   private
 
-  def select_tuples(type)
+  def entry_for(spec)
+    Gemvault::GemEntry.new(name: spec.name, version: spec.version.to_s, platform: spec.platform.to_s)
+  end
+
+  def select_candidates(type)
     case type
-    when :released then released_tuples
-    when :prerelease then prerelease_tuples
-    when :latest then latest_tuples
+    when :released then released_candidates
+    when :prerelease then prerelease_candidates
+    when :latest then latest_candidates
     else @specs.keys
     end
   end
 
-  def released_tuples
-    @specs.keys.reject { |tuple| tuple.version.prerelease? }
+  def released_candidates
+    @specs.keys.reject { |candidate| candidate.version.prerelease? }
   end
 
-  def prerelease_tuples
-    @specs.keys.select { |tuple| tuple.version.prerelease? }
+  def prerelease_candidates
+    @specs.keys.select { |candidate| candidate.version.prerelease? }
   end
 
-  def latest_tuples
+  def latest_candidates
     @specs.keys
-          .group_by { |tuple| [tuple.name, tuple.platform] }
+          .group_by { |candidate| [candidate.name, candidate.platform] }
           .values
-          .map { |tuples| tuples.max_by(&:version) }
+          .map { |versions| versions.max_by(&:version) }
   end
 
   def ensure_specs_loaded
@@ -117,9 +123,8 @@ class Gem::Source::Vault < Gem::Source
     @specs = {}
     Gemvault::Vault.open(@path) do |vault|
       vault.gem_entries.each do |entry|
-        spec = vault.spec_from_blob(entry.name, entry.version, entry.platform)
-        tuple = spec.name_tuple
-        @specs[tuple] = spec
+        spec = vault.spec_from_blob(entry)
+        @specs[spec.name_tuple] = spec
       end
     end
   end

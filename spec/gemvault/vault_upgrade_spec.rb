@@ -12,7 +12,7 @@ RSpec.describe Gemvault::VaultUpgrade do
     end
 
     it "is a no-op for an already-current vault" do
-      Gemvault::Vault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+      Gemvault::Vault.open(vault_path, create: true) { |v| v.add(build_gem(name: "foo", version: "1.0.0")) }
       expect(described_class.new(vault_path).plan.no_op?).to be(true)
     end
   end
@@ -57,7 +57,7 @@ RSpec.describe Gemvault::VaultUpgrade do
     end
 
     it "does not back up or rewrite an already-current vault" do
-      Gemvault::Vault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+      Gemvault::Vault.open(vault_path, create: true) { |v| v.add(build_gem(name: "foo", version: "1.0.0")) }
       described_class.new(vault_path).call
       expect(File.exist?("#{vault_path}.bak")).to be(false)
     end

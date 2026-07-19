@@ -5,7 +5,7 @@ require "json"
 
 RSpec.describe "vault format versioning" do
   it "reports format_version 2 for a Tarvault" do
-    Gemvault::Vault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
+    Gemvault::Vault.open(vault_path, create: true) { |v| v.add(build_gem(name: "foo", version: "1.0.0")) }
     Gemvault::Vault.open(vault_path) { |v| expect(v.format_version).to eq(2) }
   end
 
@@ -15,8 +15,8 @@ RSpec.describe "vault format versioning" do
   end
 
   it "refuses a Tarvault whose declared version is newer than READABLE_FORMATS" do
-    Gemvault::Vault.open(vault_path, create: true) { |v| v.add(build_gem("foo", "1.0.0")) }
-    bump_tarvault_version(vault_path, 99)
+    Gemvault::Vault.open(vault_path, create: true) { |v| v.add(build_gem(name: "foo", version: "1.0.0")) }
+    bump_tarvault_version(path: vault_path, version: 99)
     expect { Gemvault::Vault.open(vault_path) { |v| v } }.to raise_error(Gemvault::Vault::UnsupportedVersionError)
   end
 
@@ -31,10 +31,12 @@ RSpec.describe "vault format versioning" do
     expect { Gemvault::Vault.open(vault_path) { |v| v } }.to raise_error(Gemvault::Vault::Error, /Unrecognized/)
   end
 
-  def bump_tarvault_version(path, version)
-    archive = Gemvault::TarArchive.new(path.to_s)
+  def bump_tarvault_version(path:, version:)
+    archive = Gemvault::Tarball.new(path)
     manifest = JSON.parse(archive.read("manifest.json"))
     manifest["vault_version"] = version
-    archive.write([["manifest.json", JSON.generate(manifest)], *archive.gem_pairs])
+    gems = archive.entries.reject { |entry| entry.name == "manifest.json" }
+    manifest_entry = Gemvault::ArchiveEntry.new(name: "manifest.json", bytes: JSON.generate(manifest))
+    archive.write([manifest_entry] + gems)
   end
 end

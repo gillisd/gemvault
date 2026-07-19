@@ -26,11 +26,14 @@ module Gemvault
                          desc: "Gem version (overrides positional and NAME-VERSION forms)"
 
         def run(vault, name, positional_version = nil)
-          ref = Gemvault::GemReference.parse(name, version: options[:version] || positional_version)
-          with_vault(vault) { |v| report_removal(v.remove(ref)) }
-        rescue Gemvault::GemReference::NonExactVersionError => e
-          print_error(e.message)
-          exit(1)
+          begin
+            version = options[:version] || positional_version
+            reference = Gemvault::GemReference.parse(name, version: version)
+            with_vault(vault) { |v| report_removal(v.remove(reference)) }
+          rescue Gemvault::GemReference::NonExactVersionError => e
+            print_error(e.message)
+            exit(1)
+          end
         end
 
         private

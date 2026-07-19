@@ -9,10 +9,13 @@ module Gemvault
       private
 
       def with_vault(locator, create: false, &block)
-        Gemvault::Vault.open(VaultPath.resolve(locator), create: create, &block)
-      rescue Gemvault::Vault::Error => e
-        print_error(e.message)
-        exit(1)
+        begin
+          path = VaultPath.resolve(locator)
+          Gemvault::Vault.open(path, create: create, &block)
+        rescue Gemvault::Vault::Error => e
+          print_error(e.message)
+          exit(1)
+        end
       end
     end
   end

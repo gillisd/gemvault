@@ -1,4 +1,5 @@
 require "uri"
+require "pathname"
 
 module Gemvault
   ##
@@ -11,18 +12,20 @@ module Gemvault
     SCHEMES = ["file", "vault"].freeze
 
     # :call-seq:
-    #   resolve(locator) -> String
+    #   resolve(locator) -> Pathname
     #
-    # Resolves +locator+ to a filesystem path. Two-slash relative forms such
-    # as <tt>file://vault.gemv</tt> parse their first segment as a URI host,
-    # so host and path are rejoined.
+    # Resolves +locator+ to a Pathname. Two-slash relative forms such as
+    # <tt>file://vault.gemv</tt> parse their first segment as a URI host, so
+    # host and path are rejoined.
     def self.resolve(locator)
-      uri = URI.parse(locator.to_s)
-      return locator.to_s unless SCHEMES.include?(uri.scheme)
+      begin
+        uri = URI.parse(locator.to_s)
+        return Pathname(locator.to_s) unless SCHEMES.include?(uri.scheme)
 
-      [uri.host, uri.path].compact.join
-    rescue URI::InvalidURIError
-      locator.to_s
+        Pathname([uri.host, uri.path].compact.join)
+      rescue URI::InvalidURIError
+        Pathname(locator.to_s)
+      end
     end
   end
 end

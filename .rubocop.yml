@@ -137,6 +137,13 @@ Style/ArgumentsForwarding:
 Style/RedundantBegin:
   Enabled: false
 
+# Data value objects that carry constants, nested value types, or any class
+# body read best as `class X < Data.define(...)`. The assignment form the cop
+# prefers leaks block-level constants to the enclosing scope and forces a
+# `.freeze` (Style/MutableConstant) on the class. Permitted by David.
+Style/DataInheritance:
+  Enabled: false
+
 # Compact class names are fine for small files and tests.
 Style/ClassAndModuleChildren:
   Enabled: false

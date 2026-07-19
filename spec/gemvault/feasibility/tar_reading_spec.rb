@@ -5,8 +5,8 @@ RSpec.describe "reading gemspecs from a plain tar of .gem files" do
   let(:tar_path) { gem_dir / "plain.tar" }
 
   before do
-    a = File.binread(build_gem("alpha", "1.0.0"))
-    b = File.binread(build_gem("beta", "2.0.0"))
+    a = File.binread(build_gem(name: "alpha", version: "1.0.0"))
+    b = File.binread(build_gem(name: "beta", version: "2.0.0"))
     Gem::Package::TarWriter.new(File.open(tar_path, "wb")) do |w|
       { "alpha-1.0.0.gem" => a, "beta-2.0.0.gem" => b }.each do |name, bytes|
         w.add_file_simple(name, 0o644, bytes.bytesize) { |io| io.write(bytes) }

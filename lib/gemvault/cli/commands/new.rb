@@ -1,3 +1,4 @@
+require "pathname"
 require_relative "../command"
 
 module Gemvault
@@ -12,9 +13,9 @@ module Gemvault
                         desc: "Vault name (auto-appends .gemv)"
 
         def run(name)
-          path = name.end_with?(".gemv") ? name : "#{name}.gemv"
+          path = Pathname(name.end_with?(".gemv") ? name : "#{name}.gemv")
 
-          if File.exist?(path)
+          if path.exist?
             print_error("#{path} already exists")
             exit(1)
           end

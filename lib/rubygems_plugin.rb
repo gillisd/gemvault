@@ -31,8 +31,7 @@ module Gemvault
       Gem::OptionParser.accept Gem::URI::HTTP do |value|
         next value if value.to_s.end_with?(".gemv")
 
-        uri = parse_uri(value)
-        validate_scheme!(uri, value)
+        validate_uri!(value)
         value
       end
     end
@@ -40,12 +39,15 @@ module Gemvault
     private
 
     def parse_uri(value)
-      Gem::URI.parse value
-    rescue Gem::URI::InvalidURIError
-      raise Gem::OptionParser::InvalidArgument, value
+      begin
+        Gem::URI.parse value
+      rescue Gem::URI::InvalidURIError
+        raise Gem::OptionParser::InvalidArgument, value
+      end
     end
 
-    def validate_scheme!(uri, value)
+    def validate_uri!(value)
+      uri = parse_uri(value)
       return if VALID_URI_SCHEMES.include?(uri.scheme)
 
       schemes = VALID_URI_SCHEMES.map { |scheme| "#{scheme}://" }
