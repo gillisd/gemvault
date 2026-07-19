@@ -58,6 +58,12 @@ module Gemvault
       records.find { |record| record.gem.same_identity_as?(entry) }
     end
 
+    def matching(reference)
+      records.select { |record| reference.matches?(record.gem) }
+    end
+
+    def size = records.size
+
     def gem_entries
       records.map(&:gem).sort_by { |gem| [gem.name, gem.version] }
     end

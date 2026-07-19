@@ -98,7 +98,7 @@ module Bundler
       end
 
       def entry_for(spec)
-        Gemvault::GemEntry.new(name: spec.name, version: spec.version.to_s, platform: spec.platform.to_s)
+        Gemvault::GemEntry.from_spec(spec)
       end
 
       def validate_vault_exists!

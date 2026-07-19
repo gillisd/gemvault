@@ -35,7 +35,7 @@ module Gemvault
     end
 
     def remove(reference)
-      dropped = matching_records(reference)
+      dropped = @manifest.matching(reference)
       return 0 if dropped.empty?
 
       @manifest = @manifest.without(dropped)
@@ -62,7 +62,7 @@ module Gemvault
     end
 
     def size
-      @manifest.records.size
+      @manifest.size
     end
 
     def close
@@ -121,25 +121,12 @@ module Gemvault
     end
 
     def build_record(spec:, bytes:, created_at:)
-      entry = GemEntry.new(
-        name: spec.name, version: spec.version.to_s,
-        platform: spec.platform.to_s, created_at: created_at
-      )
+      entry = GemEntry.from_spec(spec, created_at: created_at)
       Manifest::StoredGem.new(gem: entry, sha256: Manifest.digest(bytes), encrypted: false)
     end
 
-    def matching_records(reference)
-      case reference
-      in GemReference::AnyVersion[name:]
-        @manifest.records.select { |record| record.gem.name == name }
-      in GemReference::SpecificVersion[name:, version:]
-        @manifest.records.select { |record| record.gem.name == name && record.gem.version == version.to_s }
-      end
-    end
-
     def raise_if_duplicate(spec)
-      entry = GemEntry.new(name: spec.name, version: spec.version.to_s, platform: spec.platform.to_s)
-      return unless @manifest.find(entry)
+      return unless @manifest.find(GemEntry.from_spec(spec))
 
       raise Vault::DuplicateGemError,
             "Gem already in vault: #{spec.name}-#{spec.version} (#{spec.platform})"

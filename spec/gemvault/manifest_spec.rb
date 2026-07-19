@@ -1,4 +1,5 @@
 require "gemvault/manifest"
+require "gemvault/gem_reference"
 
 RSpec.describe Gemvault::Manifest do
   let(:entry) do
@@ -53,6 +54,33 @@ RSpec.describe Gemvault::Manifest do
     it "returns the stored gems' entries sorted by name then version" do
       manifest = described_class.empty(created_at: "t").with_record(record)
       expect(manifest.gem_entries).to eq([entry])
+    end
+  end
+
+  describe "#matching" do
+    let(:foo_two) do
+      Gemvault::Manifest::StoredGem.new(
+        gem: Gemvault::GemEntry.new(name: "foo", version: "2.0.0"), sha256: "def", encrypted: false,
+      )
+    end
+    let(:manifest) { described_class.empty(created_at: "t").with_record(record).with_record(foo_two) }
+
+    it "selects every stored gem the reference matches" do
+      expect(manifest.matching(Gemvault::GemReference.parse("foo"))).to contain_exactly(record, foo_two)
+    end
+
+    it "narrows to one gem when the reference names an exact version" do
+      expect(manifest.matching(Gemvault::GemReference.parse("foo", version: "1.0.0"))).to eq([record])
+    end
+
+    it "is empty when nothing matches" do
+      expect(manifest.matching(Gemvault::GemReference.parse("absent"))).to eq([])
+    end
+  end
+
+  describe "#size" do
+    it "counts the stored gems" do
+      expect(described_class.empty(created_at: "t").with_record(record).size).to eq(1)
     end
   end
 
