@@ -31,7 +31,7 @@ module Gemvault
 
       spec = spec_from_gem_file(gem_path)
       raise_if_duplicate(spec)
-      store(spec: spec, bytes: gem_path.binread, created_at: created_at || timestamp)
+      store(spec:, bytes: gem_path.binread, created_at: created_at || timestamp)
     end
 
     def remove(reference)
@@ -101,9 +101,9 @@ module Gemvault
     end
 
     def store(spec:, bytes:, created_at:)
-      record = build_record(spec: spec, bytes: bytes, created_at: created_at)
+      record = build_record(spec:, bytes:, created_at:)
       @manifest = @manifest.with_record(record)
-      rewrite(survivors + [ArchiveEntry.new(name: record.filename, bytes: bytes)])
+      rewrite(survivors + [ArchiveEntry.new(name: record.filename, bytes:)])
     end
 
     def rewrite(gems)
@@ -121,7 +121,7 @@ module Gemvault
     end
 
     def build_record(spec:, bytes:, created_at:)
-      entry = GemEntry.from_spec(spec, created_at: created_at)
+      entry = GemEntry.from_spec(spec, created_at:)
       Manifest::StoredGem.new(gem: entry, sha256: Manifest.digest(bytes), encrypted: false)
     end
 

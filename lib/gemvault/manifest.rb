@@ -14,11 +14,9 @@ module Gemvault
     # encryption flag the manifest keeps alongside it.
     class StoredGem < Data.define(:gem, :sha256, :encrypted)
       def self.from_h(hash)
-        entry = GemEntry.new(
-          name: hash[:name], version: hash[:version],
-          platform: hash[:platform], created_at: hash[:created_at]
-        )
-        new(gem: entry, sha256: hash[:sha256], encrypted: hash[:encrypted])
+        hash => { name:, version:, platform:, created_at:, sha256:, encrypted: }
+        entry = GemEntry.new(name:, version:, platform:, created_at:)
+        new(gem: entry, sha256:, encrypted:)
       end
 
       def filename = gem.filename
@@ -28,22 +26,20 @@ module Gemvault
       def to_h
         {
           name: gem.name, version: gem.version, platform: gem.platform,
-          created_at: gem.created_at, sha256: sha256, encrypted: encrypted
+          created_at: gem.created_at, sha256:, encrypted:
         }
       end
     end
 
     def self.digest(bytes) = Digest::SHA256.hexdigest(bytes)
 
-    def self.empty(created_at:) = new(created_at: created_at, records: [])
+    def self.empty(created_at:) = new(created_at:, records: [])
 
     def self.parse(json)
       data = JSON.parse(json, symbolize_names: true)
-      new(
-        created_at: data[:created_at],
-        records: data.fetch(:gems, []).map { |gem| StoredGem.from_h(gem) },
-        format_version: (data[:vault_version] || FORMAT_VERSION).to_i,
-      )
+      records = data.fetch(:gems, []).map { |gem| StoredGem.from_h(gem) }
+      format_version = (data[:vault_version] || FORMAT_VERSION).to_i
+      new(created_at: data[:created_at], records:, format_version:)
     end
 
     def initialize(created_at:, records:, format_version: FORMAT_VERSION)
@@ -72,7 +68,7 @@ module Gemvault
       {
         vault_version: FORMAT_VERSION,
         format: "tarvault",
-        created_at: created_at,
+        created_at:,
         gems: records.map(&:to_h),
       }
     end

@@ -80,12 +80,12 @@ module Gemvault
 
     def self.build_tarvault(path, create:)
       require_relative "tarvault"
-      Tarvault.new(path, create: create)
+      Tarvault.new(path, create:)
     end
 
     def initialize(path, create: false)
       absolute_path = Pathname(path).expand_path
-      @backend = self.class.backend_for(absolute_path, create: create)
+      @backend = self.class.backend_for(absolute_path, create:)
     end
   end
 end

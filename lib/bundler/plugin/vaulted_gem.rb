@@ -34,7 +34,7 @@ module Bundler
       # Install the extracted .gem file into the bundle, point the spec at it,
       # and return its post-install message.
       def install(gem_path:, build_args:)
-        installed = installer(gem_path: gem_path, build_args: build_args).install
+        installed = installer(gem_path:, build_args:).install
         @spec.full_gem_path = installed.full_gem_path
         @spec.loaded_from = anchor(installed.to_ruby, dir: installed.full_gem_path)
         @spec.post_install_message
@@ -58,7 +58,7 @@ module Bundler
           ignore_dependencies: true,
           wrappers: true,
           env_shebang: true,
-          build_args: build_args,
+          build_args:,
         )
       end
     end

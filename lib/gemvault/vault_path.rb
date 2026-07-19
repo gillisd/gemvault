@@ -11,13 +11,15 @@ module Gemvault
   module VaultPath
     SCHEMES = ["file", "vault"].freeze
 
+    module_function
+
     # :call-seq:
     #   resolve(locator) -> Pathname
     #
     # Resolves +locator+ to a Pathname. Two-slash relative forms such as
     # <tt>file://vault.gemv</tt> parse their first segment as a URI host, so
     # host and path are rejoined.
-    def self.resolve(locator)
+    def resolve(locator)
       begin
         uri = URI.parse(locator.to_s)
         return Pathname(locator.to_s) unless SCHEMES.include?(uri.scheme)

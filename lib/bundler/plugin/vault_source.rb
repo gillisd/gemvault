@@ -56,7 +56,7 @@ module Bundler
         return gem.adopt if gem.installed? && !opts[:force]
 
         Bundler.ui.confirm "Installing #{gem.version_message} from vault #{@uri}"
-        extract(spec) { |gem_path| gem.install(gem_path: gem_path, build_args: opts[:build_args] || []) }
+        extract(spec) { |gem_path| gem.install(gem_path:, build_args: opts[:build_args] || []) }
       end
 
       def options_to_lock

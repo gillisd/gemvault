@@ -10,25 +10,19 @@ RSpec.describe Gemvault::GemReference do
     context "with an AnyVersion reference" do
       subject(:reference) { described_class::AnyVersion.new(name: "foo") }
 
-      it "matches any version of the named gem" do
-        expect(reference.matches?(foo_two)).to be(true)
-      end
+      let(:matching_entry) { foo_two }
+      let(:nonmatching_entry) { bar_one }
 
-      it "rejects a gem with a different name" do
-        expect(reference.matches?(bar_one)).to be(false)
-      end
+      it_behaves_like "a gem reference"
     end
 
     context "with a SpecificVersion reference" do
       subject(:reference) { described_class::SpecificVersion.new(name: "foo", version: Gem::Version.new("1.0.0")) }
 
-      it "matches the exact name and version" do
-        expect(reference.matches?(foo_one)).to be(true)
-      end
+      let(:matching_entry) { foo_one }
+      let(:nonmatching_entry) { foo_two }
 
-      it "rejects another version of the same gem" do
-        expect(reference.matches?(foo_two)).to be(false)
-      end
+      it_behaves_like "a gem reference"
     end
   end
 

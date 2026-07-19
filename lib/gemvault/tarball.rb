@@ -22,7 +22,7 @@ module Gemvault
 
     def write(entries)
       Tempfile.create(["tarvault", ".tar"], @path.dirname) do |tmp|
-        write_entries(io: tmp, entries: entries)
+        write_entries(io: tmp, entries:)
         tmp.flush
         tmp.fsync
         tmp.close
@@ -42,7 +42,7 @@ module Gemvault
 
     def write_entries(io:, entries:)
       Gem::Package::TarWriter.new(io) do |writer|
-        entries.each { |entry| add_entry(writer: writer, entry: entry) }
+        entries.each { |entry| add_entry(writer:, entry:) }
       end
     end
 

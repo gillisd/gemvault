@@ -20,8 +20,7 @@ module Gemvault
         def run(vault)
           begin
             upgrade = build_upgrade(vault)
-            summary = upgrade.plan
-            report(vault: vault, summary: summary, upgrade: upgrade)
+            dispatch(vault:, upgrade:)
           rescue Gemvault::Vault::Error => e
             print_error(e.message)
             exit(1)
@@ -39,16 +38,21 @@ module Gemvault
           !options[:no_backup]
         end
 
-        def report(vault:, summary:, upgrade:)
-          case summary
+        def dispatch(vault:, upgrade:)
+          summary = upgrade.plan
+          case decision(summary)
           in { no_op: true }
-            report_no_op(vault: vault, summary: summary)
-          in _ if options[:dry_run]
-            report_dry_run(vault: vault, summary: summary)
+            report_no_op(vault:, summary:)
+          in { dry_run: true }
+            report_dry_run(vault:, summary:)
           else
             upgrade.call
-            report_upgraded(vault: vault, summary: summary)
+            report_upgraded(vault:, summary:)
           end
+        end
+
+        def decision(summary)
+          { no_op: summary.no_op?, dry_run: options[:dry_run] }
         end
 
         def report_no_op(vault:, summary:)

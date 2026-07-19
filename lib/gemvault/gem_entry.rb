@@ -8,7 +8,7 @@ module Gemvault
     # Builds an entry from a <tt>Gem::Specification</tt> (or any object with
     # +name+, +version+, and +platform+), stringifying the version and platform.
     def self.from_spec(spec, created_at: nil)
-      new(name: spec.name, version: spec.version.to_s, platform: spec.platform.to_s, created_at: created_at)
+      new(name: spec.name, version: spec.version.to_s, platform: spec.platform.to_s, created_at:)
     end
 
     def initialize(name:, version:, platform: RUBY_PLATFORM_NAME, created_at: nil)

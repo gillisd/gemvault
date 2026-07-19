@@ -57,7 +57,7 @@ module Gemvault
       tmp = Pathname("#{@path}.upgrading")
       rm_f(tmp)
       copy_current_format(tmp)
-      verify_count!(tmp: tmp, expected_count: expected_count)
+      verify_count!(tmp:, expected_count:)
       tmp.rename(@path)
     end
 
@@ -65,7 +65,7 @@ module Gemvault
       Deprecation.silence do
         Vault.open(@path) do |old|
           target = Vault.new(tmp, create: true)
-          old.gem_entries.each { |entry| copy_gem(old: old, target: target, entry: entry) }
+          old.gem_entries.each { |entry| copy_gem(old:, target:, entry:) }
           target.close
         end
       end

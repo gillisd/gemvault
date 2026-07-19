@@ -61,7 +61,9 @@ module Gemvault
 
     def format_version
       row = @db.execute("SELECT value FROM metadata WHERE key = 'vault_version'").first
-      row ? row["value"].to_i : FORMAT_VERSION
+      return FORMAT_VERSION unless row
+
+      row["value"].to_i
     end
 
     private

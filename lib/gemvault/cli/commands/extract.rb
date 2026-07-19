@@ -29,9 +29,9 @@ module Gemvault
 
           with_vault(vault) do |v|
             output_dir.mkpath
-            entries = matching_entries(vault: v, name: name, version: version)
+            entries = matching_entries(vault: v, name:, version:)
             abort_missing_gem(name) if entries.empty?
-            extract_entries(vault: v, entries: entries, output_dir: output_dir)
+            extract_entries(vault: v, entries:, output_dir:)
           end
         end
 
