@@ -31,6 +31,10 @@ module BundleInstall
     )
   end
 
+  def bundle_check_after_install
+    run_bundle(single_gem_gemfile, "bundle install\nbundle check")
+  end
+
   def install_after_vault_rename
     run_bundle(
       <<~GEMFILE,

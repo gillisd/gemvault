@@ -30,6 +30,20 @@ module Bundler
         @allow_remote = true
       end
 
+      # The inverse of remote!. Bundler's local-only resolve (Definition#check!,
+      # reached by `bundle check`) calls local_only! on every source. The base
+      # Bundler::Plugin::API::Source defines no such hook, so without this the
+      # command dies with NoMethodError; here it simply stops advertising gems
+      # that live only inside the archive.
+      def local_only!
+        @allow_remote = false
+      end
+
+      # Also invoked on every source during resolution (Definition#prefer_local!,
+      # for `--prefer-local`). The vault reads from one local file already, so
+      # there is no remote to deprioritize.
+      def prefer_local!; end
+
       def install(spec, opts = {})
         gem_dir = gem_dir_for(spec.full_name)
         return use_installed_gem(spec, gem_dir) if File.directory?(gem_dir) && !opts[:force]
