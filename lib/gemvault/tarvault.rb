@@ -30,8 +30,9 @@ module Gemvault
       raise Vault::NotFoundError, "Gem file not found: #{gem_path}" unless gem_path.file?
 
       spec = spec_from_gem_file(gem_path)
-      raise_if_duplicate(spec)
-      store(spec:, bytes: gem_path.binread, created_at: created_at || timestamp)
+      entry = GemEntry.from_spec(spec, created_at: created_at || timestamp)
+      raise_if_duplicate(entry)
+      store(entry:, bytes: gem_path.binread)
     end
 
     def remove(reference)
@@ -100,8 +101,8 @@ module Gemvault
       json
     end
 
-    def store(spec:, bytes:, created_at:)
-      record = build_record(spec:, bytes:, created_at:)
+    def store(entry:, bytes:)
+      record = build_record(entry:, bytes:)
       @manifest = @manifest.with_record(record)
       rewrite(survivors + [ArchiveEntry.new(name: record.filename, bytes:)])
     end
@@ -120,16 +121,14 @@ module Gemvault
       survivors.reject { |entry| names.include?(entry.name) }
     end
 
-    def build_record(spec:, bytes:, created_at:)
-      entry = GemEntry.from_spec(spec, created_at:)
+    def build_record(entry:, bytes:)
       Manifest::StoredGem.new(gem: entry, sha256: Manifest.digest(bytes), encrypted: false)
     end
 
-    def raise_if_duplicate(spec)
-      return unless @manifest.find(GemEntry.from_spec(spec))
+    def raise_if_duplicate(entry)
+      return unless @manifest.find(entry)
 
-      raise Vault::DuplicateGemError,
-            "Gem already in vault: #{spec.name}-#{spec.version} (#{spec.platform})"
+      raise Vault::DuplicateGemError, "Gem already in vault: #{entry}"
     end
 
     def timestamp
