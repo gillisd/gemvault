@@ -570,3 +570,9 @@ Description:
 + 
 + If there aren't any reports for this error yet, please fill in the new issue form located at https://github.com/ruby/rubygems/issues/new?labels=Bundler&template=bundler-related-issue.md. Make sure to copy and paste the full output of this command under the "What happened instead?" section.
 Status: open
+
+Id: 11
+Updated: Sat, 18 Jul 2026 22:35:18 -0400
+Name: CI tests aren't running
+Description: CI tests should be running on all platforms
+Status: open
