@@ -1,8 +1,9 @@
 module GemInstall
   LOADING_SPECS_MESSAGE = /Loading .* specs from vault at/
+  INSTALLED_SUFFIXED_VERSION = /installed suffix_gem-0\.2\.1\.patch1/i
 
-  def run_gem_install(gem_name, vault_flags, assertions)
-    podman_run(gem_install_script(gem_name, vault_flags, assertions))
+  def run_gem_install(gem_name, vault_flags, assertions, version: "1.0.0")
+    podman_run(gem_install_script(gem_name, vault_flags, assertions, version))
   end
 
   def install_and_require_gem
@@ -13,8 +14,8 @@ module GemInstall
     )
   end
 
-  def gem_install_script(gem_name, vault_flags, assertions)
-    preamble = FixtureScript.preamble(gems: [[gem_name, "1.0.0"]])
+  def gem_install_script(gem_name, vault_flags, assertions, version = "1.0.0")
+    preamble = FixtureScript.preamble(gems: [[gem_name, version]])
     <<~SH
       #{preamble}
       SYSTEM_GEM_PATH=$(ruby -e 'puts Gem.path.join(":")')

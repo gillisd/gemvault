@@ -22,4 +22,13 @@ RSpec.describe "gem install with vault source", :integration do
     expect(status).to be_success, "Failed:\n#{output}"
     expect(output).to match(/installed vault_uri_abs/i)
   end
+
+  context "when the vault's only version carries a non-numeric suffix" do
+    it "treats it as a prerelease and installs it with --pre", :aggregate_failures do
+      output, status = run_gem_install("suffix_gem", "--pre --source $WORKDIR/test.gemv", "true",
+                                       version: "0.2.1.patch1")
+      expect(status).to be_success, "Failed:\n#{output}"
+      expect(output).to match(GemInstall::INSTALLED_SUFFIXED_VERSION)
+    end
+  end
 end
