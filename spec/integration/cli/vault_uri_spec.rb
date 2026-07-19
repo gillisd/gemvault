@@ -10,4 +10,10 @@ RSpec.describe "gemvault commands with URI vault locators", :integration do
     expect(status).to be_success, "gemvault list failed:\n#{output}"
     expect(output).to include("uri_gem-1.0.0")
   end
+
+  it "upgrades through a vault:/// URI", :aggregate_failures do
+    output, status = upgrade_vault_through_uri("vault://")
+    expect(status).to be_success, "gemvault upgrade failed:\n#{output}"
+    expect(output).to include("already current")
+  end
 end

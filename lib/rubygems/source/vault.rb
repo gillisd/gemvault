@@ -3,7 +3,8 @@ require "gemvault/vault_path"
 require "pathname"
 
 ##
-# A source backed by a .gemv vault file (SQLite archive of .gem blobs).
+# A source backed by a .gemv vault file: a tar archive of .gem files indexed
+# by a manifest. Legacy SQLite vaults are read transparently.
 #
 # Used by the gemvault RubyGems plugin to support:
 #

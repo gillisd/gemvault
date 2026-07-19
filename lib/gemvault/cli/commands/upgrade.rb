@@ -1,4 +1,5 @@
 require_relative "../command"
+require_relative "../../vault_path"
 require_relative "../../vault_upgrade"
 
 module Gemvault
@@ -17,7 +18,7 @@ module Gemvault
         option :no_backup, desc: "Do not write a .bak copy before upgrading"
 
         def run(vault)
-          upgrade = Gemvault::VaultUpgrade.new(vault, backup: !options[:no_backup])
+          upgrade = Gemvault::VaultUpgrade.new(VaultPath.resolve(vault), backup: !options[:no_backup])
           summary = upgrade.plan
           return report_no_op(vault, summary) if summary.no_op?
           return report_dry_run(vault, summary) if options[:dry_run]

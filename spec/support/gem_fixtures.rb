@@ -3,8 +3,10 @@ require "tmpdir"
 require "fileutils"
 
 module GemFixtures
+  TMP_ROOT = Pathname(__dir__).parent.parent.join("tmp").freeze
+
   def gem_dir
-    @gem_dir ||= Pathname(Dir.mktmpdir("gemvault_spec"))
+    @gem_dir ||= Pathname(Dir.mktmpdir("gemvault_spec", TMP_ROOT.tap(&:mkpath).to_s))
   end
 
   def build_gem(name, version, **options)

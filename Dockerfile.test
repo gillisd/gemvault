@@ -11,7 +11,8 @@ RUN cd /tmp/build \
     && rm -rf /tmp/build
 
 # sqlite3 is not a gemvault runtime dependency; install it here so the upgrade
-# integration test can build a legacy SQLite (Dbvault) fixture to migrate.
+# integration test can read the committed legacy SQLite (Dbvault) fixture it
+# migrates.
 RUN gem install --no-document sqlite3
 
 # Gem files for integration specs that install the plugin from a local gem

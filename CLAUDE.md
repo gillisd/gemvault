@@ -26,7 +26,7 @@ Do NOT modify `.rubocop.yml` or use inline `# rubocop:disable` tags without expl
 
 ## Project Overview
 
-Multi-gem portable archives backed by SQLite. A single `.gemv` file contains multiple `.gem` files.
+Multi-gem portable archives. A single `.gemv` file is a tarball holding multiple `.gem` files plus a `manifest.json` index; legacy SQLite vaults are read-only.
 
 Two gems, one repo:
 
@@ -57,7 +57,7 @@ gem install --source file:///path/to/myvault.gemv foo
 ## Architecture
 
 - `gemvault.gemspec` — main gem spec (name: `gemvault`)
-- `lib/gemvault/vault.rb` — Core vault class (SQLite CRUD for gem blobs + specs)
+- `lib/gemvault/vault.rb` — Vault facade choosing a backend by file format (Tarvault current, legacy Dbvault read-only)
 - `lib/gemvault/cli.rb` — CLI dispatcher (new/add/list/remove/extract)
 - `lib/bundler/plugin/vault_source.rb` — Bundler `Plugin::API::Source` implementation
 - `lib/rubygems_plugin.rb` — RubyGems plugin: monkey-patches for `--source myvault.gemv` support
@@ -70,7 +70,7 @@ gem install --source file:///path/to/myvault.gemv foo
 
 ## Key Design Decisions
 
-- SQLite storage — random access, ACID, single file, inspectable with `sqlite3` CLI
+- Tar storage — portable, dependency-free, single file, inspectable with `tar`; legacy SQLite vaults readable via lazily-loaded sqlite3
 - Specs extracted from gem blobs at runtime (no separate spec storage)
 - Vault opened/closed per operation in the source plugin (no persistent connection)
 - `fetch_gemspec_files` checks installed state — Bundler computes `full_gem_path` as `dirname(loaded_from)`, so `loaded_from` must point inside the gem directory
