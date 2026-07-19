@@ -25,7 +25,7 @@ jobs:
     - name: Run unit tests
       run: bundle exec rake test
     - name: Run host specs
-      run: bundle exec rake spec
+      run: bundle exec rake spec:host
     - name: Run RuboCop
       run: bundle exec rake rubocop
 
@@ -41,6 +41,8 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby-version }}
         bundler-cache: true
+    - name: Ensure podman is available
+      run: command -v podman || (sudo apt-get update && sudo apt-get install -y podman)
     - name: Build test container image
       run: bundle exec rake spec:build
     - name: Run integration specs

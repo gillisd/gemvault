@@ -23,7 +23,7 @@ Description: Removal of gems when version is specified is broken. try the follow
 Status: closed
 
 Id: 1
-Updated: Tue, 21 Apr 2026 23:28:44 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Getting error when dir structure has slightly changed
 Description: Installing bundler-source-vault 0.1.2
 + The following plugin paths don't exist: /workspace/gemvault/shim/..
@@ -57,12 +57,17 @@ Description: Installing bundler-source-vault 0.1.2
 + 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/site_ruby/4.0.0/rubygems.rb:304:in 'Gem.activate_and_load_bin_path'
 + 	from /Users/davidgillis/.rbenv/versions/4.0.1/bin/bundle:25:in '<main>'
 + /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/source_list.rb:59:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
-+ 
++
 +       add_source_to_list Plugin.source(source).new(options), @plugin_sources
-Status: open
++
++ RESOLUTION: replicated by spec/integration/bundle_install_spec.rb ("path-installed
++ bundler plugin's source directory has been renamed"): Bundler's plugin index pins
++ the absolute path, and `gemvault doctor` clears it and reinstalls. Installing the
++ published gems (no `plugin ... path:` line) avoids the class entirely.
+Status: closed
 
 Id: 2
-Updated: Tue, 21 Apr 2026 23:31:42 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Renaming gemv file breaks bundler config
 Description: Steps to replicate:
 + 1. add vault source with some gems
@@ -81,10 +86,14 @@ Description: Steps to replicate:
 + ```
 + 
 + Where vendored.gemv is the name of the old file, and there is still an entry in Gemfile.lock
-Status: open
++
++ RESOLUTION: fixed on the tarvault branch; replicated by
++ spec/integration/bundle_install_spec.rb ("when the .gemv file is renamed and the
++ Gemfile updated to match"), passing.
+Status: closed
 
 Id: 3
-Updated: Tue, 21 Apr 2026 23:42:59 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Name of vault in logs should show relative path
 Description: This vault is in vendor/vendored_gems.gmv, relative to the Gemfile
 + in the logs of bundle install I see:
@@ -92,10 +101,14 @@ Description: This vault is in vendor/vendored_gems.gmv, relative to the Gemfile
 + ```
 + Installing acme 1.0.1 from vault vendored_gems.gemv
 + ```
-Status: open
++
++ RESOLUTION: fixed on the tarvault branch; replicated by
++ spec/integration/bundle_install_spec.rb ("logs the relative path as written"),
++ passing.
+Status: closed
 
 Id: 4
-Updated: Wed, 22 Apr 2026 12:16:44 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Running bundle install reinstalls gemvault deps every single run
 Description: Anytime I run bundle install, I always see:
 + 
@@ -109,10 +122,18 @@ Description: Anytime I run bundle install, I always see:
 + ```
 + 
 + This is unacceptable. these should only need to be installed once
++
++ ANALYSIS: upstream Bundler behavior. Bundler::Plugin.gemfile_install runs on
++ every `bundle install`/`bundle update` (bundler cli/install.rb:41), re-resolves
++ the inferred plugin definition remotely, and Source::Rubygems#install checks
++ "already installed?" against the default gem paths rather than Plugin.root, so
++ the plugin gems reinstall every run. No gemvault code runs in that path.
++ Replicated by spec/integration/plugin_reinstall_spec.rb (marked pending so the
++ suite flags it if a future Bundler fixes it). Worth filing at rubygems/rubygems.
 Status: open
 
 Id: 5
-Updated: Wed, 22 Apr 2026 18:24:09 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Installing gem via rubygems fails to resolve absolute path
 Description: Consider the following:
 + ```
@@ -122,26 +143,46 @@ Description: Consider the following:
 + ```
 + 
 + Notice an absolute path was passed to --source, yet it tried to resolve locally
-Status: open
++
++ RESOLUTION: fixed on the tarvault branch; replicated by
++ spec/integration/gem_install_spec.rb ("accepts a vault:// URI with an absolute
++ path" and the file:// variant), passing. URI stripping now lives in
++ Gemvault::VaultPath, shared with the CLI. Duplicate of #8.
+Status: closed
 
 Id: 6
-Updated: Thu, 23 Apr 2026 11:04:39 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Cannot add gem with non-numerical suffix
 Description: When adding a gem like 'ronin-db-0.2.1.patch1.gem', gemvault successfully adds the gem, but the gem install command fails:
 + ```
 + gemvault add myvault.gemv ronin-db-0.2.1.patch1.gem # success
 + gem install --debug --verbose --clear-sources --source file://myvault.gemv ronin-db # failure
 + ```
-Status: open
++
++ RESOLUTION: RubyGems semantics, not a vault bug. A version containing letters
++ (0.2.1.patch1) is a prerelease everywhere in RubyGems, and `gem install`
++ excludes prereleases unless --pre is passed; with --pre the install from a
++ vault succeeds. Replicated by spec/integration/gem_install_spec.rb ("treats it
++ as a prerelease and installs it with --pre"). The relative `file://myvault.gemv`
++ form also resolves now (Gemvault::VaultPath rejoins host and path).
+Status: closed
 
 Id: 7
-Updated: Fri, 19 Jun 2026 10:42:46 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Gemvault pollutes project dir with plugin files in .bundle
 Description: Why is it not using the plugin that is already installed globally?
++
++ ANALYSIS: two parts. (1) Global `bundle plugin install bundler-source-vault`
++ crashed outright (issue #10's bug also hit the global root); that is fixed and
++ covered by spec/integration/plugin_install_spec.rb ("when run outside any
++ project"). (2) The local .bundle/plugin copies come from the same upstream
++ Bundler behavior as #4: when a Gemfile declares/implies a plugin, Bundler
++ always resolves and installs it into the project-local plugin root, global
++ install notwithstanding. Nothing gemvault-side can prevent that.
 Status: open
 
 Id: 8
-Updated: Wed, 22 Apr 2026 18:24:09 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Installing gem via rubygems fails to resolve absolute path
 Description: Consider the following:
 + ```
@@ -151,16 +192,23 @@ Description: Consider the following:
 + ```
 + 
 + Notice an absolute path was passed to --source, yet it tried to resolve locally
-Status: open
++
++ RESOLUTION: duplicate of #5; see its resolution.
+Status: closed
 
 Id: 9
-Updated: Sun, 28 Jun 2026 00:17:27 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Gemvault commands should also be able to accept a uri
 Description: e.g. gemvault list vault:///Users/davidgillis/repos/vault/rubylib/myvault.gemv
-Status: open
++
++ RESOLUTION: implemented. Gemvault::VaultPath resolves vault:// and file://
++ locators (absolute and two-slash relative forms) and every CLI command that
++ opens a vault goes through it, as does the RubyGems source. Covered by
++ spec/gemvault/vault_path_spec.rb and spec/integration/cli/vault_uri_spec.rb.
+Status: closed
 
 Id: 10
-Updated: Sat, 18 Jul 2026 22:33:37 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Bundler fails install on "bundle plugin install bundler-source-vault"
 Description: 
 + 
@@ -569,10 +617,67 @@ Description:
 + https://github.com/ruby/rubygems/search?q=cannot+load+such+file+--+bundler%2Fplugin%2Fvault_source&type=Issues
 + 
 + If there aren't any reports for this error yet, please fill in the new issue form located at https://github.com/ruby/rubygems/issues/new?labels=Bundler&template=bundler-related-issue.md. Make sure to copy and paste the full output of this command under the "What happened instead?" section.
-Status: open
++
++ RESOLUTION: two root causes, both fixed. (1) `bundle plugin install` switches
++ GEM_HOME to the plugin root mid-process, and RubyGems' spec stub cache is
++ populated during resolution, before gemvault is installed there; the shim's
++ preamble only checked Gem::Specification.dirs membership, skipped its reset,
++ and the stale cache made `require "bundler/plugin/vault_source"` fail. The
++ shim now derives the gem root from its own __dir__ (covering plugin roots,
++ the global root, and plain GEM_HOME installs), adds unsearched spec dirs, and
++ resets the stale spec cache when gemvault is not resolvable. (2) gemvault
++ declared bundler as a runtime dependency, which fails activation wherever
++ GEM_PATH is restricted (bundle exec, plugin install) on rubies that ship
++ bundler as a regular gem; the dependency is removed. Replicated by
++ spec/integration/plugin_install_spec.rb (project with path vendor, global
++ root, distro-style regular-gem bundler), all passing.
+Status: closed
 
 Id: 11
-Updated: Sat, 18 Jul 2026 22:35:18 -0400
+Updated: Sun, 19 Jul 2026 03:56:57 +0000
 Name: CI tests aren't running
 Description: CI tests should be running on all platforms
-Status: open
++
++ ANALYSIS: .github/workflows/ci.yml exists (unit tests, specs, rubocop on
++ push/PR to master). Two likely reasons it cannot go green: (1) `rake rubocop`
++ exits nonzero on the pre-existing Gemspec/RequiredRubyVersion offenses
++ (required_ruby_version ">= 3.4.8" vs TargetRubyVersion 4.0 in .rubocop.yml) --
++ pick one and align; (2) `rake spec` builds/uses a podman image, so the runner
++ needs podman available. Not replicable as a podman rspec spec (CI infra).
++
++ RESOLUTION: three blockers fixed. (1) TargetRubyVersion aligned to 3.4.8, the
++ gemspec floor, clearing the Gemspec/RequiredRubyVersion offenses; whole
++ tracked tree is rubocop-clean. (2) The integration job invoked
++ `rake spec:integration`, which did not exist -- the Rakefile now defines
++ spec:host (--tag ~integration) and spec:integration (--tag integration,
++ depends on spec:setup), and the unit job runs spec:host instead of the full
++ podman-backed `rake spec`. (3) The integration job installs podman if the
++ runner image lacks it. Every CI step verified locally, rubocop against a
++ simulated clean checkout: rake test 113/0, spec:host 100/0, rubocop 91 files
++ clean, spec:build ok, spec:integration 45/0 (1 intentional pending). First
++ green run happens on the next push to master/PR.
+Status: closed
+
+Id: 12
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
+Name: bundle exec fails after successful bundle install with path vendor
+Description: Reported 2026-07-19 (reversal-store): bundle install succeeds, then
++ any `bundle exec` fails while parsing the Gemfile:
++
++ ```
++ [!] There was an error parsing `Gemfile`: Could not find 'bundler' (>= 2.0)
++ among 101 total gem(s)
++ Checked in 'GEM_PATH=/workspace/vendor/ruby/4.0.0' at:
++ /workspace/.bundle/plugin/specifications/gemvault-0.1.5.gemspec
++ ```
++
++ RESOLUTION: gemvault declared bundler as a runtime dependency. Under
++ `bundle exec` with path vendor, GEM_PATH is restricted to the app bundle, and
++ on rubies where bundler is a regular (non-default) gem its spec is invisible,
++ so activating gemvault from the plugin root raises Gem::MissingSpecError while
++ the Gemfile's vault source loads. The dependency is removed (bundler always
++ exists in the process the plugin runs in). Replicated verbatim in podman by
++ spec/integration/bundle_exec_spec.rb, which simulates distro-style rubies by
++ reinstalling bundler as a regular gem and deleting its default-gem spec stub;
++ also covers the system-installed (`gem install gemvault`) flow. Both passing.
+Status: closed

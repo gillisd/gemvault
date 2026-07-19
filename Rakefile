@@ -10,6 +10,14 @@ require "rspec/core/rake_task"
 
 RSpec::Core::RakeTask.new(:spec)
 
+RSpec::Core::RakeTask.new("spec:host") do |t|
+  t.rspec_opts = "--tag ~integration"
+end
+
+RSpec::Core::RakeTask.new("spec:integration") do |t|
+  t.rspec_opts = "--tag integration"
+end
+
 require "rubocop/rake_task"
 RuboCop::RakeTask.new
 
@@ -59,6 +67,7 @@ namespace :shim do
 end
 
 Rake::Task[:spec].enhance ["spec:setup"]
+Rake::Task["spec:integration"].enhance ["spec:setup"]
 Rake::Task[:build].enhance ["shim:build"]
 Rake::Task[:release].enhance ["shim:release"]
 Rake::Task[:clobber].enhance ["spec:teardown"]
