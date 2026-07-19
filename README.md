@@ -1,10 +1,8 @@
 # Gemvault
 
-A gem server in a file. No HTTP. No infrastructure.
+A file that behaves like a private gem server.
 
-A `.gemv` file is a self-contained archive that contains Ruby gems. Commit it to your repo, drop it on S3, email it, put it on a USB drive — Bundler and RubyGems read from it directly. Private gems without running a server.
-
-New vaults are portable tarballs (no runtime dependencies, works on JRuby); the original SQLite format is still read transparently. See [Vault format versioning](#vault-format-versioning).
+You can commit it to your repo, drop it on S3, email it, put it on a USB drive, or whatever you feel like doing. Bundler and RubyGems read from it directly.
 
 ## Installation
 
@@ -29,7 +27,6 @@ end
 bundle install
 ```
 
-Bundler auto-discovers the `bundler-source-vault` plugin, installs it, and resolves gems from the vault alongside rubygems.org. No extra configuration.
 
 ### RubyGems CLI
 
@@ -67,12 +64,7 @@ gemvault upgrade myvault.gemv --no-backup  # skip the default myvault.gemv.bak c
 
 ## How It Works
 
-A `.gemv` file is a self-contained archive of gem metadata and raw `.gem` blobs. A current-format (tarball) vault has a `manifest.json` first entry followed by the `.gem` files, inspectable with standard tools:
-
-```bash
-tar -tf myvault.gemv                 # tarball (v2) vault
-sqlite3 myvault.gemv "SELECT name, version, platform FROM gems"   # SQLite (v1) vault
-```
+The gemv file is a tarball containing your .gem files and a json manifest. It has no dependencies other than the tar utilities that rubygems provides.
 
 When Bundler sees `type: :vault` in your Gemfile, it auto-installs the `bundler-source-vault` plugin from rubygems.org. The plugin implements the `Bundler::Plugin::API::Source` interface — it reads gemspecs from the vault, participates in dependency resolution, then extracts and installs gems from the vault's blob storage.
 
