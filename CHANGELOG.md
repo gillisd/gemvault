@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   activation in restricted GEM_PATH contexts.
 - CI is unblocked (issue #11): RuboCop's TargetRubyVersion now matches the
   gemspec's `required_ruby_version` floor (3.4.8), the previously-missing
-  `spec:integration` rake task exists alongside a host-only `spec:host`, the
+  `spec:integration` rake task exists alongside a non-integration `spec:core`, the
   unit job no longer needs podman, and the integration job installs podman
   when the runner image lacks it.
 

@@ -10,7 +10,7 @@ require "rspec/core/rake_task"
 
 RSpec::Core::RakeTask.new(:spec)
 
-RSpec::Core::RakeTask.new("spec:host") do |t|
+RSpec::Core::RakeTask.new("spec:core") do |t|
   t.rspec_opts = "--tag ~integration"
 end
 
