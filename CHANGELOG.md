@@ -49,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `spec:integration` rake task exists alongside a non-integration `spec:core`, the
   unit job no longer needs podman, and the integration job installs podman
   when the runner image lacks it.
+- Reading a vault's `manifest.json` is now strict: an entry missing any required
+  field (`name`, `version`, `platform`, `created_at`, `sha256`, `encrypted`)
+  raises instead of silently loading `nil` fields, so a truncated or hand-edited
+  manifest fails fast rather than yielding a subtly broken vault.
 
 ### Deprecated
 - The SQLite vault format is deprecated and now **read-only**: existing SQLite
