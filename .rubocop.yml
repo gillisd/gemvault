@@ -17,7 +17,7 @@ plugins:
 
 AllCops:
   NewCops: enable
-  TargetRubyVersion: 4.0
+  TargetRubyVersion: 3.4.8
   Exclude:
     - bin/*
     - vendor/**/*
@@ -135,6 +135,13 @@ Style/ArgumentsForwarding:
 
 # Explicit begin/rescue/end is clearer than implicit method-body rescue.
 Style/RedundantBegin:
+  Enabled: false
+
+# Data value objects that carry constants, nested value types, or any class
+# body read best as `class X < Data.define(...)`. The assignment form the cop
+# prefers leaks block-level constants to the enclosing scope and forces a
+# `.freeze` (Style/MutableConstant) on the class. Permitted by David.
+Style/DataInheritance:
   Enabled: false
 
 # Compact class names are fine for small files and tests.

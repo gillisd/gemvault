@@ -1,8 +1,10 @@
 module CLIInvocation
   def invoke(command_class, *argv)
-    command_class.main(argv)
-  rescue SystemExit => e
-    e.status
+    begin
+      command_class.main(argv)
+    rescue SystemExit => e
+      e.status
+    end
   end
 end
 

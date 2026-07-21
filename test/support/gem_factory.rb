@@ -5,7 +5,7 @@ require "rubygems/package"
 # Encapsulates the Gem::Specification construction, fixture file writing,
 # and packaging so test helpers can request a gem with a single call.
 class GemFactory
-  def initialize(name, version, dir:, **spec_options)
+  def initialize(name:, version:, dir:, **spec_options)
     @name = name
     @version = version
     @dir = Pathname(dir)

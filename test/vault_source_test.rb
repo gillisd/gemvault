@@ -23,40 +23,41 @@ class VaultSourceTestCase < Minitest::Test
   private
 
   def build_fixture_vault
-    @gem1_path = build_gem("alpha", "1.0.0", dir: @gem_build_dir,
-                                             files: { "lib/alpha.rb" => 'module Alpha; VERSION = "1.0.0"; end' })
-    @gem2_path = build_subdir_gem("beta", "2.0.0", "beta_dir",
+    @gem1_path = build_gem(name: "alpha", version: "1.0.0", dir: @gem_build_dir,
+                           files: { "lib/alpha.rb" => 'module Alpha; VERSION = "1.0.0"; end' })
+    @gem2_path = build_subdir_gem(name: "beta", version: "2.0.0", subdir: "beta_dir",
                                   files: { "lib/beta.rb" => 'module Beta; VERSION = "2.0.0"; end' })
-    populate_vault(@vault_path, @gem1_path, @gem2_path)
+    populate_vault(path: @vault_path, gem_paths: [@gem1_path, @gem2_path])
   end
 
-  def build_subdir_gem(name, version, subdir, **options)
+  def build_subdir_gem(name:, version:, subdir:, **options)
     dir = @gem_build_dir / subdir
     dir.mkpath
-    build_gem(name, version, dir: dir, **options)
+    build_gem(name: name, version: version, dir: dir, **options)
   end
 
-  def populate_vault(path, *gem_paths)
+  def populate_vault(path:, gem_paths:)
     vault = Gemvault::Vault.new(path, create: true)
     gem_paths.each { |gem_path| vault.add(gem_path) }
     vault.close
   end
 
-  def vault_source_with_gem(name, version, subdir, **options)
-    gem_path = build_subdir_gem(name, version, subdir, **options)
+  def vault_source_with_gem(name:, version:, subdir:, remote: true, **options)
+    gem_path = build_subdir_gem(name: name, version: version, subdir: subdir, **options)
     vault_path = @tmpdir / "#{name}.gemv"
-    populate_vault(vault_path, gem_path)
-    create_vault_source(vault_path)
+    populate_vault(path: vault_path, gem_paths: [gem_path])
+    create_vault_source(vault_path, remote: remote)
   end
 
-  def find_spec(source, name)
+  def find_spec(source:, name:)
     source.specs.to_a.find { |s| s.name == name }
   end
 
-  def create_vault_source(path, dependency_names: [])
+  def create_vault_source(path, dependency_names: [], remote: true)
     opts = { "uri" => path.to_s, "type" => "vault" }
     source = Bundler::Plugin::VaultSource.new(opts)
     source.dependency_names = dependency_names
+    source.remote! if remote
     source
   end
 end
@@ -136,7 +137,7 @@ class VaultSourceGemspecTest < VaultSourceTestCase
   end
 
   def test_platform_gem
-    source = vault_source_with_gem("native", "1.0.0", "native_dir", platform: "x86_64-linux")
+    source = vault_source_with_gem(name: "native", version: "1.0.0", subdir: "native_dir", platform: "x86_64-linux")
     files = source.fetch_gemspec_files
     assert_equal 1, files.length
     spec = Gem::Specification.load(files.first)
@@ -144,7 +145,7 @@ class VaultSourceGemspecTest < VaultSourceTestCase
   end
 
   def test_dependencies_preserved
-    source = vault_source_with_gem("depgem", "1.0.0", "dep_dir",
+    source = vault_source_with_gem(name: "depgem", version: "1.0.0", subdir: "dep_dir",
                                    dependencies: [["rake", ">= 13.0"]])
     files = source.fetch_gemspec_files
     spec = Gem::Specification.load(files.first)
@@ -154,12 +155,25 @@ class VaultSourceGemspecTest < VaultSourceTestCase
   end
 end
 
+class VaultSourceModeTest < VaultSourceTestCase
+  def test_local_mode_hides_gems_not_yet_installed
+    source = vault_source_with_gem(name: "localmode", version: "1.0.0", subdir: "local_dir", remote: false)
+    assert_empty source.fetch_gemspec_files
+  end
+
+  def test_remote_mode_advertises_gems_not_yet_installed
+    source = vault_source_with_gem(name: "remotemode", version: "1.0.0", subdir: "remote_dir", remote: false)
+    source.remote!
+    assert_equal 1, source.fetch_gemspec_files.length
+  end
+end
+
 class VaultSourceInstallTest < VaultSourceTestCase
   def test_install_extracts_to_bundle_path
     source = create_vault_source(@vault_path)
     source.dependency_names = %w[alpha]
 
-    spec = find_spec(source, "alpha")
+    spec = find_spec(source: source, name: "alpha")
     refute_nil spec, "Expected to find alpha spec"
 
     source.install(spec)
@@ -172,7 +186,7 @@ class VaultSourceInstallTest < VaultSourceTestCase
     source = create_vault_source(@vault_path)
     source.dependency_names = %w[alpha]
 
-    spec = find_spec(source, "alpha")
+    spec = find_spec(source: source, name: "alpha")
     source.install(spec)
 
     refute_nil spec.full_gem_path
@@ -183,7 +197,7 @@ class VaultSourceInstallTest < VaultSourceTestCase
     source = create_vault_source(@vault_path)
     source.dependency_names = %w[alpha]
 
-    spec = find_spec(source, "alpha")
+    spec = find_spec(source: source, name: "alpha")
     source.install(spec)
 
     refute_nil spec.loaded_from
@@ -194,10 +208,10 @@ class VaultSourceInstallTest < VaultSourceTestCase
     source = create_vault_source(@vault_path)
     source.dependency_names = %w[alpha]
 
-    spec = find_spec(source, "alpha")
+    spec = find_spec(source: source, name: "alpha")
     source.install(spec)
 
-    out = capture_reinstall_output(source, spec)
+    out = capture_reinstall_output(source: source, spec: spec)
 
     refute_match(/Installing/, out, "Expected skip on second install, but got Installing output")
     gem_dir = File.join(Bundler.bundle_path, "gems", spec.full_name)
@@ -209,17 +223,17 @@ class VaultSourceInstallTest < VaultSourceTestCase
     source = create_vault_source(@vault_path)
     source.dependency_names = %w[alpha]
 
-    spec = find_spec(source, "alpha")
+    spec = find_spec(source: source, name: "alpha")
     source.install(spec)
 
-    out = capture_reinstall_output(source, spec, force: true)
+    out = capture_reinstall_output(source: source, spec: spec, force: true)
 
     assert_match(/Installing/, out, "Expected force reinstall to print Installing")
   end
 
   private
 
-  def capture_reinstall_output(source, spec, force: false)
+  def capture_reinstall_output(source:, spec:, force: false)
     out, _err = capture_io do
       Bundler.ui = Bundler::UI::Shell.new
       source.install(spec, force: force)

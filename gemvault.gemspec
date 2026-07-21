@@ -5,8 +5,9 @@ Gem::Specification.new do |spec|
   spec.version = Gemvault::VERSION
   spec.authors = ["David Gillis"]
   spec.email = ["david@flipmine.com"]
-  spec.summary = "Multi-gem portable archives backed by SQLite"
-  spec.description = "SQLite-backed .gemv archives for bundling and distributing multiple gems as a single file"
+  spec.summary = "Multi-gem portable archives — a gem server in a file"
+  spec.description = "Portable .gemv archives for bundling and distributing multiple gems as a single file, " \
+                     "read directly by Bundler and RubyGems"
   spec.homepage = "https://github.com/gillisd/gemvault"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.4.8"
@@ -29,9 +30,17 @@ Gem::Specification.new do |spec|
   spec.executables = ["gemvault"]
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "bundler", ">= 2.0"
+  # bundler is intentionally NOT a dependency even though the Bundler plugin
+  # lives here: it always runs inside an existing Bundler process, and a
+  # declared dependency breaks gem activation under `bundle exec`, where
+  # GEM_PATH is restricted to the app's bundle and cannot see the bundler
+  # gem on rubies that ship it as a regular (non-default) gem.
   spec.add_dependency "command_kit", "~> 0.6"
-  spec.add_dependency "sqlite3", "~> 2.0"
+
+  # sqlite3 is intentionally NOT a runtime dependency: current-format (tarball)
+  # vaults use only rubygems' built-in tar tooling, so gemvault runs dependency-
+  # free (and on JRuby). sqlite3 is loaded lazily, only to read a legacy SQLite
+  # vault; install it separately if you need that.
 
   spec.metadata = {
     "rubygems_mfa_required" => "true",

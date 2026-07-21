@@ -1,193 +1,91 @@
-require "sqlite3"
-require "rubygems/package"
-require "fileutils"
-require "tempfile"
-require_relative "gem_entry"
-require_relative "gem_reference"
+require "forwardable"
+require "pathname"
+require_relative "vault_session"
 
 module Gemvault
-  # SQLite-backed archive of .gem blobs; supports add/remove/list/extract.
+  # The public vault interface. Delegates storage to a backend chosen by file
+  # format: a Dbvault (SQLite) for existing SQLite files, a Tarvault (tarball)
+  # otherwise. New vaults are Tarvaults. Only the selected backend is loaded,
+  # so the tar path never requires sqlite3.
   class Vault
+    extend VaultSession
+    extend Forwardable
+
     class Error < StandardError; end
     class NotFoundError < Error; end
     class DuplicateGemError < Error; end
     class InvalidGemError < Error; end
+    class UnsupportedVersionError < Error; end
+    class ReadOnlyError < Error; end
 
-    SCHEMA_VERSION = "1".freeze
     SQLITE_MAGIC = "SQLite format 3#{0.chr}".freeze
+    TAR_MAGIC = "ustar".freeze
+    TAR_MAGIC_OFFSET = 257
 
-    attr_reader :path
+    CURRENT_FORMAT = 2
+    MIN_READABLE_FORMAT = 1
 
-    def self.open(path, **opts, &block)
-      raise ArgumentError, "#{name}.open requires a block" unless block
+    def_delegators :@backend,
+                   :add, :remove, :gem_data, :gem_entries, :specs,
+                   :spec_from_blob, :with_gem_file, :size, :close, :closed?,
+                   :path, :format_version
 
-      vault = new(path, **opts)
-      begin
-        yield vault
-      ensure
-        vault.close
+    def self.assert_readable!(version:, path:)
+      return if version.between?(MIN_READABLE_FORMAT, CURRENT_FORMAT)
+
+      raise UnsupportedVersionError,
+            "Vault #{path} is format #{version}; this gemvault reads up to #{CURRENT_FORMAT}. Upgrade gemvault."
+    end
+
+    def self.backend_for(path, create:)
+      return build_tarvault(path, create: true) if create
+      raise NotFoundError, "Vault not found: #{path}" unless path.exist?
+
+      case container_kind(path)
+      when :sqlite then build_dbvault(path)
+      when :tar then build_tarvault(path, create: false)
+      else
+        raise Error, "Unrecognized vault format: #{path} (not a Dbvault or Tarvault; it may require a newer gemvault)"
       end
+    end
+
+    def self.container_kind(path)
+      return :sqlite if sqlite?(path)
+      return :tar if tar?(path)
+
+      :unknown
+    end
+
+    def self.sqlite?(path)
+      path.exist? && path.binread(SQLITE_MAGIC.bytesize) == SQLITE_MAGIC
+    end
+
+    def self.tar?(path)
+      return false unless path.exist?
+
+      header = path.binread(TAR_MAGIC_OFFSET + TAR_MAGIC.bytesize)
+      header.to_s[TAR_MAGIC_OFFSET, TAR_MAGIC.bytesize] == TAR_MAGIC
+    end
+
+    def self.build_dbvault(path)
+      begin
+        require_relative "dbvault"
+        Dbvault.new(path)
+      rescue LoadError => e
+        raise Error,
+              "#{path} is a legacy SQLite vault; it needs the sqlite3 gem (#{e.message}). " \
+              "Install sqlite3, or upgrade the vault with a gemvault that includes it."
+      end
+    end
+
+    def self.build_tarvault(path, create:)
+      require_relative "tarvault"
+      Tarvault.new(path, create:)
     end
 
     def initialize(path, create: false)
-      @path = File.expand_path(path)
-      create ? create_vault! : open_vault!
-    end
-
-    def add(gem_path)
-      gem_path = File.expand_path(gem_path)
-      raise NotFoundError, "Gem file not found: #{gem_path}" unless File.file?(gem_path)
-
-      spec = load_gem_spec(gem_path)
-      raise_if_duplicate(spec)
-      insert_gem(gem_path, spec)
-    end
-
-    def remove(reference)
-      case reference
-      in GemReference::AnyVersion[name:]
-        @db.execute("DELETE FROM gems WHERE name = ?", [name])
-      in GemReference::SpecificVersion[name:, version:]
-        @db.execute(
-          "DELETE FROM gems WHERE name = ? AND version = ?",
-          [name, version.to_s],
-        )
-      end
-      @db.changes
-    end
-
-    def gem_data(name, version, platform: "ruby")
-      row = @db.execute(
-        "SELECT data FROM gems WHERE name = ? AND version = ? AND platform = ?",
-        [name, version, platform],
-      ).first
-
-      raise NotFoundError, "Gem not found: #{name}-#{version} (#{platform})" unless row
-
-      row["data"]
-    end
-
-    def specs
-      gem_entries.map { |entry| spec_from_blob(entry.name, entry.version, entry.platform) }
-    end
-
-    def gem_entries
-      @db.execute(
-        "SELECT name, version, platform, created_at FROM gems ORDER BY name, version",
-      ).map { |row| GemEntry.new(**row.transform_keys(&:to_sym)) }
-    end
-
-    def size
-      @db.execute("SELECT COUNT(*) AS count FROM gems").first["count"]
-    end
-
-    def close
-      @db.close if @db && !@db.closed?
-    end
-
-    def with_gem_file(name, version, platform: "ruby")
-      data = gem_data(name, version, platform: platform)
-      tmpfile = write_tempfile(data)
-      begin
-        yield tmpfile.path
-      ensure
-        tmpfile.close unless tmpfile.closed?
-        tmpfile.unlink
-      end
-    end
-
-    def spec_from_blob(name, version, platform = "ruby")
-      with_gem_file(name, version, platform: platform) do |path|
-        Gem::Package.new(path).spec
-      end
-    end
-
-    private
-
-    def create_vault!
-      raise Error, "Vault already exists: #{@path}" if File.exist?(@path)
-
-      @db = new_database
-      create_schema
-    end
-
-    def open_vault!
-      raise NotFoundError, "Vault not found: #{@path}" unless File.exist?(@path)
-
-      validate_sqlite!
-      @db = new_database
-    end
-
-    def new_database
-      db = SQLite3::Database.new(@path)
-      db.results_as_hash = true
-      db
-    end
-
-    def load_gem_spec(gem_path)
-      Gem::Package.new(gem_path).spec
-    rescue StandardError => e
-      raise InvalidGemError, "Invalid gem file #{gem_path}: #{e.message}"
-    end
-
-    def raise_if_duplicate(spec)
-      existing = @db.execute(
-        "SELECT 1 FROM gems WHERE name = ? AND version = ? AND platform = ?",
-        [spec.name, spec.version.to_s, spec.platform.to_s],
-      )
-      return if existing.empty?
-
-      raise DuplicateGemError,
-            "Gem already in vault: #{spec.name}-#{spec.version} (#{spec.platform})"
-    end
-
-    def insert_gem(gem_path, spec)
-      data = File.binread(gem_path)
-      @db.execute(
-        "INSERT INTO gems (name, version, platform, data) VALUES (?, ?, ?, ?)",
-        [spec.name, spec.version.to_s, spec.platform.to_s, SQLite3::Blob.new(data)],
-      )
-    end
-
-    def write_tempfile(data)
-      tmpfile = Tempfile.new(["vault_gem", ".gem"])
-      tmpfile.binmode
-      tmpfile.write(data)
-      tmpfile.close
-      tmpfile
-    end
-
-    def create_schema
-      @db.execute_batch(<<~SQL)
-        CREATE TABLE metadata (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL
-        );
-
-        CREATE TABLE gems (
-          name TEXT NOT NULL,
-          version TEXT NOT NULL,
-          platform TEXT NOT NULL DEFAULT 'ruby',
-          data BLOB NOT NULL,
-          created_at TEXT NOT NULL DEFAULT (datetime('now')),
-          PRIMARY KEY (name, version, platform)
-        );
-      SQL
-
-      @db.execute(
-        "INSERT INTO metadata (key, value) VALUES (?, ?)",
-        ["vault_version", SCHEMA_VERSION],
-      )
-      @db.execute(
-        "INSERT INTO metadata (key, value) VALUES (?, ?)",
-        ["created_at", Time.now.utc.strftime("%Y-%m-%d %H:%M:%S")],
-      )
-    end
-
-    def validate_sqlite!
-      return if File.binread(@path, SQLITE_MAGIC.bytesize) == SQLITE_MAGIC
-
-      raise Error, "Not a valid vault file (not SQLite): #{@path}"
+      absolute_path = Pathname(path).expand_path
+      @backend = self.class.backend_for(absolute_path, create:)
     end
   end
 end

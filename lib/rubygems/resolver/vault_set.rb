@@ -11,7 +11,7 @@ class Gem::Resolver::VaultSet < Gem::Resolver::Set
   end
 
   def find_all(req)
-    @specs.filter_map { |tuple| index_spec_for(req, tuple) }
+    @specs.filter_map { |candidate| index_spec_for(candidate) if req.match?(candidate) }
   end
 
   def prefetch(reqs); end
@@ -22,19 +22,17 @@ class Gem::Resolver::VaultSet < Gem::Resolver::Set
 
       pp.breakable
 
-      pp.seplist @specs do |tuple|
-        pp.text tuple.full_name
+      pp.seplist @specs do |candidate|
+        pp.text candidate.full_name
       end
     end
   end
 
   private
 
-  def index_spec_for(req, tuple)
-    return unless req.match?(tuple)
-
+  def index_spec_for(candidate)
     Gem::Resolver::IndexSpecification.new(
-      self, tuple.name, tuple.version, @source, tuple.platform
+      self, candidate.name, candidate.version, @source, candidate.platform
     )
   end
 end

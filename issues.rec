@@ -23,7 +23,7 @@ Description: Removal of gems when version is specified is broken. try the follow
 Status: closed
 
 Id: 1
-Updated: Tue, 21 Apr 2026 23:28:44 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Getting error when dir structure has slightly changed
 Description: Installing bundler-source-vault 0.1.2
 + The following plugin paths don't exist: /workspace/gemvault/shim/..
@@ -57,12 +57,17 @@ Description: Installing bundler-source-vault 0.1.2
 + 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/site_ruby/4.0.0/rubygems.rb:304:in 'Gem.activate_and_load_bin_path'
 + 	from /Users/davidgillis/.rbenv/versions/4.0.1/bin/bundle:25:in '<main>'
 + /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.8/lib/bundler/source_list.rb:59:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
-+ 
++
 +       add_source_to_list Plugin.source(source).new(options), @plugin_sources
-Status: open
++
++ RESOLUTION: replicated by spec/integration/bundle_install_spec.rb ("path-installed
++ bundler plugin's source directory has been renamed"): Bundler's plugin index pins
++ the absolute path, and `gemvault doctor` clears it and reinstalls. Installing the
++ published gems (no `plugin ... path:` line) avoids the class entirely.
+Status: closed
 
 Id: 2
-Updated: Tue, 21 Apr 2026 23:31:42 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Renaming gemv file breaks bundler config
 Description: Steps to replicate:
 + 1. add vault source with some gems
@@ -81,10 +86,14 @@ Description: Steps to replicate:
 + ```
 + 
 + Where vendored.gemv is the name of the old file, and there is still an entry in Gemfile.lock
-Status: open
++
++ RESOLUTION: fixed on the tarvault branch; replicated by
++ spec/integration/bundle_install_spec.rb ("when the .gemv file is renamed and the
++ Gemfile updated to match"), passing.
+Status: closed
 
 Id: 3
-Updated: Tue, 21 Apr 2026 23:42:59 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Name of vault in logs should show relative path
 Description: This vault is in vendor/vendored_gems.gmv, relative to the Gemfile
 + in the logs of bundle install I see:
@@ -92,10 +101,14 @@ Description: This vault is in vendor/vendored_gems.gmv, relative to the Gemfile
 + ```
 + Installing acme 1.0.1 from vault vendored_gems.gemv
 + ```
-Status: open
++
++ RESOLUTION: fixed on the tarvault branch; replicated by
++ spec/integration/bundle_install_spec.rb ("logs the relative path as written"),
++ passing.
+Status: closed
 
 Id: 4
-Updated: Wed, 22 Apr 2026 12:16:44 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Running bundle install reinstalls gemvault deps every single run
 Description: Anytime I run bundle install, I always see:
 + 
@@ -109,10 +122,18 @@ Description: Anytime I run bundle install, I always see:
 + ```
 + 
 + This is unacceptable. these should only need to be installed once
++
++ ANALYSIS: upstream Bundler behavior. Bundler::Plugin.gemfile_install runs on
++ every `bundle install`/`bundle update` (bundler cli/install.rb:41), re-resolves
++ the inferred plugin definition remotely, and Source::Rubygems#install checks
++ "already installed?" against the default gem paths rather than Plugin.root, so
++ the plugin gems reinstall every run. No gemvault code runs in that path.
++ Replicated by spec/integration/plugin_reinstall_spec.rb (marked pending so the
++ suite flags it if a future Bundler fixes it). Worth filing at rubygems/rubygems.
 Status: open
 
 Id: 5
-Updated: Wed, 22 Apr 2026 18:24:09 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Installing gem via rubygems fails to resolve absolute path
 Description: Consider the following:
 + ```
@@ -122,26 +143,46 @@ Description: Consider the following:
 + ```
 + 
 + Notice an absolute path was passed to --source, yet it tried to resolve locally
-Status: open
++
++ RESOLUTION: fixed on the tarvault branch; replicated by
++ spec/integration/gem_install_spec.rb ("accepts a vault:// URI with an absolute
++ path" and the file:// variant), passing. URI stripping now lives in
++ Gemvault::VaultPath, shared with the CLI. Duplicate of #8.
+Status: closed
 
 Id: 6
-Updated: Thu, 23 Apr 2026 11:04:39 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Cannot add gem with non-numerical suffix
 Description: When adding a gem like 'ronin-db-0.2.1.patch1.gem', gemvault successfully adds the gem, but the gem install command fails:
 + ```
 + gemvault add myvault.gemv ronin-db-0.2.1.patch1.gem # success
 + gem install --debug --verbose --clear-sources --source file://myvault.gemv ronin-db # failure
 + ```
-Status: open
++
++ RESOLUTION: RubyGems semantics, not a vault bug. A version containing letters
++ (0.2.1.patch1) is a prerelease everywhere in RubyGems, and `gem install`
++ excludes prereleases unless --pre is passed; with --pre the install from a
++ vault succeeds. Replicated by spec/integration/gem_install_spec.rb ("treats it
++ as a prerelease and installs it with --pre"). The relative `file://myvault.gemv`
++ form also resolves now (Gemvault::VaultPath rejoins host and path).
+Status: closed
 
 Id: 7
-Updated: Fri, 19 Jun 2026 10:42:46 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Gemvault pollutes project dir with plugin files in .bundle
 Description: Why is it not using the plugin that is already installed globally?
++
++ ANALYSIS: two parts. (1) Global `bundle plugin install bundler-source-vault`
++ crashed outright (issue #10's bug also hit the global root); that is fixed and
++ covered by spec/integration/plugin_install_spec.rb ("when run outside any
++ project"). (2) The local .bundle/plugin copies come from the same upstream
++ Bundler behavior as #4: when a Gemfile declares/implies a plugin, Bundler
++ always resolves and installs it into the project-local plugin root, global
++ install notwithstanding. Nothing gemvault-side can prevent that.
 Status: open
 
 Id: 8
-Updated: Wed, 22 Apr 2026 18:24:09 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Installing gem via rubygems fails to resolve absolute path
 Description: Consider the following:
 + ```
@@ -151,10 +192,492 @@ Description: Consider the following:
 + ```
 + 
 + Notice an absolute path was passed to --source, yet it tried to resolve locally
-Status: open
++
++ RESOLUTION: duplicate of #5; see its resolution.
+Status: closed
 
 Id: 9
-Updated: Sun, 28 Jun 2026 00:17:27 -0400
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
 Name: Gemvault commands should also be able to accept a uri
 Description: e.g. gemvault list vault:///Users/davidgillis/repos/vault/rubylib/myvault.gemv
-Status: open
++
++ RESOLUTION: implemented. Gemvault::VaultPath resolves vault:// and file://
++ locators (absolute and two-slash relative forms) and every CLI command that
++ opens a vault goes through it, as does the RubyGems source. Covered by
++ spec/gemvault/vault_path_spec.rb and spec/integration/cli/vault_uri_spec.rb.
+Status: closed
+
+Id: 10
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
+Name: Bundler fails install on "bundle plugin install bundler-source-vault"
+Description: 
++ 
++ [dev@reversal-store]/workspace% bundle plugin install bundler-source-vault
++ Fetching gem metadata from https://rubygems.org/.......
++ Resolving dependencies...
++ Installing command_kit 0.6.0
++ Fetching gemvault 0.1.5
++ Installing gemvault 0.1.5
++ Fetching bundler-source-vault 0.1.5
++ Installing bundler-source-vault 0.1.5
++ --- ERROR REPORT TEMPLATE -------------------------------------------------------
++ 
++ ```
++ LoadError: cannot load such file -- bundler/plugin/vault_source
++   /workspace/.bundle/plugin/gems/bundler-source-vault-0.1.5/plugins.rb:21:in 'Kernel#require'
++           /workspace/.bundle/plugin/gems/bundler-source-vault-0.1.5/plugins.rb:21:in '<top (required)>'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/plugin.rb:317:in 'Kernel#load'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/plugin.rb:317:in 'Bundler::Plugin.register_plugin'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/plugin.rb:288:in 'Bundler::Plugin.save_plugin'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/plugin.rb:263:in 'block in Bundler::Plugin.save_plugins'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/plugin.rb:255:in 'Array#each'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/plugin.rb:255:in 'Bundler::Plugin.save_plugins'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/plugin.rb:43:in 'Bundler::Plugin.install'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/cli/plugin.rb:22:in 'Bundler::CLI::Plugin#install'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/vendor/thor/lib/thor/command.rb:28:in 'Bundler::Thor::Command#run'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/vendor/thor/lib/thor/invocation.rb:127:in 'Bundler::Thor::Invocation#invoke_command'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/vendor/thor/lib/thor.rb:538:in 'Bundler::Thor.dispatch'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/vendor/thor/lib/thor/invocation.rb:116:in 'Bundler::Thor::Invocation#invoke'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/vendor/thor/lib/thor.rb:338:in 'block in Bundler::CLI#subcommand'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/vendor/thor/lib/thor/command.rb:28:in 'Bundler::Thor::Command#run'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/vendor/thor/lib/thor/invocation.rb:127:in 'Bundler::Thor::Invocation#invoke_command'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/vendor/thor/lib/thor.rb:538:in 'Bundler::Thor.dispatch'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/cli.rb:35:in 'Bundler::CLI.dispatch'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/vendor/thor/lib/thor/base.rb:584:in 'Bundler::Thor::Base::ClassMethods#start'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/cli.rb:29:in 'Bundler::CLI.start'
++           /usr/local/share/gems/gems/bundler-4.0.14/exe/bundle:28:in 'block in <top (required)>'
++           /usr/local/share/gems/gems/bundler-4.0.14/lib/bundler/friendly_errors.rb:118:in 'Bundler.with_friendly_errors'
++           /usr/local/share/gems/gems/bundler-4.0.14/exe/bundle:20:in '<top (required)>'
++           /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Kernel#load'
++           /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Gem.activate_and_load_bin_path'
++           /usr/local/bin/bundle:25:in '<main>'
++ 
++ ```
++ 
++ ## Environment
++ 
++ ```
++ Bundler       4.0.14
++   Platforms   ruby, aarch64-linux
++ Ruby          4.0.1p0 (2026-01-13 revision e04267a14b1a5dea2d2c368e48d41bd3db441f4f) [aarch64-linux]
++   Full Path   /usr/bin/ruby
++   Config Dir  /etc
++ RubyGems      4.0.14
++   Gem Home    /workspace/.bundle/plugin
++   Gem Path    /workspace/.bundle/plugin
++   User Home   /home/dev
++   User Path   /home/dev/.local/share/gem/ruby/4.0.0
++   Bin Dir     /workspace/.bundle/plugin/bin
++ OpenSSL
++   Compiled    OpenSSL 3.5.4 30 Sep 2025
++   Loaded      OpenSSL 3.5.7 9 Jun 2026
++   Cert File   /etc/pki/tls/cert.pem
++   Cert Dir    /etc/pki/tls/certs
++ Tools
++   Git         2.54.0
++   RVM         not installed
++   rbenv       rbenv 1.3.2
++   chruby      not installed
++ ```
++ 
++ ## Bundler Build Metadata
++ 
++ ```
++ Timestamp  2026-07-19
++ Git SHA    265babb801
++ ```
++ 
++ ## Bundler settings
++ 
++ ```
++ cache_all
++   Set for your local app (/workspace/.bundle/config): true
++ frozen
++   Set for your local app (/workspace/.bundle/config): false
++ gem.push_key
++   Set for your local app (/workspace/.bundle/config): "[REDACTED]"
++ global_gem_cache
++   Set for your local app (/workspace/.bundle/config): true
++ path
++   Set for your local app (/workspace/.bundle/config): "vendor"
++ ```
++ 
++ ## Gemfile
++ 
++ ### Gemfile
++ 
++ ```ruby
++ source "https://rubygems.org"
++ 
++ source "vendor/vendored.gemv", type: :vault do
++   gem "tailspin"
++ end
++ 
++ gemspec
++ 
++ gem "addressable", "~> 2.8"
++ gem "async"
++ gem "csv"
++ gem "debug", platform: :mri
++ gem "flexor", "~> 0.1.2"
++ gem "irb", platform: :mri
++ gem "minitest"
++ gem "minitest-reporters", require: false
++ gem "rake"
++ gem "repl_type_completor", platform: :mri
++ gem "gempilot"
++ gem "rubocop"
++ gem "rubocop-minitest"
++ gem "rubocop-performance"
++ gem "rubocop-rake"
++ 
++ gem "minitest-mock", "~> 5.27"
++ ```
++ 
++ ### Gemfile.lock
++ 
++ ```
++ PLUGIN SOURCE
++   remote: vendor/vendored.gemv
++   type: vault
++   specs:
++     tailspin (0.0.3)
++       flexor
++       zeitwerk
++ 
++ PATH
++   remote: .
++   specs:
++     reversal-store (0.0.4)
++       async
++       base64
++       command_kit
++       console
++       csv
++       flexor
++       pstore
++       tailspin (>= 0.0.3)
++       zeitwerk
++ 
++ GEM
++   remote: https://rubygems.org/
++   specs:
++     addressable (2.9.0)
++       public_suffix (>= 2.0.2, < 8.0)
++     ansi (1.6.0)
++     ast (2.4.3)
++     async (2.42.0)
++       console (~> 1.29)
++       fiber-annotation
++       io-event (~> 1.11)
++       metrics (~> 0.12)
++       traces (~> 0.18)
++     base64 (0.3.0)
++     builder (3.3.0)
++     command_kit (0.6.0)
++     console (1.37.0)
++       fiber-annotation
++       fiber-local (~> 1.1)
++       json
++     csv (3.3.5)
++     debug (1.11.1)
++       irb (~> 1.10)
++       reline (>= 0.3.8)
++     drb (2.2.3)
++     erb (6.0.5)
++     fiber-annotation (0.2.0)
++     fiber-local (1.1.0)
++       fiber-storage
++     fiber-storage (1.0.1)
++     flexor (0.1.4)
++     gempilot (0.2.3)
++       command_kit
++       rake
++       warning
++       zeitwerk
++     io-console (0.8.2)
++     io-event (1.19.2)
++     irb (1.18.0)
++       pp (>= 0.6.0)
++       prism (>= 1.3.0)
++       rdoc (>= 4.0.0)
++       reline (>= 0.4.2)
++     json (2.21.1)
++     language_server-protocol (3.17.0.6)
++     lint_roller (1.1.0)
++     logger (1.7.0)
++     metrics (0.15.0)
++     minitest (6.0.6)
++       drb (~> 2.0)
++       prism (~> 1.5)
++     minitest-mock (5.27.0)
++     minitest-reporters (1.8.0)
++       ansi
++       builder
++       minitest (>= 5.0, < 7)
++       ruby-progressbar
++     parallel (2.1.0)
++     parser (3.3.12.0)
++       ast (~> 2.4.1)
++       racc
++     pp (0.6.4)
++       prettyprint
++     prettyprint (0.2.0)
++     prism (1.9.0)
++     pstore (0.2.1)
++     public_suffix (7.0.5)
++     racc (1.8.1)
++     rainbow (3.1.1)
++     rake (13.4.2)
++     rbs (4.0.3)
++       logger
++       prism (>= 1.6.0)
++       tsort
++     rdoc (8.0.0)
++       erb
++       prism (>= 1.6.0)
++       rbs (>= 4.0.0)
++       tsort
++     regexp_parser (2.12.0)
++     reline (0.6.3)
++       io-console (~> 0.5)
++     repl_type_completor (0.1.15)
++       prism (~> 1.0)
++       rbs (>= 2.7.0)
++     rubocop (1.88.2)
++       json (~> 2.3)
++       language_server-protocol (~> 3.17.0.2)
++       lint_roller (~> 1.1.0)
++       parallel (>= 1.10)
++       parser (>= 3.3.0.2)
++       rainbow (>= 2.2.2, < 4.0)
++       regexp_parser (>= 2.9.3, < 3.0)
++       rubocop-ast (>= 1.49.0, < 2.0)
++       ruby-progressbar (~> 1.7)
++       unicode-display_width (>= 2.4.0, < 4.0)
++     rubocop-ast (1.50.0)
++       parser (>= 3.3.7.2)
++       prism (~> 1.7)
++     rubocop-minitest (0.39.1)
++       lint_roller (~> 1.1)
++       rubocop (>= 1.75.0, < 2.0)
++       rubocop-ast (>= 1.38.0, < 2.0)
++     rubocop-performance (1.26.1)
++       lint_roller (~> 1.1)
++       rubocop (>= 1.75.0, < 2.0)
++       rubocop-ast (>= 1.47.1, < 2.0)
++     rubocop-rake (0.7.1)
++       lint_roller (~> 1.1)
++       rubocop (>= 1.72.1)
++     ruby-progressbar (1.13.0)
++     traces (0.18.2)
++     tsort (0.2.0)
++     unicode-display_width (3.2.0)
++       unicode-emoji (~> 4.1)
++     unicode-emoji (4.2.0)
++     warning (1.6.0)
++     zeitwerk (2.8.2)
++ 
++ PLATFORMS
++   aarch64-linux
++   ruby
++ 
++ DEPENDENCIES
++   addressable (~> 2.8)
++   async
++   csv
++   debug
++   flexor (~> 0.1.2)
++   gempilot
++   irb
++   minitest
++   minitest-mock (~> 5.27)
++   minitest-reporters
++   rake
++   repl_type_completor
++   reversal-store!
++   rubocop
++   rubocop-minitest
++   rubocop-performance
++   rubocop-rake
++   tailspin!
++ 
++ CHECKSUMS
++   addressable (2.9.0) sha256=7fdf6ac3660f7f4e867a0838be3f6cf722ace541dd97767fa42bc6cfa980c7af
++   ansi (1.6.0) sha256=ac9ea0c0ea8d32fb4e271348e609963ac78882f34b73836c2a02b3622e666658
++   ast (2.4.3) sha256=954615157c1d6a382bc27d690d973195e79db7f55e9765ac7c481c60bdb4d383
++   async (2.42.0) sha256=536078293b8c95d5b5679fa01bf7d2458bcc65cd46dec2c4cb3580feaeb965c6
++   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
++   builder (3.3.0) sha256=497918d2f9dca528fdca4b88d84e4ef4387256d984b8154e9d5d3fe5a9c8835f
++   command_kit (0.6.0) sha256=e57f29cf5aee4f571c210041d910ff87f85749e42dfe75139c57cc93d84afa90
++   console (1.37.0) sha256=8093b286c2595a063849c098594fee5155ecc7967d36f3aa8cbe7569c8f3efd7
++   csv (3.3.5) sha256=6e5134ac3383ef728b7f02725d9872934f523cb40b961479f69cf3afa6c8e73f
++   debug (1.11.1) sha256=2e0b0ac6119f2207a6f8ac7d4a73ca8eb4e440f64da0a3136c30343146e952b6
++   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
++   erb (6.0.5) sha256=858e63488cb796c9daba8b6e9ff4b3879c395022049be9a66a8e00980e612eac
++   fiber-annotation (0.2.0) sha256=7abfadf1d119f508867d4103bf231c0354d019cc39a5738945dec2edadaf6c03
++   fiber-local (1.1.0) sha256=c885f94f210fb9b05737de65d511136ea602e00c5105953748aa0f8793489f06
++   fiber-storage (1.0.1) sha256=f48e5b6d8b0be96dac486332b55cee82240057065dc761c1ea692b2e719240e1
++   flexor (0.1.4) sha256=f0196703da64e8e6b75fef021ba792ad73a5880848cbcd3d1cca709b45940c72
++   gempilot (0.2.3) sha256=b011c5965917bb4faccc85ba63ac68271d9baf9bcab4a9f9e3334be3bb8cd020
++   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc
++   io-event (1.19.2) sha256=c9ac4f0c3153b453727ab15c03cc762b29a207979c703b2bb15c8be6209d4b4c
++   irb (1.18.0) sha256=de9454a0703a54704b9811a5ef31a60c86949fbf4013fcf244fabc7c775248e3
++   json (2.21.1) sha256=13a43df75d95641443f5702dff350f237164a9d811ff0f2c2800d4d980220583
++   language_server-protocol (3.17.0.6) sha256=5ef2c0c138f8267e1bc631d3328347d354f96724b0af22f2c79516120443b7f0
++   lint_roller (1.1.0) sha256=2c0c845b632a7d172cb849cc90c1bce937a28c5c8ccccb50dfd46a485003cc87
++   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
++   metrics (0.15.0) sha256=61ded5bac95118e995b1bc9ed4a5f19bc9814928a312a85b200abbdac9039072
++   minitest (6.0.6) sha256=153ea36d1d987a62942382b61075745042a2b3123b1cd48f4c3675af9cc7d6f1
++   minitest-mock (5.27.0) sha256=7040ed7185417a966920987eaa6eaf1be4ea1fc5b25bb03ff4703f98564a55b0
++   minitest-reporters (1.8.0) sha256=8ce5280fb73ad3178ae525454df169b6f28c1b38b1d088ea91815d3a370ba384
++   parallel (2.1.0) sha256=b35258865c2e31134c5ecb708beaaf6772adf9d5efae28e93e99260877b09356
++   parser (3.3.12.0) sha256=21a6d7f755d5a24dfbdc6e6b772e4e879a52e7631a88bc5a3a134606052c9828
++   pp (0.6.4) sha256=dfcb0fce700c41456265922884f9fe195d7fbb0674a3578e6c0f69588e82b570
++   prettyprint (0.2.0) sha256=2bc9e15581a94742064a3cc8b0fb9d45aae3d03a1baa6ef80922627a0766f193
++   prism (1.9.0) sha256=7b530c6a9f92c24300014919c9dcbc055bf4cdf51ec30aed099b06cd6674ef85
++   pstore (0.2.1) sha256=03904d0f2c66579e96d1e6704cdabc0c88df7ea8ed8782d9f3569f6f6c702c1a
++   public_suffix (7.0.5) sha256=1a8bb08f1bbea19228d3bed6e5ed908d1cb4f7c2726d18bd9cadf60bc676f623
++   racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
++   rainbow (3.1.1) sha256=039491aa3a89f42efa1d6dec2fc4e62ede96eb6acd95e52f1ad581182b79bc6a
++   rake (13.4.2) sha256=cb825b2bd5f1f8e91ca37bddb4b9aaf345551b4731da62949be002fa89283701
++   rbs (4.0.3) sha256=5a7bf70e2628549d9a1f44eae447b2cfe55968a9c60cfff52693a4bdcc020e14
++   rdoc (8.0.0) sha256=03bf8c08a9639658855a0cfd77c0abca8325c227693f7f33f82957811348c469
++   regexp_parser (2.12.0) sha256=35a916a1d63190ab5c9009457136ae5f3c0c7512d60291d0d1378ba18ce08ebb
++   reline (0.6.3) sha256=1198b04973565b36ec0f11542ab3f5cfeeec34823f4e54cebde90968092b1835
++   repl_type_completor (0.1.15) sha256=dec24c45fffefa3b55b19115fee20b3446c2f75c7605f579ab6047e931edd335
++   reversal-store (0.0.4)
++   rubocop (1.88.2) sha256=8def251c90cd955feb4daa3edc0ab56893250c4ce90ef81e6c80c03f9a939bbf
++   rubocop-ast (1.50.0) sha256=b9ca88300da0803ee222ad20cdb30494c0a784eed06fdc35d254b06d662788db
++   rubocop-minitest (0.39.1) sha256=998398d6da4026d297f0f9bf709a1eac5f2b6947c24431f94af08138510cf7ed
++   rubocop-performance (1.26.1) sha256=cd19b936ff196df85829d264b522fd4f98b6c89ad271fa52744a8c11b8f71834
++   rubocop-rake (0.7.1) sha256=3797f2b6810c3e9df7376c26d5f44f3475eda59eb1adc38e6f62ecf027cbae4d
++   ruby-progressbar (1.13.0) sha256=80fc9c47a9b640d6834e0dc7b3c94c9df37f08cb072b7761e4a71e22cff29b33
++   tailspin (0.0.3)
++   traces (0.18.2) sha256=80f1649cb4daace1d7174b81f3b3b7427af0b93047759ba349960cb8f315e214
++   tsort (0.2.0) sha256=9650a793f6859a43b6641671278f79cfead60ac714148aabe4e3f0060480089f
++   unicode-display_width (3.2.0) sha256=0cdd96b5681a5949cdbc2c55e7b420facae74c4aaf9a9815eee1087cb1853c42
++   unicode-emoji (4.2.0) sha256=519e69150f75652e40bf736106cfbc8f0f73aa3fb6a65afe62fefa7f80b0f80f
++   warning (1.6.0) sha256=a49cdfae19fb77d19afff2efbe45f8ab759e9cd25b4e4ce2c79dbaf46bdb6c9e
++   zeitwerk (2.8.2) sha256=7212a61311083c604184b1ea2574b9aa05cd14f855a0841c06985cabe9181d12
++ 
++ BUNDLED WITH
++   4.0.14
++ ```
++ 
++ ## Gemspecs
++ 
++ ### reversal-store.gemspec
++ 
++ ```ruby
++ require_relative "lib/reversal/store/version"
++ 
++ Gem::Specification.new do |spec|
++   spec.name = "reversal-store"
++   spec.version = Reversal::Store::VERSION
++   spec.authors = ["David Gillis"]
++   spec.email = ["david@flipmine.com"]
++ 
++   spec.summary = "Reversal device storage"
++   spec.license = "MIT"
++   spec.required_ruby_version = ">= 3.4.8"
++ 
++   spec.metadata["allowed_push_host"] = "https://gemsluice.flipmine.com/private"
++ 
++   gemspec = File.basename(__FILE__)
++   spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
++     ls.readlines("\x0", chomp: true).reject do |f|
++       (f == gemspec) ||
++         f.start_with?(*%w[bin/ test/ spec/ features/ .git appveyor Gemfile])
++     end
++   end
++   spec.files << "vendor/vendored.gemv"
++   spec.bindir = "exe"
++   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
++   spec.require_paths = ["lib"]
++ 
++   spec.add_dependency "base64"
++   spec.add_dependency "async"
++   spec.add_dependency "console"
++   spec.add_dependency "command_kit"
++   spec.add_dependency "csv"
++   spec.add_dependency "flexor"
++   spec.add_dependency "pstore"
++   spec.add_dependency "zeitwerk"
++   spec.add_dependency "tailspin", '>= 0.0.3'
++   spec.metadata["rubygems_mfa_required"] = "true"
++ end
++ ```
++ 
++ --- TEMPLATE END ----------------------------------------------------------------
++ 
++ Unfortunately, an unexpected error occurred, and Bundler cannot continue.
++ 
++ First, try this link to see if there are any existing issue reports for this error:
++ https://github.com/ruby/rubygems/search?q=cannot+load+such+file+--+bundler%2Fplugin%2Fvault_source&type=Issues
++ 
++ If there aren't any reports for this error yet, please fill in the new issue form located at https://github.com/ruby/rubygems/issues/new?labels=Bundler&template=bundler-related-issue.md. Make sure to copy and paste the full output of this command under the "What happened instead?" section.
++
++ RESOLUTION: two root causes, both fixed. (1) `bundle plugin install` switches
++ GEM_HOME to the plugin root mid-process, and RubyGems' spec stub cache is
++ populated during resolution, before gemvault is installed there; the shim's
++ preamble only checked Gem::Specification.dirs membership, skipped its reset,
++ and the stale cache made `require "bundler/plugin/vault_source"` fail. The
++ shim now derives the gem root from its own __dir__ (covering plugin roots,
++ the global root, and plain GEM_HOME installs), adds unsearched spec dirs, and
++ resets the stale spec cache when gemvault is not resolvable. (2) gemvault
++ declared bundler as a runtime dependency, which fails activation wherever
++ GEM_PATH is restricted (bundle exec, plugin install) on rubies that ship
++ bundler as a regular gem; the dependency is removed. Replicated by
++ spec/integration/plugin_install_spec.rb (project with path vendor, global
++ root, distro-style regular-gem bundler), all passing.
+Status: closed
+
+Id: 11
+Updated: Sun, 19 Jul 2026 03:56:57 +0000
+Name: CI tests aren't running
+Description: CI tests should be running on all platforms
++
++ ANALYSIS: .github/workflows/ci.yml exists (unit tests, specs, rubocop on
++ push/PR to master). Two likely reasons it cannot go green: (1) `rake rubocop`
++ exits nonzero on the pre-existing Gemspec/RequiredRubyVersion offenses
++ (required_ruby_version ">= 3.4.8" vs TargetRubyVersion 4.0 in .rubocop.yml) --
++ pick one and align; (2) `rake spec` builds/uses a podman image, so the runner
++ needs podman available. Not replicable as a podman rspec spec (CI infra).
++
++ RESOLUTION: three blockers fixed. (1) TargetRubyVersion aligned to 3.4.8, the
++ gemspec floor, clearing the Gemspec/RequiredRubyVersion offenses; whole
++ tracked tree is rubocop-clean. (2) The integration job invoked
++ `rake spec:integration`, which did not exist -- the Rakefile now defines
++ spec:host (--tag ~integration) and spec:integration (--tag integration,
++ depends on spec:setup), and the unit job runs spec:host instead of the full
++ podman-backed `rake spec`. (3) The integration job installs podman if the
++ runner image lacks it. Every CI step verified locally, rubocop against a
++ simulated clean checkout: rake test 113/0, spec:host 100/0, rubocop 91 files
++ clean, spec:build ok, spec:integration 45/0 (1 intentional pending). First
++ green run happens on the next push to master/PR.
+Status: closed
+
+Id: 12
+Updated: Sun, 19 Jul 2026 03:27:39 +0000
+Name: bundle exec fails after successful bundle install with path vendor
+Description: Reported 2026-07-19 (reversal-store): bundle install succeeds, then
++ any `bundle exec` fails while parsing the Gemfile:
++
++ ```
++ [!] There was an error parsing `Gemfile`: Could not find 'bundler' (>= 2.0)
++ among 101 total gem(s)
++ Checked in 'GEM_PATH=/workspace/vendor/ruby/4.0.0' at:
++ /workspace/.bundle/plugin/specifications/gemvault-0.1.5.gemspec
++ ```
++
++ RESOLUTION: gemvault declared bundler as a runtime dependency. Under
++ `bundle exec` with path vendor, GEM_PATH is restricted to the app bundle, and
++ on rubies where bundler is a regular (non-default) gem its spec is invisible,
++ so activating gemvault from the plugin root raises Gem::MissingSpecError while
++ the Gemfile's vault source loads. The dependency is removed (bundler always
++ exists in the process the plugin runs in). Replicated verbatim in podman by
++ spec/integration/bundle_exec_spec.rb, which simulates distro-style rubies by
++ reinstalling bundler as a regular gem and deleting its default-gem spec stub;
++ also covers the system-installed (`gem install gemvault`) flow. Both passing.
+Status: closed

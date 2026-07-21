@@ -10,6 +10,14 @@ require "rspec/core/rake_task"
 
 RSpec::Core::RakeTask.new(:spec)
 
+RSpec::Core::RakeTask.new("spec:core") do |t|
+  t.rspec_opts = "--tag ~integration"
+end
+
+RSpec::Core::RakeTask.new("spec:integration") do |t|
+  t.rspec_opts = "--tag integration"
+end
+
 require "rubocop/rake_task"
 RuboCop::RakeTask.new
 
@@ -43,12 +51,23 @@ namespace :spec do
   task(:teardown) { destroy_cached_image if cached_image_exists? }
 end
 
+directory "pkg" do
+  mkdir "pkg"
+end
+
 namespace :shim do
   Bundler::GemHelper.install_tasks dir: "shim", name: "bundler-source-vault"
   CLOBBER.include "shim/pkg"
+
+  Rake::Task[:build].enhance ["pkg"] do
+    FileList["shim/pkg/*.gem"].each do |g|
+      mv g, "pkg", verbose: false
+    end
+  end
 end
 
 Rake::Task[:spec].enhance ["spec:setup"]
+Rake::Task["spec:integration"].enhance ["spec:setup"]
 Rake::Task[:build].enhance ["shim:build"]
 Rake::Task[:release].enhance ["shim:release"]
 Rake::Task[:clobber].enhance ["spec:teardown"]

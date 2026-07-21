@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ruby-version: ['4.0.1']
+        ruby-version: ['3.4.8', '4.0.1']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Ruby
@@ -24,8 +24,8 @@ jobs:
         bundler-cache: true
     - name: Run unit tests
       run: bundle exec rake test
-    - name: Run host specs
-      run: bundle exec rake spec
+    - name: Run core specs
+      run: bundle exec rake spec:core
     - name: Run RuboCop
       run: bundle exec rake rubocop
 
@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ruby-version: ['4.0.1']
+        ruby-version: ['3.4.8', '4.0.1']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Ruby
@@ -41,6 +41,8 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby-version }}
         bundler-cache: true
+    - name: Ensure podman is available
+      run: command -v podman || (sudo apt-get update && sudo apt-get install -y podman)
     - name: Build test container image
       run: bundle exec rake spec:build
     - name: Run integration specs

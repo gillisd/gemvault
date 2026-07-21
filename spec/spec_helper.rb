@@ -1,4 +1,5 @@
 require "gemvault"
+require "stringio"
 
 Dir[File.join(__dir__, "support", "**", "*.rb")].each { |f| require f }
 
@@ -15,4 +16,9 @@ RSpec.configure do |config|
   end
 
   config.include ContainerHelper, :integration
+
+  config.before do
+    Gemvault::Deprecation.reset!
+    Gemvault::Deprecation.output = StringIO.new
+  end
 end

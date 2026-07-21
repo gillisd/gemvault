@@ -12,3 +12,7 @@ gem "rubocop-claude"
 gem "rubocop-performance"
 gem "rubocop-rake"
 gem "rubocop-rspec"
+
+# Not a runtime dependency (see gemvault.gemspec); needed here to exercise the
+# legacy SQLite (Dbvault) read path and the `gemvault upgrade` migration.
+gem "sqlite3", "~> 2.0"

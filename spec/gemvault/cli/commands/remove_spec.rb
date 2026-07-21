@@ -1,12 +1,13 @@
 require "gemvault/cli/commands/remove"
 require "gemvault/vault"
+require "pathname"
 
 RSpec.describe Gemvault::CLI::Commands::Remove do
   describe "#run" do
     let(:vault) { instance_double(Gemvault::Vault, remove: 1) }
 
     before do
-      allow(Gemvault::Vault).to receive(:open).with("v.gemv", create: false).and_yield(vault)
+      allow(Gemvault::Vault).to receive(:open).with(Pathname("v.gemv"), create: false).and_yield(vault)
     end
 
     context "when Vault#remove returns a positive count" do

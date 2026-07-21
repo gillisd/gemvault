@@ -1,3 +1,10 @@
+# RubyGems can evaluate this plugin twice under Bundler: once through the
+# install-generated stub (via require) and again through Gem.load_env_plugins
+# (via load, which ignores $LOADED_FEATURES) once the gem's lib/ is on
+# $LOAD_PATH. Skip the redundant second evaluation so the constants and
+# monkey-patches below are installed exactly once.
+return if defined?(Gemvault::PLUGIN_LOADED)
+
 require_relative "rubygems/source/vault"
 require "rubygems/source_list"
 
@@ -14,6 +21,8 @@ require "rubygems/source_list"
 # 3. SourceList#<< -- route .gemv strings to Gem::Source::Vault
 
 module Gemvault
+  PLUGIN_LOADED = true
+
   # Lets .gemv paths bypass RubyGems' URI scheme validation.
   module AcceptVaultURI
     VALID_URI_SCHEMES = ["http", "https", "file", "s3"].freeze
@@ -22,8 +31,7 @@ module Gemvault
       Gem::OptionParser.accept Gem::URI::HTTP do |value|
         next value if value.to_s.end_with?(".gemv")
 
-        uri = parse_uri(value)
-        validate_scheme!(uri, value)
+        validate_uri!(value)
         value
       end
     end
@@ -31,12 +39,15 @@ module Gemvault
     private
 
     def parse_uri(value)
-      Gem::URI.parse value
-    rescue Gem::URI::InvalidURIError
-      raise Gem::OptionParser::InvalidArgument, value
+      begin
+        Gem::URI.parse value
+      rescue Gem::URI::InvalidURIError
+        raise Gem::OptionParser::InvalidArgument, value
+      end
     end
 
-    def validate_scheme!(uri, value)
+    def validate_uri!(value)
+      uri = parse_uri(value)
       return if VALID_URI_SCHEMES.include?(uri.scheme)
 
       schemes = VALID_URI_SCHEMES.map { |scheme| "#{scheme}://" }

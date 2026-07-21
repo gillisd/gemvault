@@ -1,8 +1,11 @@
 require "gemvault/vault"
-require "uri"
+require "gemvault/vault_path"
+require "gemvault/gem_entry"
+require "pathname"
 
 ##
-# A source backed by a .gemv vault file (SQLite archive of .gem blobs).
+# A source backed by a .gemv vault file: a tar archive of .gem files indexed
+# by a manifest. Legacy SQLite vaults are read transparently.
 #
 # Used by the gemvault RubyGems plugin to support:
 #
@@ -10,12 +13,11 @@ require "uri"
 class Gem::Source::Vault < Gem::Source
   include Gem::UserInteraction
 
-  VAULT_URI_SCHEMES = %w[file vault].freeze
-
   attr_reader :path
 
   def initialize(path)
-    @path = File.expand_path(filesystem_path(path))
+    resolved = Gemvault::VaultPath.resolve(path)
+    @path = Pathname(resolved).expand_path.to_s
     super(@path)
     @uri = @path
     @specs = nil
@@ -24,7 +26,7 @@ class Gem::Source::Vault < Gem::Source
   def load_specs(type)
     verbose "Loading #{type} specs from vault at #{@path}"
     ensure_specs_loaded
-    select_tuples(type)
+    select_candidates(type)
   end
 
   def fetch_spec(name_tuple)
@@ -38,17 +40,15 @@ class Gem::Source::Vault < Gem::Source
 
   def download(spec, dir = Dir.pwd)
     verbose "Extracting #{spec.file_name} from vault at #{@path}"
-    cache_dir = File.join(dir, "cache")
-    FileUtils.mkdir_p(cache_dir)
-
-    dest = File.join(cache_dir, spec.file_name)
+    dest = Pathname(dir).join("cache").tap(&:mkpath).join(spec.file_name)
 
     Gemvault::Vault.open(@path) do |vault|
-      data = vault.gem_data(spec.name, spec.version.to_s, platform: spec.platform.to_s)
-      File.binwrite(dest, data)
+      entry = entry_for(spec)
+      bytes = vault.gem_data(entry)
+      dest.binwrite(bytes)
     end
 
-    dest
+    dest.to_s
   end
 
   def dependency_resolver_set(prerelease = nil)
@@ -91,35 +91,32 @@ class Gem::Source::Vault < Gem::Source
 
   private
 
-  def filesystem_path(path)
-    uri = URI.parse(path.to_s)
-    VAULT_URI_SCHEMES.include?(uri.scheme) ? uri.path : path.to_s
-  rescue URI::InvalidURIError
-    path.to_s
+  def entry_for(spec)
+    Gemvault::GemEntry.from_spec(spec)
   end
 
-  def select_tuples(type)
+  def select_candidates(type)
     case type
-    when :released then released_tuples
-    when :prerelease then prerelease_tuples
-    when :latest then latest_tuples
+    when :released then released_candidates
+    when :prerelease then prerelease_candidates
+    when :latest then latest_candidates
     else @specs.keys
     end
   end
 
-  def released_tuples
-    @specs.keys.reject { |tuple| tuple.version.prerelease? }
+  def released_candidates
+    @specs.keys.reject { |candidate| candidate.version.prerelease? }
   end
 
-  def prerelease_tuples
-    @specs.keys.select { |tuple| tuple.version.prerelease? }
+  def prerelease_candidates
+    @specs.keys.select { |candidate| candidate.version.prerelease? }
   end
 
-  def latest_tuples
+  def latest_candidates
     @specs.keys
-          .group_by { |tuple| [tuple.name, tuple.platform] }
+          .group_by { |candidate| [candidate.name, candidate.platform] }
           .values
-          .map { |tuples| tuples.max_by(&:version) }
+          .map { |versions| versions.max_by(&:version) }
   end
 
   def ensure_specs_loaded
@@ -128,9 +125,8 @@ class Gem::Source::Vault < Gem::Source
     @specs = {}
     Gemvault::Vault.open(@path) do |vault|
       vault.gem_entries.each do |entry|
-        spec = vault.spec_from_blob(entry.name, entry.version, entry.platform)
-        tuple = spec.name_tuple
-        @specs[tuple] = spec
+        spec = vault.spec_from_blob(entry)
+        @specs[spec.name_tuple] = spec
       end
     end
   end

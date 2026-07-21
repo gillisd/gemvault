@@ -1,6 +1,31 @@
 require "gemvault/gem_reference"
+require "gemvault/gem_entry"
 
 RSpec.describe Gemvault::GemReference do
+  describe "#matches?" do
+    let(:foo_one) { Gemvault::GemEntry.new(name: "foo", version: "1.0.0") }
+    let(:foo_two) { Gemvault::GemEntry.new(name: "foo", version: "2.0.0") }
+    let(:bar_one) { Gemvault::GemEntry.new(name: "bar", version: "1.0.0") }
+
+    context "with an AnyVersion reference" do
+      subject(:reference) { described_class::AnyVersion.new(name: "foo") }
+
+      let(:matching_entry) { foo_two }
+      let(:nonmatching_entry) { bar_one }
+
+      it_behaves_like "a gem reference"
+    end
+
+    context "with a SpecificVersion reference" do
+      subject(:reference) { described_class::SpecificVersion.new(name: "foo", version: Gem::Version.new("1.0.0")) }
+
+      let(:matching_entry) { foo_one }
+      let(:nonmatching_entry) { foo_two }
+
+      it_behaves_like "a gem reference"
+    end
+  end
+
   describe ".parse" do
     context "with a bare name and no explicit version" do
       it "returns an AnyVersion specification for that name" do

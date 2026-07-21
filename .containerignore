@@ -1,0 +1,10 @@
+.bundle
+.git
+gemv
+pkg
+tmp
+vendor
+*.gem
+*.gemv
+references
+references/

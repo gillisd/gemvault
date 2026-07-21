@@ -17,6 +17,7 @@ Do NOT modify `.rubocop.yml` or use inline `# rubocop:disable` tags without expl
 9. ALWAYS write specs first. The workflow is: identify the domain concept (rule 5), write specs describing its behavior, then implement. No implementation without a failing spec.
 10. Integration specs are the first line of defense for CLI-tool bugs. For any bug reported from using the CLI tool (not the gemvault lib / Ruby API), the FIRST spec you write is an integration spec that reproduces the user's exact invocation — real subprocess, real vault, real exit code. Stub-heavy unit specs are complementary, not sufficient: they prove internal logic produces the expected value assuming surrounding wiring works, but a user's bug report is evidence the wiring didn't work.
 11. If an integration spec is not catching a reported CLI-tool bug, one of two things is true, and the fix starts by diagnosing which: (a) existing integration specs are not specific enough — extend them to cover the exact scenario before touching production code; or (b) the scenario is not spec'd at all, which means the work is not a bug fix but a new feature — write integration specs for the contract first (per rule 1), then implement.
+12. NEVER write to /tmp. Use /workspace/tmp
 
 ## Additional rules
 
@@ -25,7 +26,7 @@ Do NOT modify `.rubocop.yml` or use inline `# rubocop:disable` tags without expl
 
 ## Project Overview
 
-Multi-gem portable archives backed by SQLite. A single `.gemv` file contains multiple `.gem` files.
+Multi-gem portable archives. A single `.gemv` file is a tarball holding multiple `.gem` files plus a `manifest.json` index; legacy SQLite vaults are read-only.
 
 Two gems, one repo:
 
@@ -56,7 +57,7 @@ gem install --source file:///path/to/myvault.gemv foo
 ## Architecture
 
 - `gemvault.gemspec` — main gem spec (name: `gemvault`)
-- `lib/gemvault/vault.rb` — Core vault class (SQLite CRUD for gem blobs + specs)
+- `lib/gemvault/vault.rb` — Vault facade choosing a backend by file format (Tarvault current, legacy Dbvault read-only)
 - `lib/gemvault/cli.rb` — CLI dispatcher (new/add/list/remove/extract)
 - `lib/bundler/plugin/vault_source.rb` — Bundler `Plugin::API::Source` implementation
 - `lib/rubygems_plugin.rb` — RubyGems plugin: monkey-patches for `--source myvault.gemv` support
@@ -69,7 +70,7 @@ gem install --source file:///path/to/myvault.gemv foo
 
 ## Key Design Decisions
 
-- SQLite storage — random access, ACID, single file, inspectable with `sqlite3` CLI
+- Tar storage — portable, dependency-free, single file, inspectable with `tar`; legacy SQLite vaults readable via lazily-loaded sqlite3
 - Specs extracted from gem blobs at runtime (no separate spec storage)
 - Vault opened/closed per operation in the source plugin (no persistent connection)
 - `fetch_gemspec_files` checks installed state — Bundler computes `full_gem_path` as `dirname(loaded_from)`, so `loaded_from` must point inside the gem directory
@@ -93,7 +94,7 @@ Integration tests use a manually-written Bundler plugin index to avoid rubygems.
 
 ## Dependencies
 
-- `sqlite3` (~> 2.0) — runtime
-- `bundler` (>= 2.0) — runtime
+- `bundler` — NOT a dependency; the plugin always runs inside an existing Bundler process, and declaring it breaks gem activation under `bundle exec`'s restricted GEM_PATH
 - `command_kit` (~> 0.6) — runtime (CLI)
+- `sqlite3` (~> 2.0) — NOT a runtime dependency; loaded lazily only to read a legacy SQLite (Dbvault) vault. Declared in the Gemfile for development/test.
 - `minitest`, `rake` — development
