@@ -5,7 +5,7 @@ module VaultedProject
   RUBYGEMS_GEM = "command_kit".freeze
 
   SECOND_VAULT = "second".freeze
-  CHOSEN_INSTALL_PATH = "vendor/bundle".freeze
+  CHOSEN_INSTALL_PATH = ".gems/ruby-bundle".freeze
 
   VAULT_GEMS = [[VAULTED_GEM, "1.0.0"], [COMPANION_VAULTED_GEM, "1.0.0"]].freeze
   SECOND_VAULT_GEMS = [[SECOND_VAULT_GEM, "1.0.0"]].freeze
@@ -35,8 +35,11 @@ module VaultedProject
     SH
   end
 
+  # cache_all matches the reporter's own .bundle/config, and is what makes
+  # `bundle cache` take path and git sources too rather than rubygems alone.
   def self.gems_cached
     <<~SH
+      bundle config set cache_all true
       bundle install
       bundle cache
     SH
