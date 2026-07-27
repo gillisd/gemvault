@@ -11,7 +11,7 @@ module VaultedProjectScenarios
       #{FixtureScript.preamble(gems: VaultedProject::VAULT_GEMS)}
       #{FixtureScript.additional_vault(vault: VaultedProject::SECOND_VAULT, gems: VaultedProject::SECOND_VAULT_GEMS)}
       cd $WORKDIR
-      #{VaultedProject.gemfile_declaring(vaulted: [VaultedProject::VAULTED_GEM])}
+      #{VaultedGemfile.declaring(vaulted: [VaultedProject::VAULTED_GEM])}
       #{setup}
       bundle install
       #{steps}

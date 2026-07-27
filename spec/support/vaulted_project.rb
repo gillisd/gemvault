@@ -3,6 +3,8 @@ module VaultedProject
   COMPANION_VAULTED_GEM = "companion_vaulted_gem".freeze
   SECOND_VAULT_GEM = "second_vault_gem".freeze
   RUBYGEMS_GEM = "command_kit".freeze
+  OWN_GEM = "the_project_itself".freeze
+  OWN_GEM_CONSTANT = "TheProjectItself".freeze
 
   SECOND_VAULT = "second".freeze
   CHOSEN_INSTALL_PATH = ".gems/ruby-bundle".freeze
@@ -68,19 +70,23 @@ module VaultedProject
   end
 
   def self.removing_the_vaulted_gem
-    reinstall_with(gemfile_declaring)
+    reinstall_with(VaultedGemfile.declaring)
   end
 
   def self.adding_a_gem_from_rubygems
-    reinstall_with(gemfile_declaring(vaulted: [VAULTED_GEM], rubygems: [RUBYGEMS_GEM]))
+    reinstall_with(VaultedGemfile.declaring(vaulted: [VAULTED_GEM], rubygems: [RUBYGEMS_GEM]))
+  end
+
+  def self.adding_the_projects_own_gemspec
+    reinstall_with(VaultedGemfile.declaring(vaulted: [VAULTED_GEM], own_gemspec: true))
   end
 
   def self.adding_another_gem_from_the_same_vault
-    reinstall_with(gemfile_declaring(vaulted: [VAULTED_GEM, COMPANION_VAULTED_GEM]))
+    reinstall_with(VaultedGemfile.declaring(vaulted: [VAULTED_GEM, COMPANION_VAULTED_GEM]))
   end
 
   def self.adding_a_gem_from_another_vault
-    reinstall_with(gemfile_declaring(vaulted: [VAULTED_GEM], second_vault: [SECOND_VAULT_GEM]))
+    reinstall_with(VaultedGemfile.declaring(vaulted: [VAULTED_GEM], second_vault: [SECOND_VAULT_GEM]))
   end
 
   def self.running_the_doctor
@@ -92,24 +98,5 @@ module VaultedProject
 
   def self.reinstall_with(gemfile)
     "#{gemfile}bundle install\n"
-  end
-
-  def self.gemfile_declaring(vaulted: [], second_vault: [], rubygems: [])
-    <<~SH
-      cat > Gemfile <<GEMFILE
-      #{GemIndex.source_line}
-      #{rubygems.map { |name| %(gem "#{name}") }.join("\n")}
-      #{vault_block("$WORKDIR/test.gemv", vaulted)}
-      #{vault_block("$WORKDIR/#{SECOND_VAULT}.gemv", second_vault)}
-      GEMFILE
-    SH
-  end
-
-  def self.vault_block(vault, gems)
-    return "" if gems.empty?
-
-    declarations = gems.map { |name| %(  gem "#{name}") }.join("\n")
-
-    "source \"#{vault}\", type: :vault do\n#{declarations}\nend"
   end
 end
