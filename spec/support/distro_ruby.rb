@@ -20,6 +20,22 @@ module DistroRuby
     "gem install --local --force --no-document /work/src/gemvault-*.gem >/dev/null\n"
   end
 
+  # A gemvault newer than the one the shim was released against, left on the
+  # machine the way an upgrade or a stray `gem install` would. It is sabotaged
+  # so that loading it is loud rather than silent: the shim pins an exact
+  # version, and picking the newest instead has to fail the spec, not merely
+  # run different code that happens to behave the same.
+  def self.newer_gemvault_alongside
+    <<~SH
+      rm -rf /work/newer && mkdir -p /work/newer
+      cp -r /gem/lib /gem/exe /gem/gemvault.gemspec /gem/README.md /gem/LICENSE.txt /gem/Rakefile /work/newer/
+      sed -i 's/VERSION = ".*"/VERSION = "9.9.9"/' /work/newer/lib/gemvault/version.rb
+      echo 'raise "the wrong gemvault was loaded"' >> /work/newer/lib/bundler/plugin/vault_source.rb
+      (cd /work/newer && gem build -q gemvault.gemspec -o /work/newer/gemvault-9.9.9.gem >/dev/null 2>&1)
+      gem install --no-document --local /work/newer/gemvault-9.9.9.gem >/dev/null 2>&1
+    SH
+  end
+
   # Replaces the image's baked-in gemvault gems with ones freshly built from
   # the mounted source tree (requires TreeGems.build_preamble to have run).
   def self.current_tree_as_system_gems

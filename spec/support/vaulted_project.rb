@@ -25,6 +25,10 @@ module VaultedProject
     DistroRuby.without_system_gemvault
   end
 
+  def self.newer_gemvault_left_behind
+    DistroRuby.newer_gemvault_alongside
+  end
+
   def self.install_path_chosen
     "bundle config set path #{CHOSEN_INSTALL_PATH}\n"
   end
