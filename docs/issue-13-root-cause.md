@@ -152,6 +152,19 @@ paths onto `$LOAD_PATH`.
 - **`json` is now a declared runtime dependency**, so `gemvault new` works on a
   stock distro ruby.
 
+## Does the suite actually protect this?
+
+Green is not evidence on its own — the whole reason this bug shipped is that a
+green suite was being satisfied by an ambient gem. So the two pieces of the fix
+were checked by mutation:
+
+| Mutation | Result |
+|---|---|
+| `Gem.default_path` dropped from the searched roots | 18 examples fail |
+| the shim's pinned gemvault requirement ignored, so the newest wins | both examples of the upgrade-residue scenario fail |
+
+Restoring each returns the suite to green.
+
 ## Platforms verified
 
 | Platform | Status |
