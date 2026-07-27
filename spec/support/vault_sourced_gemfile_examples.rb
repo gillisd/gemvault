@@ -13,7 +13,7 @@ RSpec.shared_examples "a project whose Gemfile uses a vault source" do
     it_behaves_like "a complete bundle"
   end
 
-  context "when the user has deleted both Gemfile.lock and the .bundle directory" do
+  context "when the user has deleted everything bundler generated" do
     let(:steps) { VaultedProject.deleting_the_lockfile_and_the_bundle_directory }
 
     it_behaves_like "a complete bundle"
@@ -24,6 +24,10 @@ RSpec.shared_examples "a project whose Gemfile uses a vault source" do
     let(:expected_gems) { [] }
 
     it_behaves_like "a complete bundle"
+
+    it "stops installing the gem the user removed" do
+      expect(listed_gems(bundle_output)).not_to include(VaultedProject::VAULTED_GEM)
+    end
   end
 
   context "when the user has added a gem from rubygems to the Gemfile" do

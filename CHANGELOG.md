@@ -42,8 +42,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the ambient GEM_PATH, so the plugin root holds only the shim; once the app
   bundle is populated Bundler restricts GEM_PATH to it and the ambient copy
   falls out of scope. The shim now locates gemvault's `lib` across every root
-  that can hold it, including the ones Bundler masked, and loads it via
-  `$LOAD_PATH` rather than gem activation (issue #13).
+  that can hold it — `Gem.default_path` above all, which is what RubyGems knows
+  about its own gem roots and therefore covers rubies from rbenv, asdf, chruby,
+  Homebrew and distros, none of which export `GEM_HOME` or `GEM_PATH` — and
+  loads it via `$LOAD_PATH` rather than gem activation (issue #13).
+- The vault source registers correctly when Bundler evaluates the plugin more
+  than once in a process; gemvault is resolved and required only on the first
+  evaluation, so `Gemvault::GemEntry` can no longer be defined twice from two
+  different gem roots (issue #13).
+- `gemvault new` no longer raises `cannot load such file -- json` on a stock
+  distro ruby. json backs the tarball vault's manifest, so every current-format
+  vault needs it; it is a default gem upstream but a separate package on
+  distros, where `dnf install ruby` leaves it absent. It is now a declared
+  runtime dependency.
 - `bundle install` no longer fails with `Could not find 'command_kit' (~> 0.6)`
   when gemvault is installed into the plugin root without its dependencies.
   Loading the vault source no longer activates the gemvault gem, which would

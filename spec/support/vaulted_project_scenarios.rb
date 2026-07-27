@@ -14,10 +14,12 @@ module VaultedProjectScenarios
     SH
   end
 
-  def gems_missing_from(output, expected)
-    listed = output.scan(/^\s*\*\s+(\S+)/).flatten
+  def listed_gems(output)
+    output.scan(/^\s*\*\s+(\S+)/).flatten
+  end
 
-    expected - listed
+  def gems_missing_from(output, expected)
+    expected - listed_gems(output)
   end
 end
 
