@@ -36,6 +36,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Vault gems whose versions carry a non-numeric suffix (e.g. `0.2.1.patch1`)
   install from a vault with `gem install --pre`, matching RubyGems' prerelease
   semantics (issue #6).
+- Repeated `bundle install` no longer fails with `cannot load such file --
+  bundler/plugin/vault_source` on machines that have gemvault installed
+  system-wide. Bundler skips installing a plugin dependency already present on
+  the ambient GEM_PATH, so the plugin root holds only the shim; once the app
+  bundle is populated Bundler restricts GEM_PATH to it and the ambient copy
+  falls out of scope. The shim now locates gemvault's `lib` across every root
+  that can hold it, including the ones Bundler masked, and loads it via
+  `$LOAD_PATH` rather than gem activation (issue #13).
+- `bundle install` no longer fails with `Could not find 'command_kit' (~> 0.6)`
+  when gemvault is installed into the plugin root without its dependencies.
+  Loading the vault source no longer activates the gemvault gem, which would
+  demand the full runtime dependency set; `vault_source.rb` reaches the rest of
+  gemvault through `require_relative` alone (issue #13).
 
 ### Changed
 - `sqlite3` is no longer a runtime dependency. Gemvault runs dependency-free on

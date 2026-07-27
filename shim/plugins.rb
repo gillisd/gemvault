@@ -37,6 +37,38 @@ elsif candidate_dirs.any?
   end
 end
 
+# Making the spec dirs searchable is not enough on its own. Bundler skips
+# installing a plugin dependency that is already installed on the ambient
+# GEM_PATH, so on any machine with `gem install gemvault` the plugin root holds
+# the shim alone. Once the app bundle is populated Bundler restricts GEM_PATH to
+# the bundle, the ambient gemvault falls out of scope, and there is no spec dir
+# left to find. So locate gemvault's lib directory across every root that could
+# hold it -- including the ones Bundler masked -- and put it on $LOAD_PATH.
+#
+# $LOAD_PATH rather than gem activation is deliberate: vault_source.rb reaches
+# the rest of gemvault through require_relative alone, so it needs no dependency
+# resolution. Activating the gem would demand command_kit, which only the CLI
+# uses and which Bundler leaves out of the plugin root for the same reason.
+masked_roots = if defined?(Bundler) && Bundler.respond_to?(:original_env)
+                 original = Bundler.original_env
+                 [original["GEM_HOME"], *original["GEM_PATH"].to_s.split(File::PATH_SEPARATOR)]
+               else
+                 []
+               end
+
+vault_source_path = Pathname("bundler/plugin/vault_source.rb")
+gemvault_libs = [gem_root, *plugin_roots, *Gem.path, *masked_roots]
+                .reject { |root| root.to_s.empty? }
+                .flat_map { |root| Pathname(root.to_s).glob("gems/gemvault-*/lib") }
+                .select { |lib| lib.join(vault_source_path).file? }
+
+# The shim and gemvault are released together and the gemspec pins an exact
+# version, so a matching directory is the right one wherever it lives.
+shim_version = Pathname(__dir__).basename.to_s.delete_prefix("bundler-source-vault-")
+matching_lib = gemvault_libs.find { |lib| lib.parent.basename.to_s == "gemvault-#{shim_version}" }
+resolved_lib = matching_lib || gemvault_libs.first
+$LOAD_PATH.push(resolved_lib.to_s) if resolved_lib && !$LOAD_PATH.include?(resolved_lib.to_s)
+
 require "bundler/plugin/vault_source"
 
 Bundler::Plugin::API.source("vault", Bundler::Plugin::VaultSource)

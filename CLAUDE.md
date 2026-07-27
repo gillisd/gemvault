@@ -77,6 +77,15 @@ gem install --source file:///path/to/myvault.gemv foo
 - `bundler-source-vault` name exists because Bundler auto-infers plugin name from `type: :vault` → `bundler-source-vault`
 - `file://` URIs stripped to plain paths in `Gem::Source::Vault#initialize`
 - Verbose logging via `Gem::UserInteraction#verbose` for `--verbose` support
+- `shim/plugins.rb` loads gemvault by putting its `lib` on `$LOAD_PATH`, never by
+  activating the gem. Bundler skips installing a plugin dependency already
+  present on the ambient GEM_PATH, so the plugin root often lacks gemvault, and
+  by load time GEM_PATH is restricted to the plugin root and the app bundle. The
+  shim therefore searches every root that can hold gemvault, including the ones
+  Bundler masked (`Bundler.original_env` GEM_HOME/GEM_PATH). Activation is
+  avoided because it demands gemvault's full runtime dependency set (command_kit),
+  which Bundler skips for the same reason — `vault_source.rb` reaches the rest of
+  gemvault through `require_relative` alone and needs none of it.
 
 ## Testing
 
@@ -91,6 +100,24 @@ bundle exec rake test
 - `test/rubygems_plugin_test.rb` — 28 tests (source, resolver, monkey-patches, gem install integration, file:// URI, verbose logging)
 
 Integration tests use a manually-written Bundler plugin index to avoid rubygems.org resolution during testing.
+
+### Container fidelity — do not undo these
+
+The integration container is deliberately shaped to expose plugin-root defects.
+Two settings are load-bearing; reverting either silently makes the suite green
+against an ambient gem instead of the code under test:
+
+1. **`bundler-source-vault` is NOT installed system-wide in `Dockerfile.test`.**
+   An ambient copy satisfies Bundler's plugin resolution without ever populating
+   the plugin root. Specs resolve the shim from the local gem index (`GemIndex`)
+   so they exercise the tree's shim. `gemvault` IS installed system-wide on
+   purpose — that is a real user's machine and the trigger for issue #13.
+2. **`BUNDLE_APP_CONFIG` is unset in `ContainerHelper#podman_run`.** The ruby base
+   image sets it to `/usr/local/bundle`, which moves `Bundler::Plugin.root` out of
+   the project so no spec ever touches a project-local `.bundle/plugin`.
+
+If a spec fails only after removing a system-installed gem, the spec was passing
+for the wrong reason — fix the spec, not the container.
 
 ## Dependencies
 

@@ -28,7 +28,7 @@ RSpec.describe "bundle install with vault source", :integration do
     expect(status).to be_success, "Lockfile changed after second install:\n#{output}"
   end
 
-  it "works alongside a rubygems.org source", :aggregate_failures do
+  it "works alongside a rubygems source", :aggregate_failures do
     output, status = install_alongside_rubygems_source
     expect(status).to be_success, "Failed:\n#{output}"
     expect(output).to include("Bundle complete!")

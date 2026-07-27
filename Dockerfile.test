@@ -2,12 +2,20 @@ FROM docker.io/library/ruby:4.0.1-slim
 
 COPY . /tmp/build/
 
+# gemvault is installed system-wide because integration specs need the CLI to
+# build vault fixtures, and because that is what a real user's machine looks
+# like: `gem install gemvault` puts it on the ambient GEM_PATH. That ambient
+# copy is load-bearing for the plugin root specs -- Bundler skips installing a
+# plugin dependency that is already installed, so the plugin root only gets a
+# complete dependency set if gemvault puts it there itself.
+#
+# bundler-source-vault is deliberately NOT installed system-wide. An ambient
+# copy satisfies Bundler's plugin resolution without ever populating the plugin
+# root, which masks every plugin-root defect the integration specs exist to
+# catch. Specs install it from the local gem index built by GemIndex instead.
 RUN cd /tmp/build \
     && gem build gemvault.gemspec \
     && gem install --no-document gemvault-*.gem \
-    && cd shim \
-    && gem build bundler-source-vault.gemspec \
-    && gem install --no-document bundler-source-vault-*.gem \
     && rm -rf /tmp/build
 
 # sqlite3 is not a gemvault runtime dependency; install it here so the upgrade

@@ -36,7 +36,7 @@ module BundleScenarios
   def install_alongside_rubygems_source
     run_bundle(
       gemfile_content: <<~GEMFILE,
-        source "https://rubygems.org"
+        #{GemIndex.source_line}
         source "$WORKDIR/test.gemv", type: :vault do
           gem "vault_test_gem"
         end
