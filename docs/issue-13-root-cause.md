@@ -152,6 +152,23 @@ paths onto `$LOAD_PATH`.
 - **`json` is now a declared runtime dependency**, so `gemvault new` works on a
   stock distro ruby.
 
+## Platforms verified
+
+| Platform | Status |
+|---|---|
+| CRuby 4.0.6, Fedora 44, aarch64 | Full suite, 255 examples |
+| JRuby 10.1.1.0 (the reporter runs 10.1.0.0) | Verified once by hand, **not covered by the suite**: vault create/add/list, `bundle install` twice against a vault source, `bundle exec require`. `json 2.21.1 (java)` installed as a platform gem and resolved, which is the case `full_require_paths` has to get right |
+| macOS `arm64-darwin-24` | **Not verified.** The reporter's own platform. Nothing here can run it |
+
+JRuby has no permanent coverage because JRuby caps its own heap from the cgroup
+and the development sandbox is small enough that the cap lands at 148 MB, where
+even a single `gem fetch` dies. The one successful hand-run above happened in a
+lucky memory window and did not reproduce. A JRuby image, rake task and spec
+were written and then reverted rather than shipped unverified: harness code
+nobody has watched pass is the same defect as a spec that cannot fail. On a
+machine with ordinary memory this is worth adding, and it is the highest-value
+gap left, since issue #13 was reported against JRuby as well as CRuby.
+
 ## Coverage
 
 `spec/support/vault_sourced_gemfile_examples.rb` applies "a complete bundle" to
