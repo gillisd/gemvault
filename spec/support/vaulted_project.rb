@@ -16,8 +16,11 @@ module VaultedProject
 
   CHOSEN_PATH_CONFIRMATION = "Bundled gems are installed into `./#{CHOSEN_INSTALL_PATH}`".freeze
 
-  def self.gemvault_installed_globally
-    DistroRuby.gemvault_as_a_system_gem
+  # Removed after the fixture vault is built, since building it needs the CLI.
+  # The image installs gemvault system-wide, so every other scenario runs with an
+  # ambient copy; this is the one that makes the plugin root carry it instead.
+  def self.gemvault_uninstalled
+    DistroRuby.without_system_gemvault
   end
 
   def self.install_path_chosen
