@@ -1,6 +1,11 @@
 require "open3"
 
 module ContainerHelper
+  # The mount carries `z` because the image imitates a Fedora workstation, and on
+  # a real one SELinux is enforcing: without a relabel the container runs as
+  # container_t against a tree that kept the host's own label, and every read
+  # fails with EACCES. It is a no-op where SELinux is absent.
+  #
   # Dockerfile.test builds a distro ruby, which needs no environment surgery to
   # look like a user's machine: nothing is exported, gems land in RubyGems' own
   # default dirs, and bundler is a regular gem. There is no usable fallback
@@ -37,7 +42,7 @@ module ContainerHelper
   def capture_container(script)
     Open3.capture2e(
       "podman", "run", "--rm", "--network=host",
-      "-v", "#{project_root}:/gem:ro",
+      "-v", "#{project_root}:/gem:ro,z",
       CACHED_IMAGE,
       "bash", "-c", script
     )
