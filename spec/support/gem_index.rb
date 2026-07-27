@@ -63,7 +63,7 @@ module GemIndex
     <<~SH
       #{TreeGems.build_preamble}
       mkdir -p /work/index/gems
-      cp /work/src/*.gem /work/src/shim/*.gem /opt/gems/command_kit-*.gem /work/index/gems/
+      cp /work/src/*.gem /work/src/shim/*.gem /opt/gems/command_kit-*.gem /opt/gems/json-*.gem /work/index/gems/
       cat > /work/mkindex.rb <<'MKINDEX_RB'
       #{MKINDEX_RB}
       MKINDEX_RB

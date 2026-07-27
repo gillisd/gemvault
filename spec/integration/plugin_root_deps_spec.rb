@@ -5,7 +5,7 @@ RSpec.describe "a project with a gem that comes from a vault", :integration do
     let(:bundle_status) { result.last }
 
     it "installs the bundle" do
-      expect(second_install_output(bundle_output)).to include("Bundle complete!")
+      expect(second_install_output(bundle_output)).to include("Bundle complete!"), bundle_output
     end
 
     it "finishes without an error" do
@@ -19,7 +19,7 @@ RSpec.describe "a project with a gem that comes from a vault", :integration do
     let(:bundle_status) { result.last }
 
     it "loads the vaulted gem" do
-      expect(bundle_output).to include("1.0.0")
+      expect(required_gem_output(bundle_output)).to include("1.0.0")
     end
 
     it "finishes without an error" do

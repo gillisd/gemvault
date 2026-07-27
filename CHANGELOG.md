@@ -55,6 +55,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   vault needs it; it is a default gem upstream but a separate package on
   distros, where `dnf install ruby` leaves it absent. It is now a declared
   runtime dependency.
+- Reading a vault through the Bundler source no longer raises `cannot load such
+  file -- json` either. Loading gemvault off `$LOAD_PATH` skips activation, and
+  therefore skips its dependencies, so the declared dependency alone did not
+  reach the plugin path. The shim now resolves gemvault's declared runtime
+  dependencies the same way it resolves gemvault and puts their require paths —
+  extension directories included — on `$LOAD_PATH`. A dependency it cannot find
+  is skipped rather than fatal, which is what activation could not do.
 - `bundle install` no longer fails with `Could not find 'command_kit' (~> 0.6)`
   when gemvault is installed into the plugin root without its dependencies.
   Loading the vault source no longer activates the gemvault gem, which would

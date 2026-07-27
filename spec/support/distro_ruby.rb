@@ -1,12 +1,13 @@
 # Script fragments that reshape the container's ruby to match environments
-# seen in the wild: distro rubies ship bundler as a regular gem rather than a
-# default gem, and users may or may not have gemvault installed system-wide.
+# seen in the wild: users may or may not have gemvault installed system-wide,
+# and bundler may have been reinstalled over the packaged copy.
 module DistroRuby
+  # The base image is already a distro ruby, so bundler is already a regular
+  # gem; this only reinstalls it in place over the packaged copy. The line that
+  # used to delete a default bundler gemspec is gone -- it named the official
+  # ruby image's gem layout, which no longer exists in the container.
   def self.regular_bundler
-    <<~SH
-      gem install --local --force --no-document /opt/gems/bundler-*.gem >/dev/null
-      rm -f /usr/local/lib/ruby/gems/*/specifications/default/bundler-*.gemspec
-    SH
+    "gem install --local --force --no-document /opt/gems/bundler-*.gem >/dev/null\n"
   end
 
   def self.without_system_gemvault
