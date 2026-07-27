@@ -1,7 +1,31 @@
-FROM docker.io/library/ruby:4.0.1-slim
+# A dev machine, not a packaging convenience.
+#
+# The official ruby image is not shaped like anything a user runs: it redirects
+# gems to /usr/local/bundle, exports GEM_HOME and BUNDLE_APP_CONFIG to match,
+# and freezes bundler at whatever shipped. Each of those differences hid a real
+# defect, and patching them one at a time only moved the blind spot. A distro
+# ruby has none of them: gems land in RubyGems' own default dirs, nothing is
+# exported, and bundler is a regular gem rather than a default one -- which is
+# also the shape that broke `bundle exec` in issue #12.
+FROM docker.io/library/fedora:44
 
-COPY . /tmp/build/
+# redhat-rpm-config carries the hardening specs Fedora's ruby-devel compiles
+# extensions against; without it every native gem fails in extconf. Any Fedora
+# machine that can build a gem has it.
+RUN dnf -y install --setopt=install_weak_deps=False \
+        ruby ruby-devel rubygem-bundler \
+        gcc make redhat-rpm-config sqlite-devel tar \
+    && dnf clean all
 
+# Keep this in step with the `BUNDLED WITH` line the project's own lockfile
+# carries. The plugin machinery these specs exercise is Bundler's own, so a
+# stale version silently tests different code.
+RUN gem install --no-document bundler -v 4.0.17
+
+# The tree arrives as a bind mount at /src rather than a COPY: the build context
+# lives on a filesystem whose extended-attribute listing podman's copier cannot
+# read. `rake spec:build` supplies the mount.
+#
 # gemvault is installed system-wide because integration specs need the CLI to
 # build vault fixtures, and because that is what a real user's machine looks
 # like: `gem install gemvault` puts it on the ambient GEM_PATH. That ambient
@@ -13,10 +37,10 @@ COPY . /tmp/build/
 # copy satisfies Bundler's plugin resolution without ever populating the plugin
 # root, which masks every plugin-root defect the integration specs exist to
 # catch. Specs install it from the local gem index built by GemIndex instead.
-RUN cd /tmp/build \
-    && gem build gemvault.gemspec \
-    && gem install --no-document gemvault-*.gem \
-    && rm -rf /tmp/build
+RUN cd /src \
+    && gem build gemvault.gemspec -o /tmp/gemvault.gem \
+    && gem install --no-document /tmp/gemvault.gem \
+    && rm -f /tmp/gemvault.gem
 
 # sqlite3 is not a gemvault runtime dependency; install it here so the upgrade
 # integration test can read the committed legacy SQLite (Dbvault) fixture it
@@ -25,8 +49,7 @@ RUN gem install --no-document sqlite3
 
 # Gem files for integration specs that install the plugin from a local gem
 # index at spec runtime, kept for offline use: command_kit is gemvault's
-# runtime dependency; the bundler gem lets specs simulate distro rubies where
-# bundler is a regular (non-default) gem.
+# runtime dependency; the bundler gem lets specs reinstall bundler in place.
 RUN mkdir -p /opt/gems \
     && cd /opt/gems \
     && gem fetch command_kit -v 0.6.0 \

@@ -1,20 +1,18 @@
 require "open3"
 
 module ContainerHelper
-  BASE_IMAGE = "docker.io/library/ruby:4.0.1-slim".freeze
+  # Dockerfile.test builds a distro ruby, which needs no environment surgery to
+  # look like a user's machine: nothing is exported, gems land in RubyGems' own
+  # default dirs, and bundler is a regular gem. There is no usable fallback
+  # image -- running against a stock ruby image is what hid issues #12 and #13.
   CACHED_IMAGE = "gemvault-test:latest".freeze
 
-  # The ruby base image sets BUNDLE_APP_CONFIG=/usr/local/bundle, which moves
-  # Bundler's per-project config -- and with it Bundler::Plugin.root -- out of
-  # the project and into the system gem home. Real projects keep .bundle beside
-  # the Gemfile, so specs that exercise the plugin root must too.
   def podman_run(script)
-    image = cached_image_available? ? CACHED_IMAGE : BASE_IMAGE
     cmd = [
       "podman", "run", "--rm", "--network=host",
       "-v", "#{project_root}:/gem:ro",
-      image,
-      "bash", "-c", "unset BUNDLE_APP_CONFIG\n#{script}"
+      CACHED_IMAGE,
+      "bash", "-c", script
     ]
     Open3.capture2e(*cmd)
   end
@@ -23,9 +21,5 @@ module ContainerHelper
 
   def project_root
     File.expand_path("../..", __dir__)
-  end
-
-  def cached_image_available?
-    system("podman", "image", "exists", CACHED_IMAGE, out: File::NULL, err: File::NULL)
   end
 end

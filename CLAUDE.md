@@ -103,21 +103,37 @@ Integration tests use a manually-written Bundler plugin index to avoid rubygems.
 
 ### Container fidelity — do not undo these
 
-The integration container is deliberately shaped to expose plugin-root defects.
-Two settings are load-bearing; reverting either silently makes the suite green
-against an ambient gem instead of the code under test:
+The container has to look like a machine a user actually has. The `ruby` base
+image does not, and every way it differs has already hidden a real defect. These
+four are load-bearing; reverting any of them silently makes the suite green
+against something other than the code under test:
 
 1. **`bundler-source-vault` is NOT installed system-wide in `Dockerfile.test`.**
    An ambient copy satisfies Bundler's plugin resolution without ever populating
    the plugin root. Specs resolve the shim from the local gem index (`GemIndex`)
    so they exercise the tree's shim. `gemvault` IS installed system-wide on
    purpose — that is a real user's machine and the trigger for issue #13.
-2. **`BUNDLE_APP_CONFIG` is unset in `ContainerHelper#podman_run`.** The ruby base
-   image sets it to `/usr/local/bundle`, which moves `Bundler::Plugin.root` out of
-   the project so no spec ever touches a project-local `.bundle/plugin`.
+2. **`BUNDLE_APP_CONFIG` is dropped in `ContainerHelper#podman_run`.** The image
+   sets it to `/usr/local/bundle`, which moves `Bundler::Plugin.root` out of the
+   project so no spec ever touches a project-local `.bundle/plugin`.
+3. **`GEM_HOME` and `GEM_PATH` are dropped in `ContainerHelper#podman_run`, and
+   `Dockerfile.test` pins `GEM_HOME` to RubyGems' default dir so gems install
+   where a normal ruby keeps them.** The image exports `GEM_HOME`; rubies from
+   rbenv, asdf, chruby, Homebrew and distros export nothing. Anything that reads
+   gem roots back out of the environment finds them on the image and finds
+   nothing on a user's machine — that is what made the first fix for issue #13
+   pass its specs while still failing for the reporter.
+4. **Bundler is pinned to the version users run, not the image's default gem.**
+   The plugin machinery under test is Bundler's own, so a stale default silently
+   tests different code.
 
-If a spec fails only after removing a system-installed gem, the spec was passing
-for the wrong reason — fix the spec, not the container.
+Dropping those variables is machine configuration, so it belongs in
+`podman_run`, never in a script fragment: integration specs run only commands a
+user would actually type.
+
+If a spec fails only after removing a system-installed gem or an exported
+variable, the spec was passing for the wrong reason — fix the spec, not the
+container.
 
 ## Dependencies
 

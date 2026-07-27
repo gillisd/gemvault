@@ -31,7 +31,8 @@ def cached_image_exists?
 end
 
 def build_cached_image
-  sh "podman", "build", "--network=host", "-t", CACHED_IMAGE, "-f", "Dockerfile.test", "."
+  sh "podman", "build", "--network=host", "-v", "#{__dir__}:/src:ro",
+     "-t", CACHED_IMAGE, "-f", "Dockerfile.test", "."
 end
 
 def destroy_cached_image
