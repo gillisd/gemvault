@@ -13,6 +13,12 @@ module DistroRuby
     "gem uninstall -x -a -I bundler-source-vault gemvault command_kit >/dev/null 2>&1 || true\n"
   end
 
+  # Installs the tree's gemvault as a system gem without the shim, the shape of
+  # a machine where the user ran `gem install gemvault` for the CLI.
+  def self.gemvault_as_a_system_gem
+    "gem install --local --force --no-document /work/src/gemvault-*.gem >/dev/null\n"
+  end
+
   # Replaces the image's baked-in gemvault gems with ones freshly built from
   # the mounted source tree (requires TreeGems.build_preamble to have run).
   def self.current_tree_as_system_gems
