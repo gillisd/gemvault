@@ -169,7 +169,7 @@ Restoring each returns the suite to green.
 
 | Platform | Status |
 |---|---|
-| CRuby 4.0.6, Fedora 44, aarch64 | Full suite, 255 examples |
+| CRuby 4.0.6, Fedora 44, aarch64 | Full suite, 265 examples |
 | JRuby 10.1.1.0 (the reporter runs 10.1.0.0) | Verified once by hand, **not covered by the suite**: vault create/add/list, `bundle install` twice against a vault source, `bundle exec require`. `json 2.21.1 (java)` installed as a platform gem and resolved, which is the case `full_require_paths` has to get right |
 | macOS `arm64-darwin-24` | **Not verified.** The reporter's own platform. Nothing here can run it |
 
@@ -187,8 +187,9 @@ gap left, since issue #13 was reported against JRuby as well as CRuby.
 `spec/support/vault_sourced_gemfile_examples.rb` applies "a complete bundle" to
 a vault-sourced Gemfile and then re-applies it after each user action: deleting
 `Gemfile.lock`, deleting `.bundle`, deleting both, removing the vaulted gem,
-adding a gem from rubygems, adding another from the same vault, and adding one
-from a second vault. `spec/integration/vaulted_project_spec.rb` runs that whole
+adding a gem from rubygems, adding the project's own gemspec (the reporter's
+Gemfile shape), adding another gem from the same vault, and adding one from a
+second vault. `spec/integration/vaulted_project_spec.rb` runs that whole
 group under four bundler configurations — stock, an install path chosen, that
 path undone, and the project's gems cached — and
 `spec/integration/no_ambient_gemvault_spec.rb` covers the machine that has no

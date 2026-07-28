@@ -10,14 +10,15 @@ module DistroRuby
     "gem install --local --force --no-document /opt/gems/bundler-*.gem >/dev/null\n"
   end
 
+  # gemvault and the dependencies only gemvault brings, so the plugin root has
+  # to carry them itself. json is gemvault's other runtime dependency and is
+  # deliberately not in the list: `bundler/cli/list.rb` requires it at the top
+  # of the file, so uninstalling it makes `bundle list` -- the command the
+  # scenario checks its result with -- die before any gemvault code runs. An
+  # ambient json therefore stays visible to the plugin root; a load-path
+  # defect specific to json is not what this scenario can prove.
   def self.without_system_gemvault
     "gem uninstall -x -a -I bundler-source-vault gemvault command_kit >/dev/null 2>&1 || true\n"
-  end
-
-  # Installs the tree's gemvault as a system gem without the shim, the shape of
-  # a machine where the user ran `gem install gemvault` for the CLI.
-  def self.gemvault_as_a_system_gem
-    "gem install --local --force --no-document /work/src/gemvault-*.gem >/dev/null\n"
   end
 
   # A gemvault newer than the one the shim was released against, left on the

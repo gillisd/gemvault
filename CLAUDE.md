@@ -153,6 +153,6 @@ container.
 
 - `bundler` — NOT a dependency; the plugin always runs inside an existing Bundler process, and declaring it breaks gem activation under `bundle exec`'s restricted GEM_PATH
 - `command_kit` (~> 0.6) — runtime (CLI)
-- `json` (~> 2.0) — runtime; backs the tarball vault's manifest. A default gem upstream, but distros package it separately, so it is declared. Because `shim/plugins.rb` loads gemvault off `$LOAD_PATH` without activating it, the shim has to put json's require paths on `$LOAD_PATH` itself — see the dependency resolution at the end of that file.
+- `json` (~> 2.0) — runtime; backs the tarball vault's manifest. A default gem upstream, but distros package it separately, so it is declared. Because the shim loads gemvault off `$LOAD_PATH` without activating it, it has to put json's require paths on `$LOAD_PATH` itself — see `dependency_specs` and `entries` in `shim/gemvault_load_path.rb`.
 - `sqlite3` (~> 2.0) — NOT a runtime dependency; loaded lazily only to read a legacy SQLite (Dbvault) vault. Declared in the Gemfile for development/test.
 - `minitest`, `rspec`, `rake` — development
