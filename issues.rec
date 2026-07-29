@@ -714,7 +714,7 @@ Description: bundle install does not complete successfully (ruby 4.0.1 &jruby 10
 +  #    gem 'jarpack', "~> 0.2.1"
 +  #  -------------------------------------------
 + ```
-+
++ 
 + RESOLUTION: the plugin root never held gemvault, and the shim's require had no
 + way to reach the copy that did exist. Bundler's Source::Rubygems#install
 + short-circuits on `installed?(spec) && !force`, so a plugin dependency already
@@ -731,7 +731,7 @@ Description: bundle install does not complete successfully (ruby 4.0.1 &jruby 10
 + when gemvault does land in the plugin root -- because activation demands the
 + full runtime dependency set while vault_source.rb reaches the rest of gemvault
 + through require_relative alone.
-+
++ 
 + The integration suite could not have caught this. Dockerfile.test installed
 + gemvault AND bundler-source-vault system-wide, so `require
 + "bundler/plugin/vault_source"` resolved from the ambient GEM_HOME no matter
@@ -745,3 +745,9 @@ Description: bundle install does not complete successfully (ruby 4.0.1 &jruby 10
 + ambient copy. Replicated by spec/integration/plugin_root_deps_spec.rb (repeated
 + bundle install, and bundle exec under a restricted GEM_PATH).
 Status: closed
+
+Id: 14
+Updated: Wed, 29 Jul 2026 16:41:11 -0400
+Name: gemvault doctor fails when bundler/inline is used
+Description: Loudly fails with 2 errors, one of which is "can't find gemfile"
+Status: open
