@@ -757,3 +757,9 @@ Updated: Wed, 29 Jul 2026 17:39:23 -0400
 Name: gemvault new fails on path/to/gemvault.gemv
 Description: I did it in /tmp, maybe that's why?
 Status: open
+
+Id: 16
+Updated: Wed, 29 Jul 2026 18:25:48 -0400
+Name: Add jruby-ci workflow
+Description: It should be already set up on the jruby-support branch. It just needs to be picked from it. DO NOT use the other code in that - it is very outdated
+Status: open
