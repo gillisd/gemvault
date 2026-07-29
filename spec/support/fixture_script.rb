@@ -7,17 +7,27 @@ module FixtureScript
   #   files: hash of {name => {path => content}} overrides
   #   dependencies: hash of {name => [[dep_name, requirement]]}
   def self.preamble(gems: [["vault_test_gem", "1.0.0"]], files: {}, dependencies: {})
-    gem_builds = gems.map { |name, version|
-      build_gem(name: name, version: version, files: files, dependencies: dependencies)
-    }.join("\n")
-    vault_adds = vault_add_commands(gems)
-
     <<~SH
       set -e
       export WORKDIR=$(mktemp -d)
-      #{gem_builds}
-      gemvault new $WORKDIR/test && #{vault_adds}
+      #{gem_builds(gems: gems, files: files, dependencies: dependencies)}
+      gemvault new $WORKDIR/test && #{vault_add_commands(gems)}
     SH
+  end
+
+  # Builds a second vault at $WORKDIR/<vault>.gemv alongside the one preamble
+  # creates, for projects that draw gems from more than one vault.
+  def self.additional_vault(vault:, gems:, files: {}, dependencies: {})
+    <<~SH
+      #{gem_builds(gems: gems, files: files, dependencies: dependencies)}
+      gemvault new $WORKDIR/#{vault} && #{vault_add_commands(gems, vault)}
+    SH
+  end
+
+  def self.gem_builds(gems:, files:, dependencies:)
+    gems.map { |name, version|
+      build_gem(name: name, version: version, files: files, dependencies: dependencies)
+    }.join("\n")
   end
 
   def self.build_gem(name:, version:, files:, dependencies:)
@@ -57,9 +67,9 @@ module FixtureScript
     }.join("\n")
   end
 
-  def self.vault_add_commands(gems)
+  def self.vault_add_commands(gems, vault = "test")
     gems.map { |name, version|
-      "gemvault add $WORKDIR/test.gemv $WORKDIR/gems/#{name}/#{name}-#{version}.gem"
+      "gemvault add $WORKDIR/#{vault}.gemv $WORKDIR/gems/#{name}/#{name}-#{version}.gem"
     }.join(" && ")
   end
 

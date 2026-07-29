@@ -21,6 +21,7 @@ AllCops:
   Exclude:
     - bin/*
     - vendor/**/*
+    - references/**/*
     - lib/core_ext/**/*
     - rakelib/project.rb
     - rakelib/project_version.rb

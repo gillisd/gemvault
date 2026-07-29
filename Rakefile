@@ -24,14 +24,29 @@ RuboCop::RakeTask.new
 require "gempilot/version_task"
 Gempilot::VersionTask.new
 
-CACHED_IMAGE = "gemvault-test:latest".freeze
+require "digest"
+require_relative "spec/support/container_helper"
+
+CACHED_IMAGE = ContainerHelper::CACHED_IMAGE
+
+# Dockerfile.test reads the tree through a bind mount, whose contents podman
+# does not fold into its layer cache key. Feeding this digest in as a build arg
+# is what makes `rake spec:build` notice that the source changed.
+def image_source_digest
+  fingerprints = FileList["lib/**/*", "exe/*", "gemvault.gemspec"]
+                 .select { |path| File.file?(path) }.sort
+                 .map { |path| "#{path} #{Digest::SHA256.hexdigest(File.binread(path))}" }
+  Digest::SHA256.hexdigest(fingerprints.join("\n"))
+end
 
 def cached_image_exists?
   system("podman", "image", "exists", CACHED_IMAGE, out: File::NULL, err: File::NULL)
 end
 
 def build_cached_image
-  sh "podman", "build", "--network=host", "-t", CACHED_IMAGE, "-f", "Dockerfile.test", "."
+  sh "podman", "build", "--network=host", "-v", "#{__dir__}:/src:ro,z",
+     "--build-arg", "SOURCE_DIGEST=#{image_source_digest}",
+     "-t", CACHED_IMAGE, "-f", "Dockerfile.test", "."
 end
 
 def destroy_cached_image

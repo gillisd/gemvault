@@ -63,7 +63,7 @@ module GemIndex
     <<~SH
       #{TreeGems.build_preamble}
       mkdir -p /work/index/gems
-      cp /work/src/*.gem /work/src/shim/*.gem /opt/gems/command_kit-*.gem /work/index/gems/
+      cp /work/src/*.gem /work/src/shim/*.gem /opt/gems/command_kit-*.gem /opt/gems/json-*.gem /work/index/gems/
       cat > /work/mkindex.rb <<'MKINDEX_RB'
       #{MKINDEX_RB}
       MKINDEX_RB
@@ -81,5 +81,20 @@ module GemIndex
 
   def self.gemrc_pointing_at_index
     "printf ':sources:\\n- http://127.0.0.1:#{PORT}/\\n' > /root/.gemrc\n"
+  end
+
+  def self.source_line
+    %(source "http://127.0.0.1:#{PORT}")
+  end
+
+  # Bundler resolves a Gemfile-declared plugin against the Gemfile's own
+  # sources, so a Gemfile with no rubygems source can only find the shim among
+  # already-installed gems. Real Gemfiles name a rubygems source; these specs
+  # name the local index so they resolve the tree's shim rather than a
+  # published one.
+  def self.with_source(gemfile_content)
+    return gemfile_content if gemfile_content.include?(%(source "http))
+
+    "#{source_line}\n\n#{gemfile_content}"
   end
 end

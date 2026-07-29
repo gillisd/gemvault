@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.4.8"
 
-  spec.files = ["plugins.rb"]
+  spec.files = ["plugins.rb", "gemvault_load_path.rb"]
   spec.require_paths = ["."]
 
   spec.add_dependency "gemvault", "= #{Gemvault::VERSION}"

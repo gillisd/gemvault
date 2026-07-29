@@ -7,10 +7,11 @@ module BundleInstall
   def bundle_script(gemfile_content:, assertions:, gems:, files:, dependencies:)
     preamble = FixtureScript.preamble(gems: gems, files: files, dependencies: dependencies)
     <<~SH
+      #{GemIndex.serve_preamble}
       #{preamble}
       cd $WORKDIR
       cat > Gemfile <<GEMFILE
-      #{gemfile_content}
+      #{GemIndex.with_source(gemfile_content)}
       GEMFILE
       #{assertions}
     SH

@@ -9,11 +9,14 @@ module BundlerInline
 
   def inline_script(gemfile_call)
     <<~SH
+      #{GemIndex.serve_preamble}
       #{FixtureScript.preamble}
       cat > $WORKDIR/inline_test.rb <<RUBY
       require "bundler/inline"
 
       #{gemfile_call} do
+        #{GemIndex.source_line}
+
         source "$WORKDIR/test.gemv", type: :vault do
           gem "vault_test_gem"
         end

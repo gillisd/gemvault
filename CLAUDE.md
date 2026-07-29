@@ -77,6 +77,15 @@ gem install --source file:///path/to/myvault.gemv foo
 - `bundler-source-vault` name exists because Bundler auto-infers plugin name from `type: :vault` → `bundler-source-vault`
 - `file://` URIs stripped to plain paths in `Gem::Source::Vault#initialize`
 - Verbose logging via `Gem::UserInteraction#verbose` for `--verbose` support
+- `shim/plugins.rb` loads gemvault by putting its `lib` on `$LOAD_PATH`, never by
+  activating the gem. Bundler skips installing a plugin dependency already
+  present on the ambient GEM_PATH, so the plugin root often lacks gemvault, and
+  by load time GEM_PATH is restricted to the plugin root and the app bundle. The
+  shim therefore searches every root that can hold gemvault, including the ones
+  Bundler masked (`Bundler.original_env` GEM_HOME/GEM_PATH). Activation is
+  avoided because it demands gemvault's full runtime dependency set (command_kit),
+  which Bundler skips for the same reason — `vault_source.rb` reaches the rest of
+  gemvault through `require_relative` alone and needs none of it.
 
 ## Testing
 
@@ -84,17 +93,66 @@ gem install --source file:///path/to/myvault.gemv foo
 bundle exec rake test
 ```
 
-- `test/vault_test.rb` — 33 unit tests for Vault class
-- `test/vault_source_test.rb` — 17 unit tests for Bundler source plugin
-- `test/integration_test.rb` — 12 end-to-end bundle install tests
-- `test/cli_test.rb` — 32 CLI tests
-- `test/rubygems_plugin_test.rb` — 28 tests (source, resolver, monkey-patches, gem install integration, file:// URI, verbose logging)
+Minitest covers the library; RSpec covers the CLI and the containerized
+integration suite. `rake` (the default task) runs `test`, `spec` and `rubocop`.
 
-Integration tests use a manually-written Bundler plugin index to avoid rubygems.org resolution during testing.
+```bash
+bundle exec rake test            # minitest only
+bundle exec rake spec:core       # rspec, no containers
+bundle exec rake spec:integration # rspec, containers (builds the image first)
+bundle exec rake spec:build      # rebuild the container image
+bundle exec rake spec:teardown   # remove it
+```
+
+- `test/vault_test.rb` — unit tests for Vault class
+- `test/vault_source_test.rb` — unit tests for Bundler source plugin
+- `test/cli_test.rb` — CLI tests
+- `test/rubygems_plugin_test.rb` — source, resolver, monkey-patches, gem install integration, file:// URI, verbose logging
+- `spec/integration/` — end-to-end specs, each run inside a podman container
+- `spec/support/` — script fragments the integration specs assemble into those containers
+
+Integration specs serve the tree's own gems from a local gem index (`GemIndex`)
+to avoid rubygems.org resolution during testing.
+
+### Container fidelity — do not undo these
+
+The container has to look like a machine a user actually has. The `ruby` base
+image does not, and every way it differs has already hidden a real defect. These
+four are load-bearing; reverting any of them silently makes the suite green
+against something other than the code under test:
+
+1. **`bundler-source-vault` is NOT installed system-wide in `Dockerfile.test`.**
+   An ambient copy satisfies Bundler's plugin resolution without ever populating
+   the plugin root. Specs resolve the shim from the local gem index (`GemIndex`)
+   so they exercise the tree's shim. `gemvault` IS installed system-wide on
+   purpose — that is a real user's machine and the trigger for issue #13.
+2. **`BUNDLE_APP_CONFIG` is not set in the container.** The `ruby` image sets it
+   to `/usr/local/bundle`, which moves `Bundler::Plugin.root` out of the project
+   so no spec ever touches a project-local `.bundle/plugin`. Fedora sets it
+   nowhere; do not add it, and do not adopt a base image that does.
+3. **`GEM_HOME` and `GEM_PATH` are not exported in the container, and nothing
+   pins them.** Gems land in RubyGems' own default dirs. The `ruby` image
+   exports `GEM_HOME`; rubies from rbenv, asdf, chruby, Homebrew and distros
+   export nothing. Anything that reads gem roots back out of the environment
+   finds them on the image and finds nothing on a user's machine — that is what
+   made the first fix for issue #13 pass its specs while still failing for the
+   reporter. Neither `Dockerfile.test` nor `ContainerHelper#podman_run` should
+   grow an `ENV`/`-e` for either variable.
+4. **Bundler is pinned to the version users run, not the image's default gem.**
+   The plugin machinery under test is Bundler's own, so a stale default silently
+   tests different code.
+
+Fidelity is a property of the image, not of a script fragment: integration specs
+run only commands a user would actually type.
+
+If a spec fails only after removing a system-installed gem or an exported
+variable, the spec was passing for the wrong reason — fix the spec, not the
+container.
 
 ## Dependencies
 
 - `bundler` — NOT a dependency; the plugin always runs inside an existing Bundler process, and declaring it breaks gem activation under `bundle exec`'s restricted GEM_PATH
 - `command_kit` (~> 0.6) — runtime (CLI)
+- `json` (~> 2.0) — runtime; backs the tarball vault's manifest. A default gem upstream, but distros package it separately, so it is declared. Because the shim loads gemvault off `$LOAD_PATH` without activating it, it has to put json's require paths on `$LOAD_PATH` itself — see `dependency_specs` and `entries` in `shim/gemvault_load_path.rb`.
 - `sqlite3` (~> 2.0) — NOT a runtime dependency; loaded lazily only to read a legacy SQLite (Dbvault) vault. Declared in the Gemfile for development/test.
-- `minitest`, `rake` — development
+- `minitest`, `rspec`, `rake` — development

@@ -11,9 +11,6 @@ module PluginRootProbe
       FAKE_SPECS=$FAKE_ROOT/specifications
       mkdir -p $FAKE_SPECS
 
-      # Extract preamble (everything before the first require line)
-      sed -n '/^require/q;p' /gem/shim/plugins.rb > $WORKDIR/preamble.rb
-
       cat > $WORKDIR/test_script.rb <<RUBY
       require "bundler"
 
@@ -39,13 +36,14 @@ module PluginRootProbe
         module_function :root
       end
 
-      load "$WORKDIR/preamble.rb"
+      require "/gem/shim/gemvault_load_path"
+      BundlerSourceVault::GemvaultLoadPath.register_spec_dirs
 
       begin
         Gem::Specification.find_by_name("phantom_dep")
         puts "PASS"
       rescue Gem::MissingSpecError
-        abort "FAIL: phantom_dep not findable after plugins.rb preamble"
+        abort "FAIL: phantom_dep not findable after registering the plugin root"
       end
       RUBY
 
