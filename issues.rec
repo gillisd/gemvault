@@ -751,3 +751,9 @@ Updated: Wed, 29 Jul 2026 16:41:11 -0400
 Name: gemvault doctor fails when bundler/inline is used
 Description: Loudly fails with 2 errors, one of which is "can't find gemfile"
 Status: open
+
+Id: 15
+Updated: Wed, 29 Jul 2026 17:39:23 -0400
+Name: gemvault new fails on path/to/gemvault.gemv
+Description: I did it in /tmp, maybe that's why?
+Status: open
