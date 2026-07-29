@@ -762,4 +762,28 @@ Id: 16
 Updated: Wed, 29 Jul 2026 18:25:48 -0400
 Name: Add jruby-ci workflow
 Description: It should be already set up on the jruby-support branch. It just needs to be picked from it. DO NOT use the other code in that - it is very outdated
-Status: open
++
++ RESOLUTION: the `jruby` job is picked into .github/workflows/ci.yml; none of the
++ branch's Sequel/jdbc-sqlite3 code came with it. Master needs none of it -- the
++ tarball format uses only rubygems' own tar tooling, so gemvault already runs on
++ JRuby. Three of the branch job's details did not survive the pick: JAVA_OPTS
++ --enable-native-access existed to silence a jdbc-sqlite3 warning under Java 25
++ (no JDBC driver here, and the job pins Java 21), BUNDLE_FROZEN existed for a
++ committed MRI-resolved lock (Gemfile.lock is gitignored on master), and the
++ branch's matrix/podman edits to the MRI jobs are the outdated part.
++
++ Two things the branch job would have hit on master, both found by running it:
++ (1) `bundle install` died on the sqlite3 C extension, which cannot build on the
++ JVM. sqlite3 is a dev-only dependency for the legacy Dbvault read path, so the
++ Gemfile now scopes it `platform: %i[ruby windows]`; nothing under test/ touches
++ sqlite3, which is why the job runs `rake test` only and leaves the sqlite3-backed
++ specs to the MRI jobs. (2) `bundle install` then exhausted JRuby's default 500MB
++ heap during resolution -- inherent to the Gemfile, not to sqlite3 -- so the job
++ sets JRUBY_OPTS=-J-Xmx2048m, the remedy JRuby's own error message prescribes.
++
++ Verified locally against JRuby 10.1.0.0 on Java 25 (installed for this; the box
++ had none, and no install-jruby script existed -- one is now at
++ ~/.local/bin/install-jruby): bundle install clean with sqlite3 absent, rake test
++ 113 tests / 231 assertions / 0 failures. MRI unaffected: sqlite3 still resolves,
++ rake test 113/0, spec:core 130 examples/0 failures, rubocop 111 files clean.
+Status: closed
