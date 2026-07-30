@@ -791,6 +791,31 @@ Description: Both `integration` jobs failed on master (run 30496142063) and on P
 + the network. Commands run through an injected Shell so the retry behaviour is
 + specified without podman (spec/container_image_spec.rb, spec/shell_spec.rb), and the
 + loop was also confirmed against real podman with a Dockerfile that exits nonzero.
+=======
++
++ RESOLUTION: the `jruby` job is picked into .github/workflows/ci.yml; none of the
++ branch's Sequel/jdbc-sqlite3 code came with it. Master needs none of it -- the
++ tarball format uses only rubygems' own tar tooling, so gemvault already runs on
++ JRuby. Three of the branch job's details did not survive the pick: JAVA_OPTS
++ --enable-native-access existed to silence a jdbc-sqlite3 warning under Java 25
++ (no JDBC driver here, and the job pins Java 21), BUNDLE_FROZEN existed for a
++ committed MRI-resolved lock (Gemfile.lock is gitignored on master), and the
++ branch's matrix/podman edits to the MRI jobs are the outdated part.
++
++ Two things the branch job would have hit on master, both found by running it:
++ (1) `bundle install` died on the sqlite3 C extension, which cannot build on the
++ JVM. sqlite3 is a dev-only dependency for the legacy Dbvault read path, so the
++ Gemfile now scopes it `platform: %i[ruby windows]`; nothing under test/ touches
++ sqlite3, which is why the job runs `rake test` only and leaves the sqlite3-backed
++ specs to the MRI jobs. (2) `bundle install` then exhausted JRuby's default 500MB
++ heap during resolution -- inherent to the Gemfile, not to sqlite3 -- so the job
++ sets JRUBY_OPTS=-J-Xmx2048m, the remedy JRuby's own error message prescribes.
++
++ Verified locally against JRuby 10.1.0.0 on Java 25 (installed for this; the box
++ had none, and no install-jruby script existed -- one is now at
++ ~/.local/bin/install-jruby): bundle install clean with sqlite3 absent, rake test
++ 113 tests / 231 assertions / 0 failures. MRI unaffected: sqlite3 still resolves,
++ rake test 113/0, spec:core 130 examples/0 failures, rubocop 111 files clean.
 Status: closed
 
 Id: 18
