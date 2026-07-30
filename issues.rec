@@ -817,3 +817,51 @@ Description: Both `integration` jobs failed on master (run 30496142063) and on P
 + 113 tests / 231 assertions / 0 failures. MRI unaffected: sqlite3 still resolves,
 + rake test 113/0, spec:core 130 examples/0 failures, rubocop 111 files clean.
 Status: closed
+
+Id: 18
+Updated: Thu, 30 Jul 2026 01:06:09 +0000
+Name: Integration CI broken by runner image podman 5 / crun 1.14 mismatch
+Description: Every `integration` job fails at the Dockerfile's dnf layer with:
++ 
++ ```
++ error running container: from /usr/bin/crun creating container for
++ [/bin/sh -c dnf -y install ...]: unknown version specified
++ ```
++ 
++ This looked like issue #17's flake and is not. Correlating the runner image
++ against the outcome settles it:
++ 
++ | runner image        | podman | outcome     |
++ |---------------------|--------|-------------|
++ | 20260720.247 (old)  | 4.9.3  | pass        |
++ | 20260726.254 (new)  | 5.8.4  | crun error  |
++ 
++ Every genuine failure is on 20260726.254; every job on 20260720.247 either passed
++ or was cancelled by fail-fast (which is what made two of them look like failures).
++ GitHub rolls the image out gradually, so jobs land on either one -- hence reruns
++ sometimes helping and sometimes not, and hence integration CI going permanently
++ red as the rollout completes.
++ 
++ The new image bumped podman 4.9.3 -> 5.8.4 and left Ubuntu 24.04's crun 1.14 in
++ place. podman 5 writes an OCI config declaring ociVersion 1.2.0; crun 1.14
++ rejects any version not prefixed "1.0" with exactly "unknown version
++ specified". A dev box running podman 5.8.4 with crun 1.28 builds and runs the
++ same image fine, which is the control.
++ 
++ Nothing about this is intermittent, so #17's retry cannot help: three attempts
++ on the same runner fail three times.
++ 
++ RESOLUTION: the integration job installs a pinned crun 1.28 (newer than any
++ noble package) and names it in GEMVAULT_PODMAN_RUNTIME; Podman.command inserts
++ `--runtime` ahead of the subcommand when that variable is set, so both
++ ContainerImage's build and ContainerHelper's container runs go through it. Unset
++ -- every dev machine, and any runner whose podman and crun agree -- podman
++ chooses as before. The job also prints podman, crun and the chosen runtime, so
++ the next mismatch names itself instead of being mistaken for a flake, and
++ fail-fast is off because one leg cancelling the other hid which had broken.
++ 
++ Verified locally both ways: with the variable set to a downloaded crun 1.28,
++ spec:build plus 135 integration examples pass; with it unset, the same. A
++ config-file override (`[engine.runtimes]`) was tried first and did not take --
++ podman kept /usr/bin/crun -- which is why this uses the explicit flag.
+Status: closed
