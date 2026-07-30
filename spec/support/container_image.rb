@@ -1,4 +1,5 @@
 require_relative "shell"
+require_relative "podman"
 
 # The cached podman image the integration specs run inside: building it,
 # checking for it, and tearing it down. ContainerHelper owns running containers
@@ -29,7 +30,7 @@ class ContainerImage
   end
 
   def exists?
-    @shell.run("podman", "image", "exists", @name, silent: true)
+    @shell.run(*Podman.command("image", "exists", @name), silent: true)
   end
 
   def build
@@ -50,7 +51,7 @@ class ContainerImage
     return false unless exists?
 
     remove_containers
-    @shell.run("podman", "rmi", @name) || raise(Error, "podman rmi of #{@name} failed")
+    @shell.run(*Podman.command("rmi", @name)) || raise(Error, "podman rmi of #{@name} failed")
   end
 
   private
@@ -68,15 +69,16 @@ class ContainerImage
   # through a bind mount, whose contents podman does not fold into its layer
   # cache key. It is what makes a build notice that the source changed.
   def build_command
-    ["podman", "build", "--network=host", "-v", "#{@root}:/src:ro,z",
-     "--build-arg", "SOURCE_DIGEST=#{@digest}",
-     "-t", @name, "-f", "Dockerfile.test", "."]
+    Podman.command("build", "--network=host", "-v", "#{@root}:/src:ro,z",
+                   "--build-arg", "SOURCE_DIGEST=#{@digest}",
+                   "-t", @name, "-f", "Dockerfile.test", ".")
   end
 
   def remove_containers
-    strays = @shell.capture("podman", "ps", "-aq", "--filter", "ancestor=#{@name}").split
+    strays = @shell.capture(*Podman.command("ps", "-aq", "--filter", "ancestor=#{@name}")).split
     return if strays.empty?
 
-    @shell.run("podman", "rm", "-f", *strays) || raise(Error, "podman rm of #{@name} containers failed")
+    @shell.run(*Podman.command("rm", "-f", *strays)) ||
+      raise(Error, "podman rm of #{@name} containers failed")
   end
 end

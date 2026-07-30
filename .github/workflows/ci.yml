@@ -31,7 +31,13 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
+    env:
+      # Newer than any Ubuntu 24.04 package, and the reason for the step below.
+      CRUN_VERSION: "1.28"
     strategy:
+      # One leg cancelling the other hides which of them actually broke, and
+      # these two legs fail for different reasons often enough to matter.
+      fail-fast: false
       matrix:
         ruby-version: ['3.4.8', '4.0.1']
     steps:
@@ -43,6 +49,22 @@ jobs:
         bundler-cache: true
     - name: Ensure podman is available
       run: command -v podman || (sudo apt-get update && sudo apt-get install -y podman)
+    # Runner image 20260726.254 ships podman 5.8.4 against Ubuntu's crun 1.14.
+    # podman 5 declares ociVersion 1.2.0 and crun 1.14 rejects anything not
+    # prefixed "1.0" ("unknown version specified"), so every RUN layer and every
+    # container fails. Pin a crun that understands podman 5, and print what is
+    # actually installed so the next mismatch names itself instead of being
+    # mistaken for a flake.
+    - name: Pin an OCI runtime that matches podman
+      run: |
+        podman --version
+        crun --version || true
+        podman info --format 'chosen runtime: {{.Host.OCIRuntime.Name}} {{.Host.OCIRuntime.Version}}'
+        sudo curl -fsSL -o /usr/local/bin/crun-pinned \
+          "https://github.com/containers/crun/releases/download/${CRUN_VERSION}/crun-${CRUN_VERSION}-linux-amd64"
+        sudo chmod +x /usr/local/bin/crun-pinned
+        /usr/local/bin/crun-pinned --version
+        echo "GEMVAULT_PODMAN_RUNTIME=/usr/local/bin/crun-pinned" >> "$GITHUB_ENV"
     - name: Build test container image
       run: bundle exec rake spec:build
     - name: Run integration specs
