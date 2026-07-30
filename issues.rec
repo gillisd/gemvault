@@ -756,7 +756,28 @@ Id: 15
 Updated: Wed, 29 Jul 2026 17:39:23 -0400
 Name: gemvault new fails on path/to/gemvault.gemv
 Description: I did it in /tmp, maybe that's why?
-Status: open
++
++ RESOLUTION: /tmp was a red herring -- the trigger is the missing parent
++ directory. `gemvault new path/to/gemvault.gemv` reached Tempfile.create with a
++ nonexistent dirname and died with a raw Errno::ENOENT and a 25-line Ruby
++ backtrace; with path/to already present the same command always worked.
++
++ A vault is one file, so `gemvault new vendor/vendored.gemv` in a tree that has
++ no vendor yet reads as an ordinary request rather than a mistake: the missing
++ directories are now created, and the shallowest one created is reported
++ ("Created directory vendor") so nothing appears out of nowhere. What cannot be
++ papered over is raised as VaultDestination::Error and printed as one line with
++ exit 1 -- a parent that is a file, or one that cannot be created (EACCES).
++ SystemCallError from the vault write itself is caught the same way, so no path
++ through `gemvault new` ends in a backtrace.
++
++ Gemvault::VaultDestination owns the .gemv suffix defaulting, the occupied-path
++ check and the parent creation; the command stays thin. Replicated first by
++ spec/integration/cli/commands/new_spec.rb (real subprocess, real vault, real
++ exit code -- 5 of its 9 examples failed against the old code, including one
++ asserting the absence of Errno::ENOENT), with unit cover in
++ spec/gemvault/vault_destination_spec.rb and spec/gemvault/cli/commands/new_spec.rb.
+Status: closed
 
 Id: 16
 Updated: Wed, 29 Jul 2026 18:25:48 -0400
