@@ -762,6 +762,36 @@ Id: 16
 Updated: Wed, 29 Jul 2026 18:25:48 -0400
 Name: Add jruby-ci workflow
 Description: It should be already set up on the jruby-support branch. It just needs to be picked from it. DO NOT use the other code in that - it is very outdated
+Status: open
+
+Id: 17
+Updated: Thu, 30 Jul 2026 00:07:42 +0000
+Name: Integration CI job reddens on transient podman/crun failures
+Description: Both `integration` jobs failed on master (run 30496142063) and on PR #17 with:
++ 
++ ```
++ error running container: from /usr/bin/crun creating container for
++ [/bin/sh -c dnf -y install ...]: unknown version specified
++ ```
++ 
++ Nothing had changed between the last green run and the first red one: same runner
++ image 20260720.247.2, same pre-installed podman, same fedora:44 blob and config
++ digests, same SOURCE_DIGEST build arg, and the only commit in between touched
++ issues.rec text. Rerunning the identical commit went green.
++ 
++ `rake spec:build` had no retry, so one momentary container-runtime failure reddens
++ the whole run -- and because the matrix cancels the sibling leg, a flake reads as a
++ real break in the suite CLAUDE.md calls the first line of defense for CLI bugs.
++ 
++ RESOLUTION: the image lifecycle moved out of the Rakefile into ContainerImage
++ (spec/support/container_image.rb), which retries a failed build ATTEMPTS (3) times
++ and announces each retry. Nothing in the exit status separates a transient runtime
++ failure from a real Dockerfile error, so every failure is retried; a genuinely broken
++ Dockerfile still fails, just after 3 tries, and fails fast because it never reaches
++ the network. Commands run through an injected Shell so the retry behaviour is
++ specified without podman (spec/container_image_spec.rb, spec/shell_spec.rb), and the
++ loop was also confirmed against real podman with a Dockerfile that exits nonzero.
+=======
 +
 + RESOLUTION: the `jruby` job is picked into .github/workflows/ci.yml; none of the
 + branch's Sequel/jdbc-sqlite3 code came with it. Master needs none of it -- the
