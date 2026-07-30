@@ -47,3 +47,28 @@ jobs:
       run: bundle exec rake spec:build
     - name: Run integration specs
       run: bundle exec rake spec:integration
+
+  # gemvault has no C extensions and does not require sqlite3 for current-format
+  # (tarball) vaults, so it runs on JRuby. Only the unit tests run here: the
+  # legacy SQLite read path needs the sqlite3 C extension, which the Gemfile
+  # leaves out on JRuby.
+  jruby:
+    runs-on: ubuntu-latest
+    env:
+      # `bundle install` exhausts JRuby's default 500MB heap while resolving
+      # this Gemfile; JRuby's own error message prescribes raising it.
+      JRUBY_OPTS: "-J-Xmx2048m"
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '21'
+    - name: Set up JRuby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: jruby-10.1.0.0
+        bundler-cache: true
+    - name: Run unit tests
+      run: bundle exec rake test
