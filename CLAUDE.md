@@ -119,7 +119,7 @@ to avoid rubygems.org resolution during testing.
 
 The container has to look like a machine a user actually has. The `ruby` base
 image does not, and every way it differs has already hidden a real defect. These
-four are load-bearing; reverting any of them silently makes the suite green
+five are load-bearing; reverting any of them silently makes the suite green
 against something other than the code under test:
 
 1. **`bundler-source-vault` is NOT installed system-wide in `Dockerfile.test`.**
@@ -142,6 +142,12 @@ against something other than the code under test:
 4. **Bundler is pinned to the version users run, not the image's default gem.**
    The plugin machinery under test is Bundler's own, so a stale default silently
    tests different code.
+5. **dnf runs with stock settings — weak dependencies included.** On a real
+   Fedora machine `dnf install ruby` pulls the unbundled default-gem RPMs
+   (`rubygem-json`, `rubygem-psych`, …) through the ruby package's Recommends.
+   `--setopt=install_weak_deps=False` builds a ruby no user has — one where
+   `require "json"` raises — and that faulty install once failed every CLI
+   scenario in the suite.
 
 Fidelity is a property of the image, not of a script fragment: integration specs
 run only commands a user would actually type.
@@ -154,6 +160,6 @@ container.
 
 - `bundler` — NOT a dependency; the plugin always runs inside an existing Bundler process, and declaring it breaks gem activation under `bundle exec`'s restricted GEM_PATH
 - `command_kit` (~> 0.6) — runtime (CLI)
-- `json` (~> 2.0) — runtime; backs the tarball vault's manifest. A default gem upstream, but distros package it separately, so it is declared. Because the shim loads gemvault off `$LOAD_PATH` without activating it, it has to put json's require paths on `$LOAD_PATH` itself — see `dependency_specs` and `entries` in `shim/gemvault_load_path.rb`.
+- `json` — NOT a dependency, though it backs the tarball vault's manifest. A default gem upstream; distros that unbundle it (Fedora's `rubygem-json`) still install it alongside ruby itself, and it stays requireable even under `bundle exec`'s restricted view. Declaring it would compile a native extension on every `gem install gemvault` for no gain.
 - `sqlite3` (~> 2.0) — NOT a runtime dependency; loaded lazily only to read a legacy SQLite (Dbvault) vault. Declared in the Gemfile for development/test.
 - `minitest`, `rspec`, `rake` — development
