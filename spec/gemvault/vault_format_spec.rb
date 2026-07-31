@@ -4,7 +4,7 @@ require "sqlite3"
 require "json"
 
 RSpec.describe "vault format versioning" do
-  def declared_format_version = open_vault(&:format_version)
+  let(:declared_format_version) { open_vault(&:format_version) }
 
   it "reports format_version 2 for a Tarvault" do
     current_tarvault
