@@ -870,3 +870,83 @@ Updated: Fri, 31 Jul 2026 09:18:45 -0400
 Name: Deps in Dockerfile.test are not dynamically inferred
 Description: Bundler version, command kit version, and all other deps that are being installed need to be inferred from this project via bundler info, and should be passed in as ENV variables. Hardcoding is not acceptable
 Status: open
+
+Id: 20
+Updated: Fri, 31 Jul 2026 13:42:28 -0400
+Name: Received the following error during bundle install:
+Description: [dev@rstore]/workspace% bundle install
++ Bundler 4.0.14 is running, but your lockfile was generated with 4.0.17. Installing Bundler 4.0.17 and restarting using that version.
++ Source locally installed gems is ignoring #<Bundler::StubSpecification name=io-event version=1.19.4 platform=ruby> because it is missing extensions
++ Fetching gem metadata from https://rubygems.org/.
++ Source rubygems repository https://rubygems.org/ is ignoring #<Bundler::StubSpecification name=io-event version=1.19.4 platform=ruby> because it is missing extensions
++ Installing bundler 4.0.17
++ Ignoring io-event-1.19.4 because its extensions are not built. Try: gem pristine io-event --version 1.19.4
++ Fetching gem metadata from https://rubygems.org/.......
++ Source rubygems repository https://rubygems.org/, cached gems or installed locally is ignoring #<Bundler::StubSpecification name=io-event version=1.19.4 platform=ruby> because it is missing extensions
++ Resolving dependencies...
++ Fetching json 2.21.2
++ Installing json 2.21.2 with native extensions
++ Fetching gemvault 0.2.2
++ Installing gemvault 0.2.2
++ Fetching bundler-source-vault 0.2.2
++ Installing bundler-source-vault 0.2.2
++ The following plugin paths don't exist: /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-source-vault-0.2.1/..
++ 
++ This can happen if the plugin was installed with a different version of Ruby that has since been uninstalled.
++ 
++ If you would like to reinstall the plugin, run:
++ 
++ bundler plugin uninstall bundler-source-vault && bundler plugin install bundler-source-vault
++ 
++ Continuing without installing plugin bundler-source-vault.
++ /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/source_list.rb:59:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
++ 
++       add_source_to_list Plugin.source(source).new(options), @plugin_sources
++                                               ^^^^
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:135:in 'Bundler::Dsl#source'
++ 	from /workspace/Gemfile:20:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:49:in 'BasicObject#instance_eval'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:49:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:330:in 'Bundler::Dsl#with_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:47:in 'Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:13:in 'Bundler::Dsl.evaluate'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/definition.rb:40:in 'Bundler::Definition.build'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler.rb:235:in 'Bundler.definition'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/env.rb:36:in 'Bundler::Env.report'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/friendly_errors.rb:71:in 'Bundler::FriendlyErrors.request_issue_report_for'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/friendly_errors.rb:50:in 'Bundler::FriendlyErrors.log_error'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/friendly_errors.rb:124:in 'Bundler.with_friendly_errors'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/exe/bundle:20:in '<top (required)>'
++ 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Kernel#load'
++ 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Gem.activate_and_load_bin_path'
++ 	from /usr/local/bin/bundle:25:in '<main>'
++ /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/source_list.rb:59:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
++ 
++       add_source_to_list Plugin.source(source).new(options), @plugin_sources
++                                               ^^^^
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:135:in 'Bundler::Dsl#source'
++ 	from /workspace/Gemfile:20:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:49:in 'BasicObject#instance_eval'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:49:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:330:in 'Bundler::Dsl#with_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:47:in 'Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:13:in 'Bundler::Dsl.evaluate'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/definition.rb:40:in 'Bundler::Definition.build'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler.rb:235:in 'Bundler.definition'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/cli/install.rb:45:in 'Bundler::CLI::Install#run'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/cli.rb:296:in 'block in Bundler::CLI#install'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/settings.rb:145:in 'Bundler::Settings#temporary'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/cli.rb:295:in 'Bundler::CLI#install'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/vendor/thor/lib/thor/command.rb:28:in 'Bundler::Thor::Command#run'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/vendor/thor/lib/thor/invocation.rb:127:in 'Bundler::Thor::Invocation#invoke_command'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/vendor/thor/lib/thor.rb:538:in 'Bundler::Thor.dispatch'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/cli.rb:35:in 'Bundler::CLI.dispatch'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/vendor/thor/lib/thor/base.rb:584:in 'Bundler::Thor::Base::ClassMethods#start'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/cli.rb:29:in 'Bundler::CLI.start'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/exe/bundle:28:in 'block in <top (required)>'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/friendly_errors.rb:118:in 'Bundler.with_friendly_errors'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/exe/bundle:20:in '<top (required)>'
++ 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Kernel#load'
++ 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Gem.activate_and_load_bin_path'
++ 	from /usr/local/bin/bundle:25:in '<main>'
+Status: open
