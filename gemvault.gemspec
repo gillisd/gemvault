@@ -35,7 +35,7 @@ Gem::Specification.new do |spec|
   # declared dependency breaks gem activation under `bundle exec`, where
   # GEM_PATH is restricted to the app's bundle and cannot see the bundler
   # gem on rubies that ship it as a regular (non-default) gem.
-  
+
   spec.add_dependency "command_kit", "~> 0.6"
 
   # sqlite3 is intentionally NOT a runtime dependency: current-format (tarball)
