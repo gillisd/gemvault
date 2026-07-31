@@ -1,32 +1,33 @@
 require "gemvault/gem_entry"
 
 RSpec.describe "Gemvault::GemEntry naming" do
-  def entry(**overrides) = Gemvault::GemEntry.new(name: "foo", version: "1.0.0", **overrides)
+  subject(:entry) { Gemvault::GemEntry.new(name: "foo", version: "1.0.0", **attributes) }
 
-  describe "#full_name" do
-    it "joins name and version for a ruby-platform gem" do
+  let(:attributes) { {} }
+
+  context "with the default ruby platform" do
+    it "joins name and version into the full name" do
       expect(entry.full_name).to eq("foo-1.0.0")
     end
 
-    it "appends the platform for a native gem" do
-      expect(entry(platform: "x86_64-linux").full_name).to eq("foo-1.0.0-x86_64-linux")
-    end
-  end
-
-  describe "#filename" do
-    it "is the full name with a .gem suffix" do
+    it "suffixes .gem onto the full name for the filename" do
       expect(entry.filename).to eq("foo-1.0.0.gem")
     end
-  end
 
-  describe "#to_s" do
-    it "reads as name-version for a ruby-platform gem" do
+    it "reads as name-version" do
       expect(entry.to_s).to eq("foo-1.0.0")
     end
+  end
 
-    it "parenthesizes the platform for a native gem" do
-      native = entry(platform: "linux")
-      expect(native.to_s).to eq("foo-1.0.0 (linux)")
+  context "with a native platform" do
+    let(:attributes) { { platform: "x86_64-linux" } }
+
+    it "appends the platform to the full name" do
+      expect(entry.full_name).to eq("foo-1.0.0-x86_64-linux")
+    end
+
+    it "parenthesizes the platform in to_s" do
+      expect(entry.to_s).to eq("foo-1.0.0 (x86_64-linux)")
     end
   end
 end

@@ -9,7 +9,7 @@ RSpec.shared_context "with a stored foo record" do
     Gemvault::Manifest::StoredGem.new(gem: entry, sha256: "abc", encrypted: false)
   end
 
-  let(:one_record_manifest) { empty_manifest.with_record(record) }
+  let(:empty_manifest) { Gemvault::Manifest.empty(created_at: "t") }
 
-  def empty_manifest = Gemvault::Manifest.empty(created_at: "t")
+  let(:one_record_manifest) { empty_manifest.with_record(record) }
 end

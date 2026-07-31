@@ -1,7 +1,9 @@
 require "gemvault/gem_entry"
 
 RSpec.describe Gemvault::GemEntry do
-  def entry(**overrides) = described_class.new(name: "foo", version: "1.0.0", **overrides)
+  subject(:entry) { described_class.new(name: "foo", version: "1.0.0", **attributes) }
+
+  let(:attributes) { {} }
 
   describe ".from_spec" do
     let(:spec) do
@@ -11,13 +13,15 @@ RSpec.describe Gemvault::GemEntry do
       end
     end
 
+    let(:parsed_entry) { described_class.from_spec(spec) }
+
     it "builds an entry from the spec name, stringified version, and platform" do
-      expect(described_class.from_spec(spec)).to eq(entry(version: "1.2.0", platform: "ruby"))
+      expect(parsed_entry).to eq(described_class.new(name: "foo", version: "1.2.0", platform: "ruby"))
     end
 
     it "stringifies a native platform" do
       spec.platform = "x86_64-linux"
-      expect(described_class.from_spec(spec).platform).to eq("x86_64-linux")
+      expect(parsed_entry.platform).to eq("x86_64-linux")
     end
 
     it "carries the given created_at" do
@@ -30,8 +34,12 @@ RSpec.describe Gemvault::GemEntry do
       expect(entry).to be_ruby_platform
     end
 
-    it "is false for a native platform" do
-      expect(entry(platform: "x86_64-linux")).not_to be_ruby_platform
+    context "with a native platform" do
+      let(:attributes) { { platform: "x86_64-linux" } }
+
+      it "is false" do
+        expect(entry).not_to be_ruby_platform
+      end
     end
   end
 
@@ -46,23 +54,29 @@ RSpec.describe Gemvault::GemEntry do
   end
 
   describe "#same_identity_as?" do
+    let(:attributes) { { created_at: "t1" } }
+    let(:twin) { described_class.new(name: "foo", version: "1.0.0", created_at: "t2") }
+    let(:other_version) { described_class.new(name: "foo", version: "2.0.0") }
+
     it "is true when name, version, and platform match, ignoring created_at" do
-      expect(entry(created_at: "t1").same_identity_as?(entry(created_at: "t2"))).to be(true)
+      expect(entry.same_identity_as?(twin)).to be(true)
     end
 
     it "is false when the version differs" do
-      expect(entry.same_identity_as?(entry(version: "2.0.0"))).to be(false)
+      expect(entry.same_identity_as?(other_version)).to be(false)
     end
   end
 
   describe "equality" do
+    let(:twin) { described_class.new(name: "foo", version: "1.0.0") }
+    let(:other_version) { described_class.new(name: "foo", version: "2.0.0") }
+
     it "is equal to another entry with the same fields" do
-      twin = entry
       expect(entry).to eq(twin)
     end
 
     it "differs when the version differs" do
-      expect(entry).not_to eq(entry(version: "2.0.0"))
+      expect(entry).not_to eq(other_version)
     end
   end
 end
