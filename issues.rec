@@ -791,7 +791,6 @@ Description: Both `integration` jobs failed on master (run 30496142063) and on P
 + the network. Commands run through an injected Shell so the retry behaviour is
 + specified without podman (spec/container_image_spec.rb, spec/shell_spec.rb), and the
 + loop was also confirmed against real podman with a Dockerfile that exits nonzero.
-=======
 +
 + RESOLUTION: the `jruby` job is picked into .github/workflows/ci.yml; none of the
 + branch's Sequel/jdbc-sqlite3 code came with it. Master needs none of it -- the
