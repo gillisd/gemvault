@@ -949,6 +949,18 @@ Description: [dev@rstore]/workspace% bundle install
 + 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Kernel#load'
 + 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Gem.activate_and_load_bin_path'
 + 	from /usr/local/bin/bundle:25:in '<main>'
-+
++ 
 + Though I will add that gemvault doctor followed by bundle install fixed the issue
+Status: open
+
+Id: 21
+Updated: Fri, 31 Jul 2026 13:54:09 -0400
+Name: bundle info fails when gem is in vault
+Description: bundle info jarpack
++ Source locally installed gems is ignoring #<Bundler::StubSpecification name=json version=2.21.2 platform=ruby> because it is missing extensions
++ Could not find gem 'jarpack'.
++ Did you mean 'jarpack'?
++ 
++
++  bundle info jarpack
 Status: open
