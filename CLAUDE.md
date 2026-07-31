@@ -115,6 +115,10 @@ bundle exec rake spec:teardown   # remove it
 Integration specs serve the tree's own gems from a local gem index (`GemIndex`)
 to avoid rubygems.org resolution during testing.
 
+Rubycritic scores `lib/`, `test/` and `shim/` but not `spec/`: flog taxes each
+block-nesting level, so idiomatic describe/context nesting reads as complexity.
+rubocop-rspec owns spec style.
+
 ### Container fidelity — do not undo these
 
 The container has to look like a machine a user actually has. The `ruby` base

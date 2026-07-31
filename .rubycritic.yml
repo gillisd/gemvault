@@ -8,8 +8,11 @@ formats: # Available values are: html, json, console, lint. Default value is htm
   - console
   - json
 minimum_score: 90 # default is 0
+# spec/ is deliberately not scored: flog charges a fixed multiplier per block
+# level, so idiomatic RSpec describe/context nesting reads as complexity.
+# Spec style is rubocop-rspec's job. Minitest files are plain Ruby classes and
+# stay in.
 paths: # Files to analyse. Churn calculation is scoped to these files when using Git SCM.
   - "lib/"
-  - "spec/"
   - "test/"
   - "shim/"
