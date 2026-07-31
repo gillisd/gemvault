@@ -19,6 +19,7 @@ RUN dnf \
 	@standard \
 	@development-tools \
 	@ruby \
+	sqlite3 \
 	&& dnf clean all
 
 # Keep this in step with the `BUNDLED WITH` line the project's own lockfile
@@ -30,19 +31,6 @@ RUN gem install --no-document bundler -v 4.0.17
 # integration test can read the committed legacy SQLite (Dbvault) fixture it
 # migrates.
 RUN gem install --no-document sqlite3
-
-# Gem files for integration specs that install the plugin from a local gem
-# index at spec runtime, kept for offline use: command_kit and json are
-# gemvault's runtime dependencies, and `bundle plugin install` resolves them
-# against the Gemfile's sources with GEM_PATH already narrowed to the plugin
-# root, so an ambient copy does not satisfy it -- every declared dependency has
-# to be servable from the index. The bundler gem lets specs reinstall bundler
-# in place.
-RUN mkdir -p /opt/gems \
-    && cd /opt/gems \
-    && gem fetch command_kit -v 0.6.0 \
-    && gem fetch json -v "~> 2.0" \
-    && gem fetch bundler -v "$(ruby -rbundler -e 'print Bundler::VERSION')"
 
 # The tree arrives as a bind mount at /src rather than a COPY: the build context
 # lives on a filesystem whose extended-attribute listing podman's copier cannot
