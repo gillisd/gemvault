@@ -20,20 +20,24 @@ class RubygemsResolverVaultSetTest < Minitest::Test
 
   def test_find_all_matching
     results = find_all(name: "mygem", requirement: ">= 0")
+
     assert_equal 2, results.size
     assert(results.all?(Gem::Resolver::IndexSpecification))
     versions = results.map { |r| r.version.to_s }.sort
+
     assert_equal ["1.0.0", "2.0.0"], versions
   end
 
   def test_find_all_version_constraint
     results = find_all(name: "mygem", requirement: "~> 1.0")
+
     assert_equal 1, results.size
     assert_equal "1.0.0", results.first.version.to_s
   end
 
   def test_find_all_no_match
     results = find_all(name: "nonexistent", requirement: ">= 0")
+
     assert_empty results
   end
 

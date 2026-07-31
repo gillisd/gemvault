@@ -8,6 +8,7 @@ require_relative "support/rubygems_source_vault_case"
 class RubygemsSourceVaultTest < RubygemsSourceVaultCase
   def test_fetch_spec_valid
     spec = vault_source.fetch_spec(name_tuple("alpha", "1.0.0"))
+
     assert_equal "alpha", spec.name
     assert_equal Gem::Version.new("1.0.0"), spec.version
   end
@@ -24,26 +25,30 @@ class RubygemsSourceVaultTest < RubygemsSourceVaultCase
     download_dir.mkpath
 
     result = source.download(spec, download_dir.to_s)
+
     assert_path_exists result
     assert result.end_with?("alpha-1.0.0.gem")
-    assert File.size(result).positive?
+    assert_predicate File.size(result), :positive?
   end
 
   def test_spaceship_sorts_before_remote
     vault = vault_source
     remote = Gem::Source.new("https://rubygems.org")
+
     assert_equal 1, vault <=> remote
   end
 
   def test_spaceship_sorts_after_local
     vault = vault_source
     local = Gem::Source::Local.new
+
     assert_equal(-1, vault <=> local)
   end
 
   def test_equality_same_path
     a = vault_source
     b = vault_source
+
     assert_equal a, b
     assert_equal a.hash, b.hash
   end
@@ -53,6 +58,7 @@ class RubygemsSourceVaultTest < RubygemsSourceVaultCase
     Gemvault::Vault.new(other_path, create: true).close
     a = vault_source
     b = Gem::Source::Vault.new(other_path)
+
     refute_equal a, b
   end
 
@@ -62,11 +68,13 @@ class RubygemsSourceVaultTest < RubygemsSourceVaultCase
 
   def test_dependency_resolver_set
     set = vault_source.dependency_resolver_set
+
     assert_instance_of Gem::Resolver::VaultSet, set
   end
 
   def test_dependency_resolver_set_with_prerelease
     set = vault_source.dependency_resolver_set(true)
+
     assert_instance_of Gem::Resolver::VaultSet, set
     assert set.prerelease
   end

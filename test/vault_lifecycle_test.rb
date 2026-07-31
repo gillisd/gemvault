@@ -4,6 +4,7 @@ require_relative "support/vault_test_case"
 class VaultLifecycleTest < VaultTestCase
   def test_create_new_vault
     vault = create_vault
+
     assert_path_exists @vault_path
     assert_equal 0, vault.size
     vault.close
@@ -12,6 +13,7 @@ class VaultLifecycleTest < VaultTestCase
   def test_open_existing_vault
     create_vault.close
     vault = Gemvault::Vault.new(@vault_path)
+
     assert_equal 0, vault.size
     vault.close
   end
@@ -22,6 +24,7 @@ class VaultLifecycleTest < VaultTestCase
     vault.close
 
     vault2 = Gemvault::Vault.new(@vault_path)
+
     assert_equal 1, vault2.size
     vault2.close
   end
@@ -54,6 +57,7 @@ class VaultLifecycleTest < VaultTestCase
       assert_instance_of Gemvault::Vault, vault
       yielded_vault = vault
     end
+
     assert_predicate yielded_vault, :closed?
   end
 

@@ -6,6 +6,7 @@ class CLIListTest < CLITestCase
 
   def test_list_empty
     run_cli("new", "test")
+
     assert_equal 0, run_cli("list", "test.gemv")
     assert_match(/empty/, @stdout)
   end
@@ -17,6 +18,7 @@ class CLIListTest < CLITestCase
     gem2 = build_gem(name: "beta", version: "2.0.0", dir: dir2)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem1, gem2)
+
     assert_equal 0, run_cli("list", "test.gemv")
     assert_match(/alpha-1\.0\.0/, @stdout)
     assert_match(/beta-2\.0\.0/, @stdout)
@@ -26,6 +28,7 @@ class CLIListTest < CLITestCase
     gem_path = build_gem(name: "native", version: "1.0.0", dir: @gem_build_dir, platform: "x86_64-linux")
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
+
     assert_equal 0, run_cli("list", "test.gemv")
     assert_match(PLATFORM_LISTING_PATTERN, @stdout)
   end

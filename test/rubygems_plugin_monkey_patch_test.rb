@@ -16,6 +16,7 @@ class RubygemsPluginMonkeyPatchTest < Minitest::Test
   def test_source_list_creates_vault_source_for_gemv
     list = Gem::SourceList.new
     src = list << "/path/to/test.gemv"
+
     assert_instance_of Gem::Source::Vault, src
     assert_equal 1, list.sources.size
   end
@@ -23,6 +24,7 @@ class RubygemsPluginMonkeyPatchTest < Minitest::Test
   def test_source_list_creates_normal_source_for_url
     list = Gem::SourceList.new
     src = list << "https://rubygems.org/"
+
     assert_instance_of Gem::Source, src
   end
 
@@ -30,6 +32,7 @@ class RubygemsPluginMonkeyPatchTest < Minitest::Test
     list = Gem::SourceList.new
     list << "/path/to/test.gemv"
     list << "/path/to/test.gemv"
+
     assert_equal 1, list.sources.size
   end
 end

@@ -5,6 +5,7 @@ class VaultSourceGemspecTest < VaultSourceTestCase
   def test_fetch_gemspec_files_returns_all_gems
     source = create_vault_source(@vault_path)
     files = source.fetch_gemspec_files
+
     assert_equal 2, files.length
     files.each { |f| assert_path_exists f }
   end
@@ -14,6 +15,7 @@ class VaultSourceGemspecTest < VaultSourceTestCase
     files = source.fetch_gemspec_files
     specs = files.map { |f| Gem::Specification.load(f) }
     names = specs.map(&:name).sort
+
     assert_equal %w[alpha beta], names
   end
 
@@ -22,14 +24,17 @@ class VaultSourceGemspecTest < VaultSourceTestCase
     source.dependency_names = %w[alpha beta]
     specs_list = source.specs.to_a
     names = specs_list.map(&:name).sort
+
     assert_equal %w[alpha beta], names
   end
 
   def test_platform_gem
     source = vault_source_with_gem(name: "native", version: "1.0.0", subdir: "native_dir", platform: "x86_64-linux")
     files = source.fetch_gemspec_files
+
     assert_equal 1, files.length
     spec = Gem::Specification.load(files.first)
+
     assert_equal "x86_64-linux", spec.platform.to_s
   end
 
@@ -39,6 +44,7 @@ class VaultSourceGemspecTest < VaultSourceTestCase
     files = source.fetch_gemspec_files
     spec = Gem::Specification.load(files.first)
     dep = spec.dependencies.find { |d| d.name == "rake" }
+
     refute_nil dep
     assert_equal Gem::Requirement.new(">= 13.0"), dep.requirement
   end

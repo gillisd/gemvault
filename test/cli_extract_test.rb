@@ -11,10 +11,12 @@ class CLIExtractTest < CLITestCase
     run_cli("add", "test.gemv", gem_path)
 
     output_dir = @tmpdir / "output"
+
     assert_equal 0, run_cli("extract", "test.gemv", "foo", "1.0.0", "-o", output_dir)
     assert_match(EXTRACTED_GEM_PATTERN, @stdout)
 
     extracted = (output_dir / "foo-1.0.0.gem").binread
+
     assert_equal original, extracted
   end
 
@@ -24,6 +26,7 @@ class CLIExtractTest < CLITestCase
     run_cli("add", "test.gemv", gem_path)
 
     output_dir = @tmpdir / "custom_out"
+
     assert_equal 0, run_cli("extract", "test.gemv", "foo", "1.0.0", "--output", output_dir)
     assert_path_exists output_dir / "foo-1.0.0.gem"
   end
@@ -37,6 +40,7 @@ class CLIExtractTest < CLITestCase
     run_cli("add", "test.gemv", gem1, gem2)
 
     output_dir = @tmpdir / "output"
+
     assert_equal 0, run_cli("extract", "test.gemv", "foo", "-o", output_dir)
     assert_path_exists output_dir / "foo-1.0.0.gem"
     assert_path_exists output_dir / "foo-2.0.0.gem"
@@ -44,6 +48,7 @@ class CLIExtractTest < CLITestCase
 
   def test_extract_nonexistent_gem_errors
     run_cli("new", "test")
+
     assert_equal 1, run_cli("extract", "test.gemv", "nope")
     assert_match(/No gem named/, @stderr)
   end

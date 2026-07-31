@@ -6,6 +6,7 @@ class CLIRemoveTest < CLITestCase
     gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
+
     assert_equal 0, run_cli("remove", "test.gemv", "foo", "1.0.0")
     assert_match(/Removed 1/, @stdout)
   end
@@ -17,6 +18,7 @@ class CLIRemoveTest < CLITestCase
     gem2 = build_gem(name: "foo", version: "2.0.0", dir: dir2)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem1, gem2)
+
     assert_equal 0, run_cli("remove", "test.gemv", "foo")
     assert_match(/Removed 2/, @stdout)
   end
@@ -25,12 +27,14 @@ class CLIRemoveTest < CLITestCase
     gem_path = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem_path)
+
     assert_equal 0, run_cli("remove", "test.gemv", "foo-1.0.0")
     assert_match(/Removed 1/, @stdout)
   end
 
   def test_remove_nonexistent_errors
     run_cli("new", "test")
+
     assert_equal 1, run_cli("remove", "test.gemv", "nope")
     assert_match(/No matching gem/, @stderr)
   end
