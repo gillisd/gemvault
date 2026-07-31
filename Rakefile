@@ -25,7 +25,15 @@ require "gempilot/version_task"
 Gempilot::VersionTask.new
 
 require "rubycritic/rake_task"
-RubyCritic::RakeTask.new
+require "yaml"
+
+# The task's default paths are FileList["."], passed straight to the CLI where
+# they override .rubycritic.yml's paths -- and "." drags in references/, whose
+# vendored checkouts flog cannot even read. Feed the yml's own list back in so
+# the config file stays the single source of truth.
+RubyCritic::RakeTask.new do |task|
+  task.paths = YAML.load_file(".rubycritic.yml").fetch("paths")
+end
 
 require "digest"
 require_relative "spec/support/container_helper"

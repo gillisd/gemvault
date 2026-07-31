@@ -9,13 +9,15 @@
 # also the shape that broke `bundle exec` in issue #12.
 FROM docker.io/library/fedora:44
 
-# redhat-rpm-config carries the hardening specs Fedora's ruby-devel compiles
-# extensions against; without it every native gem fails in extconf. Any Fedora
-# machine that can build a gem has it.
+# Stock dnf settings, weak dependencies included: on a real Fedora machine
+# `dnf install ruby` pulls the unbundled default-gem RPMs (rubygem-json,
+# rubygem-psych, rubygem-rdoc, ...) through the ruby package's Recommends.
+# Passing --setopt=install_weak_deps=False builds a ruby no user has -- one
+# where `require "json"` raises -- and that faulty install once failed every
+# CLI scenario in the suite.
 RUN dnf \
 	install \
 	-y \
-	--setopt=install_weak_deps=False \
 	@standard \
 	@development-tools \
 	@ruby \
