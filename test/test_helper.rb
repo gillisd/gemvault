@@ -23,4 +23,31 @@ module GemvaultTestHelper
   def gem_entry(name:, version:)
     Gemvault::GemEntry.new(name: name, version: version)
   end
+
+  # Standard on-disk layout for vault tests: a private tmpdir holding a gem
+  # build area and the vault-to-be.
+  def vault_workspace(prefix)
+    @tmpdir = Pathname(Dir.mktmpdir(prefix))
+    @gem_build_dir = @tmpdir / "gems"
+    @gem_build_dir.mkpath
+    @vault_path = @tmpdir / "test.gemv"
+  end
+
+  # Same-named gems collide on their fixture files, so each extra version
+  # builds in its own subdirectory.
+  def build_subdir_gem(name:, version:, subdir:, **options)
+    dir = @gem_build_dir / subdir
+    dir.mkpath
+    build_gem(name: name, version: version, dir: dir, **options)
+  end
+
+  def vault_source
+    Gem::Source::Vault.new(@vault_path)
+  end
+
+  def populate_vault(path:, gem_paths:)
+    vault = Gemvault::Vault.new(path, create: true)
+    gem_paths.each { |gem_path| vault.add(gem_path) }
+    vault.close
+  end
 end

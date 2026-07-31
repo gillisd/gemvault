@@ -30,31 +30,25 @@ RSpec.shared_examples "a project whose Gemfile uses a vault source" do
     end
   end
 
-  context "when the user has added a gem from rubygems to the Gemfile" do
-    let(:steps) { VaultedProject.adding_a_gem_from_rubygems }
-    let(:expected_gems) { [VaultedProject::VAULTED_GEM, VaultedProject::RUBYGEMS_GEM] }
+  {
+    "when the user has added a gem from rubygems to the Gemfile" =>
+      [VaultedProject.adding_a_gem_from_rubygems,
+       [VaultedProject::VAULTED_GEM, VaultedProject::RUBYGEMS_GEM]],
+    "when the user has added their own project's gemspec to the Gemfile" =>
+      [VaultedProject.adding_the_projects_own_gemspec,
+       [VaultedProject::VAULTED_GEM, VaultedProject::OWN_GEM, VaultedProject::RUBYGEMS_GEM]],
+    "when the user has added another gem from the same vault to the Gemfile" =>
+      [VaultedProject.adding_another_gem_from_the_same_vault,
+       [VaultedProject::VAULTED_GEM, VaultedProject::COMPANION_VAULTED_GEM]],
+    "when the user has added a gem from a different vault to the Gemfile" =>
+      [VaultedProject.adding_a_gem_from_another_vault,
+       [VaultedProject::VAULTED_GEM, VaultedProject::SECOND_VAULT_GEM]],
+  }.each do |scenario, (scenario_steps, scenario_gems)|
+    context scenario do
+      let(:steps) { scenario_steps }
+      let(:expected_gems) { scenario_gems }
 
-    it_behaves_like "a complete bundle"
-  end
-
-  context "when the user has added their own project's gemspec to the Gemfile" do
-    let(:steps) { VaultedProject.adding_the_projects_own_gemspec }
-    let(:expected_gems) { [VaultedProject::VAULTED_GEM, VaultedProject::OWN_GEM, VaultedProject::RUBYGEMS_GEM] }
-
-    it_behaves_like "a complete bundle"
-  end
-
-  context "when the user has added another gem from the same vault to the Gemfile" do
-    let(:steps) { VaultedProject.adding_another_gem_from_the_same_vault }
-    let(:expected_gems) { [VaultedProject::VAULTED_GEM, VaultedProject::COMPANION_VAULTED_GEM] }
-
-    it_behaves_like "a complete bundle"
-  end
-
-  context "when the user has added a gem from a different vault to the Gemfile" do
-    let(:steps) { VaultedProject.adding_a_gem_from_another_vault }
-    let(:expected_gems) { [VaultedProject::VAULTED_GEM, VaultedProject::SECOND_VAULT_GEM] }
-
-    it_behaves_like "a complete bundle"
+      it_behaves_like "a complete bundle"
+    end
   end
 end

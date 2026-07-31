@@ -10,20 +10,25 @@ RSpec.describe Gemvault::CLI::Commands::Upgrade do
 
   def run_upgrade(*args) = invoke(described_class, "v.gemv", *args)
 
+  def print_to_stdout(text) = output(a_string_including(text)).to_stdout
+
   describe "#run" do
     it "performs the upgrade and reports the result" do
       allow(upgrade).to receive(:call).and_return(plan)
-      expect { run_upgrade }.to output(a_string_including("Upgraded v.gemv: format 1 -> 2 (3 gems)")).to_stdout
+      expect { run_upgrade }.to print_to_stdout("Upgraded v.gemv: format 1 -> 2 (3 gems)")
     end
 
-    it "reports a no-op for an already-current vault" do
-      allow(upgrade).to receive(:plan).and_return(current_plan)
-      expect { run_upgrade }.to output(a_string_including("already current")).to_stdout
+    context "when the vault is already current" do
+      before { allow(upgrade).to receive(:plan).and_return(current_plan) }
+
+      it "reports a no-op" do
+        expect { run_upgrade }.to print_to_stdout("already current")
+      end
     end
 
     it "reports the plan and does not migrate under --dry-run", :aggregate_failures do
       allow(upgrade).to receive(:call)
-      expect { run_upgrade("--dry-run") }.to output(a_string_including("Would upgrade v.gemv: format 1 -> 2")).to_stdout
+      expect { run_upgrade("--dry-run") }.to print_to_stdout("Would upgrade v.gemv: format 1 -> 2")
       expect(upgrade).not_to have_received(:call)
     end
 
