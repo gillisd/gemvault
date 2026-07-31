@@ -9,15 +9,16 @@ Do NOT modify `.rubocop.yml` or use inline `# rubocop:disable` tags without expl
 1. Specs always come first. Every plan should start with the skeleton of the BDD specs being added, changed or removed. Skeleton means the empty RSpec language, without implementation.
 2. Specs should never have comments. Any urge to put a comment in a spec means that comment should probably be its own spec
 3. DO NOT edit .rubocop.yml or add inline rubocop exemptions without explicit permission
-4. DO NOT run any git command that will rewrite history without explicit permission
-5. PREFER method & class extraction over comments
-6. Making new files, classes, modules, and methods IS NOT overengineering
-7. BEFORE writing code, identify which domain concept owns the behavior. Each class and module should have a single responsibility. If the new behavior doesn't fit an existing class's responsibility, create a new one — don't expand the scope of what's already there.
-8. DO NOT name classes with suffixes like "-er" or "-or" unless using a canonical pattern name (e.g., Parser, Router, Controller)
-9. ALWAYS write specs first. The workflow is: identify the domain concept (rule 5), write specs describing its behavior, then implement. No implementation without a failing spec.
-10. Integration specs are the first line of defense for CLI-tool bugs. For any bug reported from using the CLI tool (not the gemvault lib / Ruby API), the FIRST spec you write is an integration spec that reproduces the user's exact invocation — real subprocess, real vault, real exit code. Stub-heavy unit specs are complementary, not sufficient: they prove internal logic produces the expected value assuming surrounding wiring works, but a user's bug report is evidence the wiring didn't work.
-11. If an integration spec is not catching a reported CLI-tool bug, one of two things is true, and the fix starts by diagnosing which: (a) existing integration specs are not specific enough — extend them to cover the exact scenario before touching production code; or (b) the scenario is not spec'd at all, which means the work is not a bug fix but a new feature — write integration specs for the contract first (per rule 1), then implement.
-12. NEVER write to /tmp. Use /workspace/tmp
+4. DO NOT edit .rubycritic.yml or add inline rubycritic exemptions without explicit permission
+5. DO NOT run any git command that will rewrite history without explicit permission
+6. PREFER method & class extraction over comments
+7. Making new files, classes, modules, and methods IS NOT overengineering
+8. BEFORE writing code, identify which domain concept owns the behavior. Each class and module should have a single responsibility. If the new behavior doesn't fit an existing class's responsibility, create a new one — don't expand the scope of what's already there.
+9. DO NOT name classes with suffixes like "-er" or "-or" unless using a canonical pattern name (e.g., Parser, Router, Controller)
+10. ALWAYS write specs first. The workflow is: identify the domain concept (rule 5), write specs describing its behavior, then implement. No implementation without a failing spec.
+11. Integration specs are the first line of defense for CLI-tool bugs. For any bug reported from using the CLI tool (not the gemvault lib / Ruby API), the FIRST spec you write is an integration spec that reproduces the user's exact invocation — real subprocess, real vault, real exit code. Stub-heavy unit specs are complementary, not sufficient: they prove internal logic produces the expected value assuming surrounding wiring works, but a user's bug report is evidence the wiring didn't work.
+12. If an integration spec is not catching a reported CLI-tool bug, one of two things is true, and the fix starts by diagnosing which: (a) existing integration specs are not specific enough — extend them to cover the exact scenario before touching production code; or (b) the scenario is not spec'd at all, which means the work is not a bug fix but a new feature — write integration specs for the contract first (per rule 1), then implement.
+13. NEVER write to /tmp. Use /workspace/tmp
 
 ## Additional rules
 
@@ -94,7 +95,7 @@ bundle exec rake test
 ```
 
 Minitest covers the library; RSpec covers the CLI and the containerized
-integration suite. `rake` (the default task) runs `test`, `spec` and `rubocop`.
+integration suite. `rake` (the default task) runs `test`, `spec`, `rubocop` and `rubycritic`.
 
 ```bash
 bundle exec rake test            # minitest only

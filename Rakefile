@@ -24,6 +24,9 @@ RuboCop::RakeTask.new
 require "gempilot/version_task"
 Gempilot::VersionTask.new
 
+require "rubycritic/rake_task"
+RubyCritic::RakeTask.new
+
 require "digest"
 require_relative "spec/support/container_helper"
 require_relative "spec/support/container_image"
@@ -74,4 +77,4 @@ Rake::Task[:build].enhance ["shim:build"]
 Rake::Task[:release].enhance ["shim:release"]
 Rake::Task[:clobber].enhance ["spec:teardown"]
 
-task default: [:test, :spec, :rubocop]
+task default: [:test, :spec, :rubocop, :rubycritic]
