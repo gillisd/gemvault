@@ -105,9 +105,9 @@ bundle exec rake spec:build      # rebuild the container image
 bundle exec rake spec:teardown   # remove it
 ```
 
-- `test/vault_*_test.rb` — unit tests for the Vault facade (lifecycle, mutation, entries, content)
+- `test/vault_{lifecycle,mutation,entries,content}_test.rb` — unit tests for the Vault facade
 - `test/vault_source_*_test.rb` — unit tests for the Bundler source plugin (metadata, gemspecs, modes, install)
-- `test/cli_*_test.rb` — CLI tests, one file per command
+- `test/cli_*_test.rb` — in-process CLI tests (new, add, list, remove, extract, and top-level dispatch; upgrade and doctor are covered by RSpec under `spec/gemvault/cli`)
 - `test/rubygems_*_test.rb` — RubyGems source, resolver set, monkey-patches, URI handling
 - `spec/integration/` — end-to-end specs, each run inside a podman container
 - `spec/support/` — script fragments the integration specs assemble into those containers

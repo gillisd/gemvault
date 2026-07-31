@@ -60,15 +60,11 @@ module Gemvault
         end
 
         def report_dry_run(vault:, summary:)
-          puts "Would upgrade #{change_summary(vault, summary)}"
+          puts "Would upgrade #{vault}: #{summary}"
         end
 
         def report_upgraded(vault:, summary:)
-          puts "Upgraded #{change_summary(vault, summary)}"
-        end
-
-        def change_summary(vault, summary)
-          "#{vault}: #{summary} (#{summary.gem_count} gems)"
+          puts "Upgraded #{vault}: #{summary}"
         end
       end
     end

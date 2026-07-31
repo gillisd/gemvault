@@ -13,9 +13,7 @@ class CLIListTest < CLITestCase
 
   def test_list_with_gems
     gem1 = build_gem(name: "alpha", version: "1.0.0", dir: @gem_build_dir)
-    dir2 = @gem_build_dir / "beta_dir"
-    dir2.mkpath
-    gem2 = build_gem(name: "beta", version: "2.0.0", dir: dir2)
+    gem2 = build_subdir_gem(name: "beta", version: "2.0.0", subdir: "beta_dir")
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem1, gem2)
 

@@ -5,10 +5,6 @@ class VaultTestCase < Minitest::Test
     vault_workspace("gemvault_test")
   end
 
-  def teardown
-    FileUtils.rm_rf(@tmpdir)
-  end
-
   private
 
   def create_vault

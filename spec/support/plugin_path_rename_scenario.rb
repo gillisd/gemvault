@@ -1,3 +1,5 @@
+require_relative "fixture_script"
+
 # The reporter's repro for issue #1: a Gemfile-declared `plugin ... path:`
 # plugin whose source directory is renamed afterwards. Bundler's plugin index
 # pins the absolute path, so every install crashes until `gemvault doctor`
@@ -6,6 +8,9 @@ module PluginPathRenameScenario
   BROKEN_PLUGIN_PATH_ERROR = /path .* does not exist|plugin paths don't exist|undefined method.*'new' for nil/i
 
   Outcome = Data.define(:broken, :healed).freeze
+
+  INITIAL_INSTALL_MARK = "===INITIAL_INSTALL_DONE===".freeze
+  BROKEN_STATE_MARK = "===BROKEN_STATE_DONE===".freeze
 
   SCRIPT = <<~SH.freeze
     #{FixtureScript.preamble(gems: [["path_change_gem", "1.0.0"]])}
@@ -36,11 +41,11 @@ module PluginPathRenameScenario
     end
     GEMFILE
     bundle install 2>&1
-    echo "===INITIAL_INSTALL_DONE==="
+    echo "#{INITIAL_INSTALL_MARK}"
 
     mv /tmp/shim-a /tmp/shim-b
     bundle install 2>&1
-    echo "===BROKEN_STATE_DONE==="
+    echo "#{BROKEN_STATE_MARK}"
 
     sed -i 's|/tmp/shim-a|/tmp/shim-b|' Gemfile
     gemvault doctor 2>&1
@@ -48,8 +53,8 @@ module PluginPathRenameScenario
 
   def plugin_path_rename_outcome
     output, = podman_run(SCRIPT)
-    _, _, after_initial = output.partition("===INITIAL_INSTALL_DONE===")
-    broken, _, healed = after_initial.partition("===BROKEN_STATE_DONE===")
+    _, _, after_initial = output.partition(INITIAL_INSTALL_MARK)
+    broken, _, healed = after_initial.partition(BROKEN_STATE_MARK)
     Outcome.new(broken: broken, healed: healed)
   end
 end

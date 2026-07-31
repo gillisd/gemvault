@@ -1,3 +1,8 @@
+require "rubygems/command"
+require "rubygems/resolver"
+require "rubygems_plugin"
+require "rubygems/resolver/vault_set"
+
 class RubygemsSourceVaultCase < Minitest::Test
   include GemvaultTestHelper
 
@@ -9,11 +14,11 @@ class RubygemsSourceVaultCase < Minitest::Test
     build_fixture_vault
   end
 
-  def teardown
-    FileUtils.rm_rf(@tmpdir)
-  end
-
   private
+
+  def vault_source
+    Gem::Source::Vault.new(@vault_path)
+  end
 
   def build_fixture_vault
     @gem1_path = build_gem(name: "alpha", version: "1.0.0", dir: @gem_build_dir, files: ALPHA_FILES)

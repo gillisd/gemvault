@@ -1,8 +1,6 @@
 RSpec.describe "ContainerImage lifecycle" do
   include_context "with a stubbed container shell"
 
-  let(:rmi_command) { ["podman", "rmi", image_name] }
-
   describe "#exists?" do
     it "is true when podman finds the image" do
       shell_runs(true)

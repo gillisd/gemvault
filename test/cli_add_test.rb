@@ -12,9 +12,7 @@ class CLIAddTest < CLITestCase
 
   def test_add_multiple_gems
     gem1 = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
-    dir2 = @gem_build_dir / "bar_dir"
-    dir2.mkpath
-    gem2 = build_gem(name: "bar", version: "2.0.0", dir: dir2)
+    gem2 = build_subdir_gem(name: "bar", version: "2.0.0", subdir: "bar_dir")
     run_cli("new", "test")
 
     assert_equal 0, run_cli("add", "test.gemv", gem1, gem2)

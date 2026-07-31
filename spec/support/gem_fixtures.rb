@@ -44,9 +44,9 @@ module GemFixtures
   def foo_reference = Gemvault::GemReference.parse("foo", version: "1.0.0")
 
   def first_tar_entry_name(path)
-    first = nil
-    Gem::Package::TarReader.new(File.open(path, "rb")) { |r| r.each_entry { |e| first ||= e.full_name } }
-    first
+    File.open(path, "rb") do |io|
+      Gem::Package::TarReader.new(io).each_entry.first&.full_name
+    end
   end
 
   def corrupt_gem_blob(path)

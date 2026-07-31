@@ -1,22 +1,8 @@
 require "test_helper"
-require "rubygems/command"
-require "rubygems/resolver"
-require "rubygems_plugin"
-require "rubygems/resolver/vault_set"
+require_relative "support/rubygems_source_vault_case"
 
-class RubygemsResolverVaultSetTest < Minitest::Test
-  include GemvaultTestHelper
-
+class RubygemsResolverVaultSetTest < RubygemsSourceVaultCase
   MYGEM_FILES = { "lib/mygem.rb" => "module Mygem; end" }.freeze
-
-  def setup
-    vault_workspace("gemvault_vaultset_test")
-    build_fixture_vault
-  end
-
-  def teardown
-    FileUtils.rm_rf(@tmpdir)
-  end
 
   def test_find_all_matching
     results = find_all(name: "mygem", requirement: ">= 0")

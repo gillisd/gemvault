@@ -1,8 +1,4 @@
 require "test_helper"
-require "rubygems/command"
-require "rubygems/resolver"
-require "rubygems_plugin"
-require "rubygems/resolver/vault_set"
 require_relative "support/rubygems_source_vault_case"
 
 class RubygemsSourceVaultTest < RubygemsSourceVaultCase

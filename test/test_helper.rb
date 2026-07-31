@@ -24,6 +24,11 @@ module GemvaultTestHelper
     Gemvault::GemEntry.new(name: name, version: version)
   end
 
+  def teardown
+    FileUtils.rm_rf(@tmpdir) if @tmpdir
+    super
+  end
+
   # Standard on-disk layout for vault tests: a private tmpdir holding a gem
   # build area and the vault-to-be.
   def vault_workspace(prefix)
@@ -39,10 +44,6 @@ module GemvaultTestHelper
     dir = @gem_build_dir / subdir
     dir.mkpath
     build_gem(name: name, version: version, dir: dir, **options)
-  end
-
-  def vault_source
-    Gem::Source::Vault.new(@vault_path)
   end
 
   def populate_vault(path:, gem_paths:)

@@ -5,12 +5,11 @@ require "rubygems_plugin"
 require "rubygems/resolver/vault_set"
 
 class RubygemsSourceVaultUriTest < Minitest::Test
-  def setup
-    @vault_path = Pathname(Dir.mktmpdir("gemvault_uri_test")) / "test.gemv"
-  end
+  include GemvaultTestHelper
 
-  def teardown
-    FileUtils.rm_rf(@vault_path.dirname)
+  def setup
+    @tmpdir = Pathname(Dir.mktmpdir("gemvault_uri_test"))
+    @vault_path = @tmpdir / "test.gemv"
   end
 
   def test_file_uri_strips_scheme

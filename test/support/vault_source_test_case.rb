@@ -12,10 +12,6 @@ class VaultSourceTestCase < Minitest::Test
     build_fixture_vault
   end
 
-  def teardown
-    FileUtils.rm_rf(@tmpdir)
-  end
-
   private
 
   def build_fixture_vault

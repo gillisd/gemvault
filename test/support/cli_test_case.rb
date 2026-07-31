@@ -4,16 +4,14 @@ class CLITestCase < Minitest::Test
   include GemvaultTestHelper
 
   def setup
-    @tmpdir = Pathname(Dir.mktmpdir("gemvault_cli_test"))
-    @gem_build_dir = @tmpdir / "gems"
-    @gem_build_dir.mkpath
+    vault_workspace("gemvault_cli_test")
     @original_dir = Dir.pwd
     Dir.chdir(@tmpdir)
   end
 
   def teardown
     Dir.chdir(@original_dir)
-    FileUtils.rm_rf(@tmpdir)
+    super
   end
 
   private

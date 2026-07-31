@@ -33,9 +33,7 @@ class CLIExtractTest < CLITestCase
 
   def test_extract_all_versions
     gem1 = build_gem(name: "foo", version: "1.0.0", dir: @gem_build_dir)
-    dir2 = @gem_build_dir / "v2"
-    dir2.mkpath
-    gem2 = build_gem(name: "foo", version: "2.0.0", dir: dir2)
+    gem2 = build_subdir_gem(name: "foo", version: "2.0.0", subdir: "v2")
     run_cli("new", "test")
     run_cli("add", "test.gemv", gem1, gem2)
 
