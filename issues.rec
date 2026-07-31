@@ -949,4 +949,6 @@ Description: [dev@rstore]/workspace% bundle install
 + 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Kernel#load'
 + 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Gem.activate_and_load_bin_path'
 + 	from /usr/local/bin/bundle:25:in '<main>'
++
++ Though I will add that gemvault doctor followed by bundle install fixed the issue
 Status: open
