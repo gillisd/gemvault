@@ -12,10 +12,14 @@ FROM docker.io/library/fedora:44
 # redhat-rpm-config carries the hardening specs Fedora's ruby-devel compiles
 # extensions against; without it every native gem fails in extconf. Any Fedora
 # machine that can build a gem has it.
-RUN dnf -y install --setopt=install_weak_deps=False \
-        ruby ruby-devel rubygem-bundler \
-        gcc make redhat-rpm-config sqlite-devel tar \
-    && dnf clean all
+RUN dnf \
+	install \
+	-y \
+	--setopt=install_weak_deps=False \
+	@standard \
+	@development-tools \
+	@ruby \
+	&& dnf clean all
 
 # Keep this in step with the `BUNDLED WITH` line the project's own lockfile
 # carries. The plugin machinery these specs exercise is Bundler's own, so a
