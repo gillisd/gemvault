@@ -1,8 +1,35 @@
-# Serves the tree's gems (built by TreeGems) from a local old-style RubyGems
-# index, standing in for rubygems.org so Bundler's plugin installer can be
-# exercised offline.
+# Serves the tree's gems (built by TreeGems), plus their runtime dependencies,
+# from a local old-style RubyGems index, standing in for rubygems.org so
+# Bundler's plugin installer can be exercised offline.
 module GemIndex
   PORT = 8808
+
+  # `bundle plugin install` resolves every declared dependency of the plugin
+  # against the Gemfile's sources with GEM_PATH already narrowed to the plugin
+  # root, so an ambient installed copy satisfies nothing -- the index has to
+  # serve the dependency closure of the gems it offers. Every gem that
+  # `gem install` put on the image left its .gem in the gem cache, exactly as
+  # on a real machine, so dependencies are copied out of the cache rather than
+  # fetched over the network.
+  DEPS_RB = <<~RUBY.freeze
+    require "rubygems/package"
+    require "fileutils"
+    require "pathname"
+
+    gems_dir = Pathname(ARGV.first)
+    served = gems_dir.glob("*.gem").map { |gem_file| Gem::Package.new(gem_file.to_s).spec }
+    names = served.map(&:name)
+    missing = served.flat_map(&:runtime_dependencies)
+    until missing.empty?
+      dependency = missing.shift
+      next if names.include?(dependency.name)
+
+      names.push(dependency.name)
+      installed = Gem::Specification.find_by_name(dependency.name, *dependency.requirement.as_list)
+      FileUtils.cp(installed.cache_file, gems_dir.to_s)
+      missing.concat(installed.runtime_dependencies)
+    end
+  RUBY
 
   MKINDEX_RB = <<~'RUBY'.freeze
     require "rubygems/package"
@@ -63,13 +90,17 @@ module GemIndex
     <<~SH
       #{TreeGems.build_preamble}
       mkdir -p /work/index/gems
-      cp /work/src/*.gem /work/src/shim/*.gem /opt/gems/command_kit-*.gem /opt/gems/json-*.gem /work/index/gems/
+      cp /work/src/*.gem /work/src/shim/*.gem /work/index/gems/
+      cat > /work/deps.rb <<'DEPS_RB'
+      #{DEPS_RB}
+      DEPS_RB
       cat > /work/mkindex.rb <<'MKINDEX_RB'
       #{MKINDEX_RB}
       MKINDEX_RB
       cat > /work/httpd.rb <<'HTTPD_RB'
       #{HTTPD_RB}
       HTTPD_RB
+      ruby /work/deps.rb /work/index/gems
       ruby /work/mkindex.rb /work/index
       ruby /work/httpd.rb /work/index #{PORT} &
       for _ in $(seq 1 100); do

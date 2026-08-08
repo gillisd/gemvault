@@ -9,13 +9,20 @@
 # also the shape that broke `bundle exec` in issue #12.
 FROM docker.io/library/fedora:44
 
-# redhat-rpm-config carries the hardening specs Fedora's ruby-devel compiles
-# extensions against; without it every native gem fails in extconf. Any Fedora
-# machine that can build a gem has it.
-RUN dnf -y install --setopt=install_weak_deps=False \
-        ruby ruby-devel rubygem-bundler \
-        gcc make redhat-rpm-config sqlite-devel tar \
-    && dnf clean all
+# Stock dnf settings, weak dependencies included: on a real Fedora machine
+# `dnf install ruby` pulls the unbundled default-gem RPMs (rubygem-json,
+# rubygem-psych, rubygem-rdoc, ...) through the ruby package's Recommends.
+# Passing --setopt=install_weak_deps=False builds a ruby no user has -- one
+# where `require "json"` raises -- and that faulty install once failed every
+# CLI scenario in the suite.
+RUN dnf \
+	install \
+	-y \
+	@standard \
+	@development-tools \
+	@ruby \
+	sqlite3 \
+	&& dnf clean all
 
 # Keep this in step with the `BUNDLED WITH` line the project's own lockfile
 # carries. The plugin machinery these specs exercise is Bundler's own, so a
@@ -26,19 +33,6 @@ RUN gem install --no-document bundler -v 4.0.17
 # integration test can read the committed legacy SQLite (Dbvault) fixture it
 # migrates.
 RUN gem install --no-document sqlite3
-
-# Gem files for integration specs that install the plugin from a local gem
-# index at spec runtime, kept for offline use: command_kit and json are
-# gemvault's runtime dependencies, and `bundle plugin install` resolves them
-# against the Gemfile's sources with GEM_PATH already narrowed to the plugin
-# root, so an ambient copy does not satisfy it -- every declared dependency has
-# to be servable from the index. The bundler gem lets specs reinstall bundler
-# in place.
-RUN mkdir -p /opt/gems \
-    && cd /opt/gems \
-    && gem fetch command_kit -v 0.6.0 \
-    && gem fetch json -v "~> 2.0" \
-    && gem fetch bundler -v "$(ruby -rbundler -e 'print Bundler::VERSION')"
 
 # The tree arrives as a bind mount at /src rather than a COPY: the build context
 # lives on a filesystem whose extended-attribute listing podman's copier cannot
