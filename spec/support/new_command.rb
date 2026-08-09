@@ -4,7 +4,7 @@ module NewCommand
   end
 
   def run_new_then(args, followup:)
-    podman_run(new_script(args, followup: followup))
+    podman_run(new_script(args, followup:))
   end
 
   # `|| exit $?` hands the container gemvault's own exit status, so a spec can

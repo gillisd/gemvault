@@ -22,7 +22,8 @@ module Gemvault
     attr_reader :path
 
     def initialize(name)
-      @path = Pathname(suffixed(name.to_s))
+      locator = suffixed(name.to_s)
+      @path = Pathname(locator)
     end
 
     # Raises Error when something already occupies the vault's path.
@@ -59,9 +60,11 @@ module Gemvault
     end
 
     def make(parent)
-      parent.mkpath
-    rescue SystemCallError => e
-      raise Error, "cannot create directory #{parent}: #{e.message}"
+      begin
+        parent.mkpath
+      rescue SystemCallError => e
+        raise Error, "cannot create directory #{parent}: #{e.message}"
+      end
     end
   end
 end

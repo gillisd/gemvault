@@ -63,6 +63,18 @@ RSpec.describe Gemvault::CLI::Commands::New do
       end
     end
 
+    context "when the vault appears between the check and the write" do
+      before { allow(Gemvault::Vault).to receive(:create).and_raise(Gemvault::Vault::Error, "already exists") }
+
+      it "reports the failure without a backtrace" do
+        expect { invoke(described_class, (gem_dir / "v.gemv").to_s) }.to output("new: already exists\n").to_stderr
+      end
+
+      it "exits 1" do
+        expect(invoke(described_class, (gem_dir / "v.gemv").to_s)).to eq(1)
+      end
+    end
+
     context "when the vault file cannot be written" do
       before { allow(Gemvault::Vault).to receive(:create).and_raise(Errno::EACCES, "denied") }
 

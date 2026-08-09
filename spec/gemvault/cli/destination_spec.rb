@@ -4,8 +4,9 @@ require "gemvault/cli/destination"
 require "gemvault/vault_destination"
 
 RSpec.describe Gemvault::CLI::Destination do
-  subject(:destination) { described_class.new(Gemvault::VaultDestination.new(path), stdout: stdout) }
+  subject(:destination) { described_class.new(vault_destination, stdout:) }
 
+  let(:vault_destination) { Gemvault::VaultDestination.new(path) }
   let(:stdout) { StringIO.new }
 
   describe "#path" do
