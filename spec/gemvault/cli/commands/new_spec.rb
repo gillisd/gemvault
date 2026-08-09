@@ -2,14 +2,12 @@ require "gemvault/cli/commands/new"
 require "gemvault/vault"
 
 RSpec.describe Gemvault::CLI::Commands::New do
-  let(:vault) { instance_double(Gemvault::Vault, close: nil) }
-
-  before { allow(Gemvault::Vault).to receive(:new).and_return(vault) }
+  before { allow(Gemvault::Vault).to receive(:create) }
 
   describe "#run" do
     it "creates the vault at the resolved path" do
       invoke(described_class, (gem_dir / "v").to_s)
-      expect(Gemvault::Vault).to have_received(:new).with(Pathname(gem_dir / "v.gemv"), create: true)
+      expect(Gemvault::Vault).to have_received(:create).with(Pathname(gem_dir / "v.gemv"))
     end
 
     it "reports the vault it created" do
@@ -48,7 +46,7 @@ RSpec.describe Gemvault::CLI::Commands::New do
 
       it "creates no vault" do
         invoke(described_class, (gem_dir / "taken.gemv").to_s)
-        expect(Gemvault::Vault).not_to have_received(:new)
+        expect(Gemvault::Vault).not_to have_received(:create)
       end
     end
 
@@ -66,7 +64,7 @@ RSpec.describe Gemvault::CLI::Commands::New do
     end
 
     context "when the vault file cannot be written" do
-      before { allow(Gemvault::Vault).to receive(:new).and_raise(Errno::EACCES, "denied") }
+      before { allow(Gemvault::Vault).to receive(:create).and_raise(Errno::EACCES, "denied") }
 
       it "reports the failure without a backtrace" do
         expect { invoke(described_class, (gem_dir / "v.gemv").to_s) }.to output(/denied/i).to_stderr

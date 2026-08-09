@@ -19,26 +19,48 @@ RSpec.describe Gemvault::VaultDestination do
     end
   end
 
-  describe "#exist?" do
-    it "is false for a path nothing occupies" do
-      expect(described_class.new(gem_dir / "absent").exist?).to be(false)
+  describe "#refuse_existing" do
+    it "passes a path nothing occupies" do
+      destination = described_class.new(gem_dir / "absent.gemv")
+      expect { destination.refuse_existing }.not_to raise_error
     end
 
-    it "is true once the vault file is there" do
-      (gem_dir / "there.gemv").write("")
-      expect(described_class.new(gem_dir / "there.gemv").exist?).to be(true)
+    context "when something occupies the path" do
+      before { (gem_dir / "taken.gemv").write("") }
+
+      it "raises" do
+        destination = described_class.new(gem_dir / "taken.gemv")
+        expect { destination.refuse_existing }.to raise_error(Gemvault::VaultDestination::Error, /already exists/)
+      end
+
+      it "names the occupied path" do
+        destination = described_class.new(gem_dir / "taken.gemv")
+        expect { destination.refuse_existing }.to raise_error(/taken/)
+      end
+    end
+  end
+
+  describe "#missing_directory" do
+    it "is nil when the parent directory exists" do
+      expect(described_class.new(gem_dir / "vault.gemv").missing_directory).to be_nil
+    end
+
+    it "is nil for a bare name in the working directory" do
+      expect(described_class.new("vault.gemv").missing_directory).to be_nil
+    end
+
+    it "is the parent when only the parent is missing" do
+      missing = described_class.new(gem_dir / "path/vault.gemv").missing_directory
+      expect(missing.to_s).to eq((gem_dir / "path").to_s)
+    end
+
+    it "is the shallowest missing ancestor" do
+      missing = described_class.new(gem_dir / "path/to/deep/vault.gemv").missing_directory
+      expect(missing.to_s).to eq((gem_dir / "path").to_s)
     end
   end
 
   describe "#create_parents" do
-    it "answers nil when the parent directory already exists" do
-      expect(described_class.new(gem_dir / "vault.gemv").create_parents).to be_nil
-    end
-
-    it "answers nil for a bare name in the working directory" do
-      expect(described_class.new("vault.gemv").create_parents).to be_nil
-    end
-
     it "creates a single missing parent" do
       described_class.new(gem_dir / "path/vault.gemv").create_parents
       expect(gem_dir / "path").to be_a_directory
@@ -47,11 +69,6 @@ RSpec.describe Gemvault::VaultDestination do
     it "creates every missing ancestor" do
       described_class.new(gem_dir / "path/to/deep/vault.gemv").create_parents
       expect(gem_dir / "path/to/deep").to be_a_directory
-    end
-
-    it "answers the shallowest directory it created" do
-      created = described_class.new(gem_dir / "path/to/deep/vault.gemv").create_parents
-      expect(created.to_s).to eq((gem_dir / "path").to_s)
     end
 
     it "does not create the vault file itself" do

@@ -8,48 +8,54 @@ module Gemvault
   # A vault is one file, so <tt>gemvault new vendor/vendored.gemv</tt> in a tree
   # that has no <tt>vendor</tt> yet reads as an ordinary request rather than a
   # mistake, and the missing directories are created. What cannot be papered
-  # over -- a parent that is a file, a parent that cannot be created -- is
-  # raised as Error, so the CLI reports one line instead of a Ruby backtrace.
+  # over -- something already occupying the path, a parent that is a file, a
+  # parent that cannot be created -- is raised as Error, so the CLI reports one
+  # line instead of a Ruby backtrace.
   class VaultDestination
     SUFFIX = ".gemv".freeze
 
     ##
-    # Raised when the path cannot hold a vault.
+    # Raised when the path cannot hold a new vault.
     class Error < StandardError; end
 
     # The vault's path, with SUFFIX appended if the name lacked it.
     attr_reader :path
 
     def initialize(name)
-      locator = name.to_s
-      @path = Pathname(locator.end_with?(SUFFIX) ? locator : "#{locator}#{SUFFIX}")
+      @path = Pathname(suffixed(name.to_s))
     end
 
-    # Whether something already occupies the vault's path.
-    def exist?
-      @path.exist?
+    # Raises Error when something already occupies the vault's path.
+    def refuse_existing
+      raise Error, "#{@path} already exists" if @path.exist?
     end
 
     # :call-seq:
-    #   create_parents -> Pathname or nil
+    #   missing_directory -> Pathname or nil
     #
-    # Creates the vault's missing parent directories, answering the shallowest
-    # one created so a caller can report it, or +nil+ when none were missing.
+    # The shallowest directory create_parents would have to make -- creating it
+    # brings every deeper one with it -- or +nil+ when the parent already
+    # exists.
+    def missing_directory
+      @path.dirname.ascend.reject(&:exist?).last
+    end
+
+    # Creates the vault's missing parent directories.
     def create_parents
       parent = @path.dirname
-      return nil if parent.directory?
+      return if parent.directory?
 
       raise Error, "#{parent} is not a directory" if parent.exist?
 
-      shallowest_missing(parent).tap { make(parent) }
+      make(parent)
     end
 
     private
 
-    # Pathname#ascend walks outward, so the last ancestor that does not exist is
-    # the one whose creation brings all the others with it.
-    def shallowest_missing(parent)
-      parent.ascend.reject(&:exist?).last
+    def suffixed(locator)
+      return locator if locator.end_with?(SUFFIX)
+
+      "#{locator}#{SUFFIX}"
     end
 
     def make(parent)
