@@ -997,4 +997,18 @@ Description: bundler-cache: true on the ruby/setup-ruby action will not work cor
 +           # bundler-cache runs `bundle lock`, which cannot parse the vault source until
 +           # `bundle install` has fetched its plugin; install and cache manually instead.
 +           bundler-cache: false
++       - name: Cache gems
++         uses: actions/cache@v6
++         with:
++           path: |
++             vendor/bundle
++             .bundle/plugin
++           key: ${{ runner.os }}-gems-${{ matrix.ruby }}-${{ hashFiles('Gemfile', '*.gemspec', 'vendor/vendored.gemv') }}
++           restore-keys: |
++             ${{ runner.os }}-gems-${{ matrix.ruby }}-
++ 
++       - name: Install gems
++         run: | # confine gems to vendor/bundle so the cache never shadows vendor/vendored.gemv
++           bundle config set --local path vendor/bundle
++           bundle install --jobs 4 --retry 3
 Status: open
