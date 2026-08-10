@@ -1,6 +1,8 @@
+require_relative "gem_index_files"
+
 # Serves the tree's gems (built by TreeGems), plus their runtime dependencies,
-# from a local old-style RubyGems index, standing in for rubygems.org so
-# Bundler's plugin installer can be exercised offline.
+# from a local RubyGems index, standing in for rubygems.org so Bundler's
+# plugin installer can be exercised offline.
 module GemIndex
   PORT = 8808
 
@@ -31,24 +33,9 @@ module GemIndex
     end
   RUBY
 
-  MKINDEX_RB = <<~'RUBY'.freeze
-    require "rubygems/package"
-    require "zlib"
-    require "pathname"
-
-    def marshal_gz(payload) = Zlib.gzip(Marshal.dump(payload))
-    def marshal_rz(payload) = Zlib::Deflate.deflate(Marshal.dump(payload))
-
-    index = Pathname(ARGV.first)
-    specs = index.join("gems").glob("*.gem").map { |gem_file| Gem::Package.new(gem_file.to_s).spec }
-    entries = specs.map { |spec| [spec.name, spec.version, spec.platform.to_s] }
-
-    ["specs.4.8.gz", "latest_specs.4.8.gz"].each { |name| index.join(name).binwrite(marshal_gz(entries)) }
-    index.join("prerelease_specs.4.8.gz").binwrite(marshal_gz([]))
-
-    quick = index.join("quick", "Marshal.4.8").tap(&:mkpath)
-    specs.each { |spec| quick.join("#{spec.original_name}.gemspec.rz").binwrite(marshal_rz(spec)) }
-  RUBY
+  # The index files themselves -- both protocols -- are rendered by the script
+  # in GemIndexFiles.
+  MKINDEX_RB = GemIndexFiles::MKINDEX_RB
 
   HTTPD_RB = <<~'RUBY'.freeze
     require "socket"
