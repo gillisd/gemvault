@@ -26,6 +26,19 @@ module VaultedApp
     SH
   end
 
+  # The standard auto-install scenario: serve the tree's gems from the local
+  # index, build the fixture vault, reshape the machine as asked, then bundle
+  # a project whose Gemfile pulls from both.
+  def self.auto_installed_bundle(setup: "")
+    <<~SH
+      #{GemIndex.serve_preamble}
+      #{FixtureScript.preamble}
+      #{setup}
+      #{gemfile_with_index}
+      #{vendored_install}
+    SH
+  end
+
   def self.vendored_install
     <<~SH
       bundle config set --local path vendor >/dev/null

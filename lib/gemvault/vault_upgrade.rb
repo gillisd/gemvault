@@ -15,7 +15,7 @@ module Gemvault
     class Plan < Data.define(:from_version, :to_version, :gem_count)
       def no_op? = from_version == to_version
 
-      def to_s = "format #{from_version} -> #{to_version}"
+      def to_s = "format #{from_version} -> #{to_version} (#{gem_count} gems)"
 
       def deconstruct_keys(_keys)
         { from_version:, to_version:, gem_count:, no_op: no_op? }

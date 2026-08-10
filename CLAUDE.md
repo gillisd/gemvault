@@ -9,15 +9,16 @@ Do NOT modify `.rubocop.yml` or use inline `# rubocop:disable` tags without expl
 1. Specs always come first. Every plan should start with the skeleton of the BDD specs being added, changed or removed. Skeleton means the empty RSpec language, without implementation.
 2. Specs should never have comments. Any urge to put a comment in a spec means that comment should probably be its own spec
 3. DO NOT edit .rubocop.yml or add inline rubocop exemptions without explicit permission
-4. DO NOT run any git command that will rewrite history without explicit permission
-5. PREFER method & class extraction over comments
-6. Making new files, classes, modules, and methods IS NOT overengineering
-7. BEFORE writing code, identify which domain concept owns the behavior. Each class and module should have a single responsibility. If the new behavior doesn't fit an existing class's responsibility, create a new one — don't expand the scope of what's already there.
-8. DO NOT name classes with suffixes like "-er" or "-or" unless using a canonical pattern name (e.g., Parser, Router, Controller)
-9. ALWAYS write specs first. The workflow is: identify the domain concept (rule 5), write specs describing its behavior, then implement. No implementation without a failing spec.
-10. Integration specs are the first line of defense for CLI-tool bugs. For any bug reported from using the CLI tool (not the gemvault lib / Ruby API), the FIRST spec you write is an integration spec that reproduces the user's exact invocation — real subprocess, real vault, real exit code. Stub-heavy unit specs are complementary, not sufficient: they prove internal logic produces the expected value assuming surrounding wiring works, but a user's bug report is evidence the wiring didn't work.
-11. If an integration spec is not catching a reported CLI-tool bug, one of two things is true, and the fix starts by diagnosing which: (a) existing integration specs are not specific enough — extend them to cover the exact scenario before touching production code; or (b) the scenario is not spec'd at all, which means the work is not a bug fix but a new feature — write integration specs for the contract first (per rule 1), then implement.
-12. NEVER write to /tmp. Use /workspace/tmp
+4. DO NOT edit .rubycritic.yml or add inline rubycritic exemptions without explicit permission
+5. DO NOT run any git command that will rewrite history without explicit permission
+6. PREFER method & class extraction over comments
+7. Making new files, classes, modules, and methods IS NOT overengineering
+8. BEFORE writing code, identify which domain concept owns the behavior. Each class and module should have a single responsibility. If the new behavior doesn't fit an existing class's responsibility, create a new one — don't expand the scope of what's already there.
+9. DO NOT name classes with suffixes like "-er" or "-or" unless using a canonical pattern name (e.g., Parser, Router, Controller)
+10. ALWAYS write specs first. The workflow is: identify the domain concept (rule 5), write specs describing its behavior, then implement. No implementation without a failing spec.
+11. Integration specs are the first line of defense for CLI-tool bugs. For any bug reported from using the CLI tool (not the gemvault lib / Ruby API), the FIRST spec you write is an integration spec that reproduces the user's exact invocation — real subprocess, real vault, real exit code. Stub-heavy unit specs are complementary, not sufficient: they prove internal logic produces the expected value assuming surrounding wiring works, but a user's bug report is evidence the wiring didn't work.
+12. If an integration spec is not catching a reported CLI-tool bug, one of two things is true, and the fix starts by diagnosing which: (a) existing integration specs are not specific enough — extend them to cover the exact scenario before touching production code; or (b) the scenario is not spec'd at all, which means the work is not a bug fix but a new feature — write integration specs for the contract first (per rule 1), then implement.
+13. NEVER write to /tmp. Use /workspace/tmp
 
 ## Additional rules
 
@@ -94,7 +95,7 @@ bundle exec rake test
 ```
 
 Minitest covers the library; RSpec covers the CLI and the containerized
-integration suite. `rake` (the default task) runs `test`, `spec` and `rubocop`.
+integration suite. `rake` (the default task) runs `test`, `spec`, `rubocop` and `rubycritic`.
 
 ```bash
 bundle exec rake test            # minitest only
@@ -104,21 +105,25 @@ bundle exec rake spec:build      # rebuild the container image
 bundle exec rake spec:teardown   # remove it
 ```
 
-- `test/vault_test.rb` — unit tests for Vault class
-- `test/vault_source_test.rb` — unit tests for Bundler source plugin
-- `test/cli_test.rb` — CLI tests
-- `test/rubygems_plugin_test.rb` — source, resolver, monkey-patches, gem install integration, file:// URI, verbose logging
+- `test/vault_{lifecycle,mutation,entries,content}_test.rb` — unit tests for the Vault facade
+- `test/vault_source_*_test.rb` — unit tests for the Bundler source plugin (metadata, gemspecs, modes, install)
+- `test/cli_*_test.rb` — in-process CLI tests (new, add, list, remove, extract, and top-level dispatch; upgrade and doctor are covered by RSpec under `spec/gemvault/cli`)
+- `test/rubygems_*_test.rb` — RubyGems source, resolver set, monkey-patches, URI handling
 - `spec/integration/` — end-to-end specs, each run inside a podman container
 - `spec/support/` — script fragments the integration specs assemble into those containers
 
 Integration specs serve the tree's own gems from a local gem index (`GemIndex`)
 to avoid rubygems.org resolution during testing.
 
+Rubycritic scores `lib/`, `test/` and `shim/` but not `spec/`: flog taxes each
+block-nesting level, so idiomatic describe/context nesting reads as complexity.
+rubocop-rspec owns spec style.
+
 ### Container fidelity — do not undo these
 
 The container has to look like a machine a user actually has. The `ruby` base
 image does not, and every way it differs has already hidden a real defect. These
-four are load-bearing; reverting any of them silently makes the suite green
+five are load-bearing; reverting any of them silently makes the suite green
 against something other than the code under test:
 
 1. **`bundler-source-vault` is NOT installed system-wide in `Dockerfile.test`.**
@@ -141,6 +146,12 @@ against something other than the code under test:
 4. **Bundler is pinned to the version users run, not the image's default gem.**
    The plugin machinery under test is Bundler's own, so a stale default silently
    tests different code.
+5. **dnf runs with stock settings — weak dependencies included.** On a real
+   Fedora machine `dnf install ruby` pulls the unbundled default-gem RPMs
+   (`rubygem-json`, `rubygem-psych`, …) through the ruby package's Recommends.
+   `--setopt=install_weak_deps=False` builds a ruby no user has — one where
+   `require "json"` raises — and that faulty install once failed every CLI
+   scenario in the suite.
 
 Fidelity is a property of the image, not of a script fragment: integration specs
 run only commands a user would actually type.
@@ -153,6 +164,6 @@ container.
 
 - `bundler` — NOT a dependency; the plugin always runs inside an existing Bundler process, and declaring it breaks gem activation under `bundle exec`'s restricted GEM_PATH
 - `command_kit` (~> 0.6) — runtime (CLI)
-- `json` (~> 2.0) — runtime; backs the tarball vault's manifest. A default gem upstream, but distros package it separately, so it is declared. Because the shim loads gemvault off `$LOAD_PATH` without activating it, it has to put json's require paths on `$LOAD_PATH` itself — see `dependency_specs` and `entries` in `shim/gemvault_load_path.rb`.
+- `json` — NOT a dependency, though it backs the tarball vault's manifest. A default gem upstream; distros that unbundle it (Fedora's `rubygem-json`) still install it alongside ruby itself, and it stays requireable even under `bundle exec`'s restricted view. Declaring it would compile a native extension on every `gem install gemvault` for no gain.
 - `sqlite3` (~> 2.0) — NOT a runtime dependency; loaded lazily only to read a legacy SQLite (Dbvault) vault. Declared in the Gemfile for development/test.
 - `minitest`, `rspec`, `rake` — development

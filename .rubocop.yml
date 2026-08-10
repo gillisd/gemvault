@@ -12,6 +12,7 @@
 plugins:
   - rubocop-claude
   - rubocop-rspec
+  - rubocop-minitest # Permitted by David.
   - rubocop-performance
   - rubocop-rake
 

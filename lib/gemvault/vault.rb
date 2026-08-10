@@ -30,6 +30,11 @@ module Gemvault
                    :spec_from_blob, :with_gem_file, :size, :close, :closed?,
                    :path, :format_version
 
+    # Creates an empty vault file at +path+, leaving it closed.
+    def self.create(path)
+      new(path, create: true).close
+    end
+
     def self.assert_readable!(version:, path:)
       return if version.between?(MIN_READABLE_FORMAT, CURRENT_FORMAT)
 

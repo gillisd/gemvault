@@ -3,12 +3,7 @@ module BundleExecScenarios
 
   def bundle_exec_with_auto_installed_plugin
     podman_run(<<~SH)
-      #{GemIndex.serve_preamble}
-      #{FixtureScript.preamble}
-      #{DistroRuby.regular_bundler}
-      #{DistroRuby.without_system_gemvault}
-      #{VaultedApp.gemfile_with_index}
-      #{VaultedApp.vendored_install}
+      #{VaultedApp.auto_installed_bundle(setup: DistroRuby.regular_bundler + DistroRuby.without_system_gemvault)}
       #{REQUIRE_VAULT_GEM}
     SH
   end

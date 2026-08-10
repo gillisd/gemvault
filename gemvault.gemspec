@@ -35,14 +35,8 @@ Gem::Specification.new do |spec|
   # declared dependency breaks gem activation under `bundle exec`, where
   # GEM_PATH is restricted to the app's bundle and cannot see the bundler
   # gem on rubies that ship it as a regular (non-default) gem.
-  spec.add_dependency "command_kit", "~> 0.6"
 
-  # json backs the tarball vault's manifest, so every current-format vault needs
-  # it. It is a default gem upstream, but distros package it separately -- a
-  # plain `dnf install ruby` has no json at all -- and default gems can be
-  # uninstalled anywhere. Declaring it keeps `gemvault new` working off a stock
-  # distro ruby instead of raising LoadError on the first vault.
-  spec.add_dependency "json", "~> 2.0"
+  spec.add_dependency "command_kit", "~> 0.6"
 
   # sqlite3 is intentionally NOT a runtime dependency: current-format (tarball)
   # vaults use only rubygems' built-in tar tooling, so gemvault runs dependency-

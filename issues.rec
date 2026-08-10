@@ -791,10 +791,264 @@ Id: 15
 Updated: Wed, 29 Jul 2026 17:39:23 -0400
 Name: gemvault new fails on path/to/gemvault.gemv
 Description: I did it in /tmp, maybe that's why?
-Status: open
++ 
++ RESOLUTION: /tmp was a red herring -- the trigger is the missing parent
++ directory. `gemvault new path/to/gemvault.gemv` reached Tempfile.create with a
++ nonexistent dirname and died with a raw Errno::ENOENT and a 25-line Ruby
++ backtrace; with path/to already present the same command always worked.
++ 
++ A vault is one file, so `gemvault new vendor/vendored.gemv` in a tree that has
++ no vendor yet reads as an ordinary request rather than a mistake: the missing
++ directories are now created, and the shallowest one created is reported
++ ("Created directory vendor") so nothing appears out of nowhere. What cannot be
++ papered over is raised as VaultDestination::Error and printed as one line with
++ exit 1 -- a parent that is a file, or one that cannot be created (EACCES).
++ SystemCallError from the vault write itself is caught the same way, so no path
++ through `gemvault new` ends in a backtrace.
++ 
++ Gemvault::VaultDestination owns the .gemv suffix defaulting, the occupied-path
++ check and the parent creation; the command stays thin. Replicated first by
++ spec/integration/cli/commands/new_spec.rb (real subprocess, real vault, real
++ exit code -- 5 of its 9 examples failed against the old code, including one
++ asserting the absence of Errno::ENOENT), with unit cover in
++ spec/gemvault/vault_destination_spec.rb and spec/gemvault/cli/commands/new_spec.rb.
+Status: closed
 
 Id: 16
 Updated: Wed, 29 Jul 2026 18:25:48 -0400
 Name: Add jruby-ci workflow
 Description: It should be already set up on the jruby-support branch. It just needs to be picked from it. DO NOT use the other code in that - it is very outdated
+Status: open
+
+Id: 17
+Updated: Thu, 30 Jul 2026 00:07:42 +0000
+Name: Integration CI job reddens on transient podman/crun failures
+Description: Both `integration` jobs failed on master (run 30496142063) and on PR #17 with:
++ 
++ ```
++ error running container: from /usr/bin/crun creating container for
++ [/bin/sh -c dnf -y install ...]: unknown version specified
++ ```
++ 
++ Nothing had changed between the last green run and the first red one: same runner
++ image 20260720.247.2, same pre-installed podman, same fedora:44 blob and config
++ digests, same SOURCE_DIGEST build arg, and the only commit in between touched
++ issues.rec text. Rerunning the identical commit went green.
++ 
++ `rake spec:build` had no retry, so one momentary container-runtime failure reddens
++ the whole run -- and because the matrix cancels the sibling leg, a flake reads as a
++ real break in the suite CLAUDE.md calls the first line of defense for CLI bugs.
++ 
++ RESOLUTION: the image lifecycle moved out of the Rakefile into ContainerImage
++ (spec/support/container_image.rb), which retries a failed build ATTEMPTS (3) times
++ and announces each retry. Nothing in the exit status separates a transient runtime
++ failure from a real Dockerfile error, so every failure is retried; a genuinely broken
++ Dockerfile still fails, just after 3 tries, and fails fast because it never reaches
++ the network. Commands run through an injected Shell so the retry behaviour is
++ specified without podman (spec/container_image_spec.rb, spec/shell_spec.rb), and the
++ loop was also confirmed against real podman with a Dockerfile that exits nonzero.
++ 
++ RESOLUTION: the `jruby` job is picked into .github/workflows/ci.yml; none of the
++ branch's Sequel/jdbc-sqlite3 code came with it. Master needs none of it -- the
++ tarball format uses only rubygems' own tar tooling, so gemvault already runs on
++ JRuby. Three of the branch job's details did not survive the pick: JAVA_OPTS
++ --enable-native-access existed to silence a jdbc-sqlite3 warning under Java 25
++ (no JDBC driver here, and the job pins Java 21), BUNDLE_FROZEN existed for a
++ committed MRI-resolved lock (Gemfile.lock is gitignored on master), and the
++ branch's matrix/podman edits to the MRI jobs are the outdated part.
++ 
++ Two things the branch job would have hit on master, both found by running it:
++ (1) `bundle install` died on the sqlite3 C extension, which cannot build on the
++ JVM. sqlite3 is a dev-only dependency for the legacy Dbvault read path, so the
++ Gemfile now scopes it `platform: %i[ruby windows]`; nothing under test/ touches
++ sqlite3, which is why the job runs `rake test` only and leaves the sqlite3-backed
++ specs to the MRI jobs. (2) `bundle install` then exhausted JRuby's default 500MB
++ heap during resolution -- inherent to the Gemfile, not to sqlite3 -- so the job
++ sets JRUBY_OPTS=-J-Xmx2048m, the remedy JRuby's own error message prescribes.
++ 
++ Verified locally against JRuby 10.1.0.0 on Java 25 (installed for this; the box
++ had none, and no install-jruby script existed -- one is now at
++ ~/.local/bin/install-jruby): bundle install clean with sqlite3 absent, rake test
++ 113 tests / 231 assertions / 0 failures. MRI unaffected: sqlite3 still resolves,
++ rake test 113/0, spec:core 130 examples/0 failures, rubocop 111 files clean.
+Status: closed
+
+Id: 18
+Updated: Thu, 30 Jul 2026 01:06:09 +0000
+Name: Integration CI broken by runner image podman 5 / crun 1.14 mismatch
+Description: Every `integration` job fails at the Dockerfile's dnf layer with:
++ 
++ ```
++ error running container: from /usr/bin/crun creating container for
++ [/bin/sh -c dnf -y install ...]: unknown version specified
++ ```
++ 
++ This looked like issue #17's flake and is not. Correlating the runner image
++ against the outcome settles it:
++ 
++ | runner image        | podman | outcome     |
++ |---------------------|--------|-------------|
++ | 20260720.247 (old)  | 4.9.3  | pass        |
++ | 20260726.254 (new)  | 5.8.4  | crun error  |
++ 
++ Every genuine failure is on 20260726.254; every job on 20260720.247 either passed
++ or was cancelled by fail-fast (which is what made two of them look like failures).
++ GitHub rolls the image out gradually, so jobs land on either one -- hence reruns
++ sometimes helping and sometimes not, and hence integration CI going permanently
++ red as the rollout completes.
++ 
++ The new image bumped podman 4.9.3 -> 5.8.4 and left Ubuntu 24.04's crun 1.14 in
++ place. podman 5 writes an OCI config declaring ociVersion 1.2.0; crun 1.14
++ rejects any version not prefixed "1.0" with exactly "unknown version
++ specified". A dev box running podman 5.8.4 with crun 1.28 builds and runs the
++ same image fine, which is the control.
++ 
++ Nothing about this is intermittent, so #17's retry cannot help: three attempts
++ on the same runner fail three times.
++ 
++ RESOLUTION: the integration job installs a pinned crun 1.28 (newer than any
++ noble package) and names it in GEMVAULT_PODMAN_RUNTIME; Podman.command inserts
++ `--runtime` ahead of the subcommand when that variable is set, so both
++ ContainerImage's build and ContainerHelper's container runs go through it. Unset
++ -- every dev machine, and any runner whose podman and crun agree -- podman
++ chooses as before. The job also prints podman, crun and the chosen runtime, so
++ the next mismatch names itself instead of being mistaken for a flake, and
++ fail-fast is off because one leg cancelling the other hid which had broken.
++ 
++ Verified locally both ways: with the variable set to a downloaded crun 1.28,
++ spec:build plus 135 integration examples pass; with it unset, the same. A
++ config-file override (`[engine.runtimes]`) was tried first and did not take --
++ podman kept /usr/bin/crun -- which is why this uses the explicit flag.
+Status: closed
+
+Id: 19
+Updated: Fri, 31 Jul 2026 09:18:45 -0400
+Name: Deps in Dockerfile.test are not dynamically inferred
+Description: Bundler version, command kit version, and all other deps that are being installed need to be inferred from this project via bundler info, and should be passed in as ENV variables. Hardcoding is not acceptable
+Status: open
+
+Id: 20
+Updated: Fri, 31 Jul 2026 13:42:28 -0400
+Name: Received the following error during bundle install:
+Description: [dev@rstore]/workspace% bundle install
++ Bundler 4.0.14 is running, but your lockfile was generated with 4.0.17. Installing Bundler 4.0.17 and restarting using that version.
++ Source locally installed gems is ignoring #<Bundler::StubSpecification name=io-event version=1.19.4 platform=ruby> because it is missing extensions
++ Fetching gem metadata from https://rubygems.org/.
++ Source rubygems repository https://rubygems.org/ is ignoring #<Bundler::StubSpecification name=io-event version=1.19.4 platform=ruby> because it is missing extensions
++ Installing bundler 4.0.17
++ Ignoring io-event-1.19.4 because its extensions are not built. Try: gem pristine io-event --version 1.19.4
++ Fetching gem metadata from https://rubygems.org/.......
++ Source rubygems repository https://rubygems.org/, cached gems or installed locally is ignoring #<Bundler::StubSpecification name=io-event version=1.19.4 platform=ruby> because it is missing extensions
++ Resolving dependencies...
++ Fetching json 2.21.2
++ Installing json 2.21.2 with native extensions
++ Fetching gemvault 0.2.2
++ Installing gemvault 0.2.2
++ Fetching bundler-source-vault 0.2.2
++ Installing bundler-source-vault 0.2.2
++ The following plugin paths don't exist: /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-source-vault-0.2.1/..
++ 
++ This can happen if the plugin was installed with a different version of Ruby that has since been uninstalled.
++ 
++ If you would like to reinstall the plugin, run:
++ 
++ bundler plugin uninstall bundler-source-vault && bundler plugin install bundler-source-vault
++ 
++ Continuing without installing plugin bundler-source-vault.
++ /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/source_list.rb:59:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
++ 
++       add_source_to_list Plugin.source(source).new(options), @plugin_sources
++                                               ^^^^
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:135:in 'Bundler::Dsl#source'
++ 	from /workspace/Gemfile:20:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:49:in 'BasicObject#instance_eval'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:49:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:330:in 'Bundler::Dsl#with_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:47:in 'Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:13:in 'Bundler::Dsl.evaluate'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/definition.rb:40:in 'Bundler::Definition.build'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler.rb:235:in 'Bundler.definition'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/env.rb:36:in 'Bundler::Env.report'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/friendly_errors.rb:71:in 'Bundler::FriendlyErrors.request_issue_report_for'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/friendly_errors.rb:50:in 'Bundler::FriendlyErrors.log_error'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/friendly_errors.rb:124:in 'Bundler.with_friendly_errors'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/exe/bundle:20:in '<top (required)>'
++ 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Kernel#load'
++ 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Gem.activate_and_load_bin_path'
++ 	from /usr/local/bin/bundle:25:in '<main>'
++ /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/source_list.rb:59:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
++ 
++       add_source_to_list Plugin.source(source).new(options), @plugin_sources
++                                               ^^^^
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:135:in 'Bundler::Dsl#source'
++ 	from /workspace/Gemfile:20:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:49:in 'BasicObject#instance_eval'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:49:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:330:in 'Bundler::Dsl#with_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:47:in 'Bundler::Dsl#eval_gemfile'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/dsl.rb:13:in 'Bundler::Dsl.evaluate'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/definition.rb:40:in 'Bundler::Definition.build'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler.rb:235:in 'Bundler.definition'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/cli/install.rb:45:in 'Bundler::CLI::Install#run'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/cli.rb:296:in 'block in Bundler::CLI#install'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/settings.rb:145:in 'Bundler::Settings#temporary'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/cli.rb:295:in 'Bundler::CLI#install'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/vendor/thor/lib/thor/command.rb:28:in 'Bundler::Thor::Command#run'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/vendor/thor/lib/thor/invocation.rb:127:in 'Bundler::Thor::Invocation#invoke_command'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/vendor/thor/lib/thor.rb:538:in 'Bundler::Thor.dispatch'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/cli.rb:35:in 'Bundler::CLI.dispatch'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/vendor/thor/lib/thor/base.rb:584:in 'Bundler::Thor::Base::ClassMethods#start'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/cli.rb:29:in 'Bundler::CLI.start'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/exe/bundle:28:in 'block in <top (required)>'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/lib/bundler/friendly_errors.rb:118:in 'Bundler.with_friendly_errors'
++ 	from /workspace/vendor/ruby/4.0.0/gems/bundler-4.0.17/exe/bundle:20:in '<top (required)>'
++ 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Kernel#load'
++ 	from /usr/local/share/ruby/site_ruby/rubygems.rb:305:in 'Gem.activate_and_load_bin_path'
++ 	from /usr/local/bin/bundle:25:in '<main>'
++ 
++ Though I will add that gemvault doctor followed by bundle install fixed the issue
+Status: open
+
+Id: 21
+Updated: Fri, 31 Jul 2026 13:54:09 -0400
+Name: bundle info fails when gem is in vault
+Description: bundle info jarpack
++ Source locally installed gems is ignoring #<Bundler::StubSpecification name=json version=2.21.2 platform=ruby> because it is missing extensions
++ Could not find gem 'jarpack'.
++ Did you mean 'jarpack'?
++ 
++ 
++  bundle info jarpack
+Status: open
+
+Id: 22
+Updated: Mon, 10 Aug 2026 10:03:35 -0400
+Name: Add github actions disclaimer/instructions
+Description: bundler-cache: true on the ruby/setup-ruby action will not work correctly:
++ 
++    - uses: ruby/setup-ruby@v1
++         with:
++           ruby-version: ${{ matrix.ruby }}
++           # bundler-cache runs `bundle lock`, which cannot parse the vault source until
++           # `bundle install` has fetched its plugin; install and cache manually instead.
++           bundler-cache: false
++       - name: Cache gems
++         uses: actions/cache@v6
++         with:
++           path: |
++             vendor/bundle
++             .bundle/plugin
++           key: ${{ runner.os }}-gems-${{ matrix.ruby }}-${{ hashFiles('Gemfile', '*.gemspec', 'vendor/vendored.gemv') }}
++           restore-keys: |
++             ${{ runner.os }}-gems-${{ matrix.ruby }}-
++ 
++       - name: Install gems
++         run: | # confine gems to vendor/bundle so the cache never shadows vendor/vendored.gemv
++           bundle config set --local path vendor/bundle
++           bundle install --jobs 4 --retry 3
+Updated: Mon, 10 Aug 2026 10:14:51 -0400
+Name: Gemvault spams warnings on bundle install
+Description: /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:31: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::GEM
++ /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:32: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::SHIM
++ /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:33: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::VAULT_SOURCE
 Status: open

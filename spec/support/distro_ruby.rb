@@ -3,20 +3,18 @@
 # and bundler may have been reinstalled over the packaged copy.
 module DistroRuby
   # The base image is already a distro ruby, so bundler is already a regular
-  # gem; this only reinstalls it in place over the packaged copy. The line that
-  # used to delete a default bundler gemspec is gone -- it named the official
-  # ruby image's gem layout, which no longer exists in the container.
+  # gem; this only reinstalls it in place, from the cache .gem that pinning
+  # bundler at image build left behind. The line that used to delete a default
+  # bundler gemspec is gone -- it named the official ruby image's gem layout,
+  # which no longer exists in the container.
   def self.regular_bundler
-    "gem install --local --force --no-document /opt/gems/bundler-*.gem >/dev/null\n"
+    <<~SH
+      gem install --local --force --no-document "$(ruby -e 'print Gem::Specification.find_by_name(%q{bundler}).cache_file')" >/dev/null
+    SH
   end
 
   # gemvault and the dependencies only gemvault brings, so the plugin root has
-  # to carry them itself. json is gemvault's other runtime dependency and is
-  # deliberately not in the list: `bundler/cli/list.rb` requires it at the top
-  # of the file, so uninstalling it makes `bundle list` -- the command the
-  # scenario checks its result with -- die before any gemvault code runs. An
-  # ambient json therefore stays visible to the plugin root; a load-path
-  # defect specific to json is not what this scenario can prove.
+  # to carry them itself.
   def self.without_system_gemvault
     "gem uninstall -x -a -I bundler-source-vault gemvault command_kit >/dev/null 2>&1 || true\n"
   end

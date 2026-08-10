@@ -17,10 +17,7 @@ module PluginRootDependencies
 
   def install_twice_with_system_gemvault_present
     podman_run(<<~SH)
-      #{GemIndex.serve_preamble}
-      #{FixtureScript.preamble}
-      #{VaultedApp.gemfile_with_index}
-      #{VaultedApp.vendored_install}
+      #{VaultedApp.auto_installed_bundle}
       echo #{SECOND_INSTALL_MARK}
       bundle install
     SH
@@ -28,10 +25,7 @@ module PluginRootDependencies
 
   def bundle_exec_with_system_gemvault_present
     podman_run(<<~SH)
-      #{GemIndex.serve_preamble}
-      #{FixtureScript.preamble}
-      #{VaultedApp.gemfile_with_index}
-      #{VaultedApp.vendored_install}
+      #{VaultedApp.auto_installed_bundle}
       echo #{REQUIRE_MARK}
       #{REQUIRE_VAULT_GEM}
     SH

@@ -1,4 +1,5 @@
 require "open3"
+require_relative "podman"
 
 module ContainerHelper
   # The mount carries `z` because the image imitates a Fedora workstation, and on
@@ -26,7 +27,8 @@ module ContainerHelper
   def self.image_available?
     return @image_available unless @image_available.nil?
 
-    @image_available = system("podman", "image", "exists", CACHED_IMAGE, out: File::NULL, err: File::NULL)
+    @image_available = system(*Podman.command("image", "exists", CACHED_IMAGE),
+                              out: File::NULL, err: File::NULL)
   end
 
   def podman_run(script)
@@ -41,10 +43,10 @@ module ContainerHelper
 
   def capture_container(script)
     Open3.capture2e(
-      "podman", "run", "--rm", "--network=host",
-      "-v", "#{project_root}:/gem:ro,z",
-      CACHED_IMAGE,
-      "bash", "-c", script
+      *Podman.command("run", "--rm", "--network=host",
+                      "-v", "#{project_root}:/gem:ro,z",
+                      CACHED_IMAGE,
+                      "bash", "-c", script),
     )
   end
 
