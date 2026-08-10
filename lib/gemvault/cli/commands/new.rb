@@ -1,5 +1,6 @@
-require "pathname"
 require_relative "../command"
+require_relative "../destination"
+require_relative "../../vault_destination"
 
 module Gemvault
   class CLI
@@ -13,16 +14,23 @@ module Gemvault
                         desc: "Vault name (auto-appends .gemv)"
 
         def run(name)
-          path = Pathname(name.end_with?(".gemv") ? name : "#{name}.gemv")
-
-          if path.exist?
-            print_error("#{path} already exists")
+          begin
+            destination = build_destination(name)
+            destination.refuse_existing
+            destination.create_parents
+            Vault.create(destination.path)
+            puts "Created #{destination.path}"
+          rescue VaultDestination::Error, Vault::Error, SystemCallError => e
+            print_error(e.message)
             exit(1)
           end
+        end
 
-          vault = Vault.new(path, create: true)
-          vault.close
-          puts "Created #{path}"
+        private
+
+        def build_destination(name)
+          vault_destination = VaultDestination.new(name)
+          Destination.new(vault_destination, stdout:)
         end
       end
     end

@@ -41,6 +41,18 @@ class VaultLifecycleTest < VaultTestCase
     vault.close
   end
 
+  def test_create_writes_an_empty_vault_file
+    Gemvault::Vault.create(@vault_path)
+    assert_path_exists @vault_path
+  end
+
+  def test_create_leaves_a_reopenable_vault
+    Gemvault::Vault.create(@vault_path)
+    vault = Gemvault::Vault.new(@vault_path)
+    assert_equal 0, vault.size
+    vault.close
+  end
+
   def test_open_existing_vault
     create_vault.close
     vault = Gemvault::Vault.new(@vault_path)
