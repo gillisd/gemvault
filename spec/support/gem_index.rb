@@ -33,10 +33,6 @@ module GemIndex
     end
   RUBY
 
-  # The index files themselves -- both protocols -- are rendered by the script
-  # in GemIndexFiles.
-  MKINDEX_RB = GemIndexFiles::MKINDEX_RB
-
   HTTPD_RB = <<~'RUBY'.freeze
     require "socket"
     require "pathname"
@@ -82,7 +78,7 @@ module GemIndex
       #{DEPS_RB}
       DEPS_RB
       cat > /work/mkindex.rb <<'MKINDEX_RB'
-      #{MKINDEX_RB}
+      #{GemIndexFiles::MKINDEX_RB}
       MKINDEX_RB
       cat > /work/httpd.rb <<'HTTPD_RB'
       #{HTTPD_RB}

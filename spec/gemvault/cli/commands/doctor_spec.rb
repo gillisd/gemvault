@@ -7,6 +7,10 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
     let(:command) { described_class.new(stdout: stdout, stderr: stderr) }
     let(:uninstall) { ["bundle", "plugin", "uninstall", "bundler-source-vault"] }
 
+    def ghost_double(path)
+      instance_double(Gemvault::GhostSpecification, to_s: path)
+    end
+
     before do
       allow(Gemvault::GhostSpecification).to receive(:of).and_return([])
       allow(command).to receive(:system).and_return(true)
@@ -49,10 +53,7 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
     end
 
     context "when a ghost specification haunts a gem root" do
-      let(:ghost) do
-        instance_double(Gemvault::GhostSpecification,
-                        file: Pathname("/roots/specifications/bundler-source-vault-0.2.4.gemspec"))
-      end
+      let(:ghost) { ghost_double("/roots/specifications/bundler-source-vault-0.2.4.gemspec") }
 
       before do
         allow(Gemvault::GhostSpecification).to receive(:of).with("bundler-source-vault").and_return([ghost])
@@ -80,25 +81,61 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
       end
     end
 
-    context "when a ghost specification cannot be removed" do
-      let(:ghost) do
-        instance_double(Gemvault::GhostSpecification,
-                        file: Pathname("/roots/specifications/gemvault-0.2.4.gemspec"))
-      end
+    context "when ghosts of both gems haunt the machine" do
+      let(:gemvault_ghost) { ghost_double("/roots/specifications/gemvault-0.2.4.gemspec") }
+      let(:shim_ghost) { ghost_double("/roots/specifications/bundler-source-vault-0.2.4.gemspec") }
 
       before do
-        allow(Gemvault::GhostSpecification).to receive(:of).with("gemvault").and_return([ghost])
-        allow(ghost).to receive(:delete).and_raise(Errno::EACCES, "/roots/specifications/gemvault-0.2.4.gemspec")
+        allow(Gemvault::GhostSpecification).to receive(:of).with("gemvault").and_return([gemvault_ghost])
+        allow(Gemvault::GhostSpecification).to receive(:of).with("bundler-source-vault").and_return([shim_ghost])
+        allow(gemvault_ghost).to receive(:delete)
+        allow(shim_ghost).to receive(:delete)
       end
 
-      it "reports the failure without a backtrace" do
+      it "removes every ghost", :aggregate_failures do
+        command.run
+
+        expect(gemvault_ghost).to have_received(:delete)
+        expect(shim_ghost).to have_received(:delete)
+      end
+
+      it "reports every removal" do
+        command.run
+
+        expect(stdout.string).to eq(<<~REPORT)
+          Removed ghost specification /roots/specifications/gemvault-0.2.4.gemspec
+          Removed ghost specification /roots/specifications/bundler-source-vault-0.2.4.gemspec
+        REPORT
+      end
+    end
+
+    context "when a ghost specification cannot be removed" do
+      let(:removed) { ghost_double("/roots/specifications/gemvault-0.2.3.gemspec") }
+      let(:stuck) { ghost_double("/roots/specifications/gemvault-0.2.4.gemspec") }
+
+      before do
+        allow(Gemvault::GhostSpecification).to receive(:of).with("gemvault").and_return([removed, stuck])
+        allow(removed).to receive(:delete)
+        allow(stuck).to receive(:delete).and_raise(Errno::EACCES, "/roots/specifications/gemvault-0.2.4.gemspec")
+      end
+
+      it "reports the failure as a single line" do
         invoke_run
 
-        expect(stderr.string).to include("Permission denied")
+        expect(stderr.string).to eq(
+          "doctor: Permission denied - /roots/specifications/gemvault-0.2.4.gemspec " \
+          "(re-run with permissions for that gem home, e.g. sudo gemvault doctor)\n",
+        )
       end
 
       it "exits 1" do
         expect(invoke_run).to eq(1)
+      end
+
+      it "reports only the removals it performed" do
+        invoke_run
+
+        expect(stdout.string).to eq("Removed ghost specification /roots/specifications/gemvault-0.2.3.gemspec\n")
       end
 
       it "does not touch the plugin", :aggregate_failures do

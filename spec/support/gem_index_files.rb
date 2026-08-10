@@ -8,8 +8,11 @@
 # suite. The marshal files stay because `gem install --source` still reads
 # them. Formats follow the compact_index reference implementation:
 #
-#   versions:   NAME V1[,V2] MD5-of-info-file
-#   info/NAME:  VERSION[-PLATFORM] DEP:REQ[&REQ][,DEP:REQ]|checksum:HEX[,ruby:REQ]
+#   versions:   created_at: TIME
+#               ---
+#               NAME V1[,V2] MD5-of-info-file
+#   info/NAME:  ---
+#               VERSION[-PLATFORM] DEP:REQ[&REQ][,DEP:REQ]|checksum:HEX[,ruby:REQ][,rubygems:REQ],created_at:TIME
 #
 # Every info line carries created_at because rubygems.org's does: Bundler's
 # cooldown machinery backfills that date onto matching installed stubs and

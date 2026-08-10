@@ -25,8 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `gemvault doctor` now repairs ghost installations: a
-  `specifications/<gem>.gemspec` left behind after its gem directory was
-  removed (interrupted uninstall, hand-cleaned gem home). Such a ghost of
+  `specifications/<gem>-<version>.gemspec` left behind after its gem directory
+  was removed (interrupted uninstall, hand-cleaned gem home), even when the
+  record itself is truncated or unreadable. Such a ghost of
   `bundler-source-vault` makes every `bundle install` fail with
   `Bundler::Plugin::MalformattedPlugin (plugins.rb was not found in the
   plugin.)` — Bundler reinstalls the gem correctly but validates the ghost's

@@ -1066,4 +1066,24 @@ Description: ❯
 + index too (versions and info/NAME with checksum and created_at, rendered by
 + GemIndexFiles), matching what rubygems.org sends, with the marshal files
 + kept for `gem install --source`.
++ 
++ Review hardening: detection evaluates no Ruby. The gem directory's name is
++ the record's file name minus .gemspec by RubyGems' install convention, so a
++ missing payload is recognized from the filesystem alone; scoping to the
++ asked gem reads the record's "# stub:" header when readable and falls back
++ to the filename. That sweeps truncated or unreadable records -- wreckage in
++ their own right, and Bundler's stub path needs only the header line, so a
++ truncated record can keep triggering this bug -- instead of silently
++ skipping them, and an unreadable neighboring record no longer aborts the
++ scan. Deliberately out of scope: a gem directory that exists but lost part
++ of its payload (same MalformattedPlugin symptom via a shorter path).
++ Telling that wreck apart from a healthy install would mean trusting the
++ record's file list, and a false positive there deletes a working
++ installation's record; a report of that wreck reopens this.
 Status: closed
+
+Id: 24
+Updated: Mon, 10 Aug 2026 23:16:35 +0000
+Name: doctor prints a backtrace when the plugin uninstall step fails
+Description: gemvault doctor's `bundle plugin uninstall` step runs with exception: true; a nonzero exit raises RuntimeError and a missing bundle raises Errno::ENOENT, and both escape Command#run to command_kit's ExceptionHandler, which prints error.full_message -- a full backtrace -- violating the one-line-and-exit-1 convention issue #15 established. Adjacent to issue #14 (doctor failing under bundler/inline). The ghost-specification sweep added for issue #23 reports its own failures as one line; the uninstall step should match.
+Status: open
