@@ -756,12 +756,12 @@ Id: 15
 Updated: Wed, 29 Jul 2026 17:39:23 -0400
 Name: gemvault new fails on path/to/gemvault.gemv
 Description: I did it in /tmp, maybe that's why?
-+
++ 
 + RESOLUTION: /tmp was a red herring -- the trigger is the missing parent
 + directory. `gemvault new path/to/gemvault.gemv` reached Tempfile.create with a
 + nonexistent dirname and died with a raw Errno::ENOENT and a 25-line Ruby
 + backtrace; with path/to already present the same command always worked.
-+
++ 
 + A vault is one file, so `gemvault new vendor/vendored.gemv` in a tree that has
 + no vendor yet reads as an ordinary request rather than a mistake: the missing
 + directories are now created, and the shallowest one created is reported
@@ -770,7 +770,7 @@ Description: I did it in /tmp, maybe that's why?
 + exit 1 -- a parent that is a file, or one that cannot be created (EACCES).
 + SystemCallError from the vault write itself is caught the same way, so no path
 + through `gemvault new` ends in a backtrace.
-+
++ 
 + Gemvault::VaultDestination owns the .gemv suffix defaulting, the occupied-path
 + check and the parent creation; the command stays thin. Replicated first by
 + spec/integration/cli/commands/new_spec.rb (real subprocess, real vault, real
@@ -982,6 +982,19 @@ Description: bundle info jarpack
 + Could not find gem 'jarpack'.
 + Did you mean 'jarpack'?
 + 
-+
++ 
 +  bundle info jarpack
+Status: open
+
+Id: 22
+Updated: Mon, 10 Aug 2026 10:03:35 -0400
+Name: Add github actions disclaimer/instructions
+Description: bundler-cache: true on the ruby/setup-ruby action will not work correctly:
++ 
++    - uses: ruby/setup-ruby@v1
++         with:
++           ruby-version: ${{ matrix.ruby }}
++           # bundler-cache runs `bundle lock`, which cannot parse the vault source until
++           # `bundle install` has fetched its plugin; install and cache manually instead.
++           bundler-cache: false
 Status: open
