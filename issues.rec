@@ -1011,4 +1011,9 @@ Description: bundler-cache: true on the ruby/setup-ruby action will not work cor
 +         run: | # confine gems to vendor/bundle so the cache never shadows vendor/vendored.gemv
 +           bundle config set --local path vendor/bundle
 +           bundle install --jobs 4 --retry 3
+Updated: Mon, 10 Aug 2026 10:14:51 -0400
+Name: Gemvault spams warnings on bundle install
+Description: /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:31: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::GEM
++ /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:32: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::SHIM
++ /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:33: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::VAULT_SOURCE
 Status: open
