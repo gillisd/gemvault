@@ -2,7 +2,9 @@ require "gemvault/gem_reference"
 require "gemvault/gem_entry"
 
 RSpec.describe "Gemvault::GemReference matching" do
-  def specific(name, version) = Gemvault::GemReference::SpecificVersion.new(name: name, version: Gem::Version.new(version))
+  def specific(name, version)
+    Gemvault::GemReference::SpecificVersion.new(name: name, version: Gem::Version.new(version))
+  end
 
   def any(name) = Gemvault::GemReference::AnyVersion.new(name: name)
 
