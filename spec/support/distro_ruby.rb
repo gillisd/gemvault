@@ -35,6 +35,20 @@ module DistroRuby
     SH
   end
 
+  # The wreckage of an interrupted uninstall or a hand-cleaned gem home: the
+  # plugin gem's directory is gone but its specification survived, so RubyGems
+  # still lists the gem as installed. Bundler's plugin installer trusts that
+  # record, validates the missing directory instead of the copy it just
+  # installed, and every `bundle install` dies with MalformattedPlugin
+  # (issue #23). Built from the tree's own shim so the ghost carries the same
+  # version the local gem index resolves.
+  def self.ghost_of_ambient_shim
+    <<~SH
+      gem install --local --no-document /work/src/shim/bundler-source-vault-*.gem >/dev/null
+      rm -rf "$(gem env gemdir)"/gems/bundler-source-vault-*
+    SH
+  end
+
   # Replaces the image's baked-in gemvault gems with ones freshly built from
   # the mounted source tree (requires TreeGems.build_preamble to have run).
   def self.current_tree_as_system_gems

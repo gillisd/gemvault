@@ -1027,4 +1027,43 @@ Description: ❯
 + Resolving dependencies...
 + Installing bundler-source-vault 0.2.4
 + Failed to install plugin `bundler-source-vault`, due to Bundler::Plugin::MalformattedPlugin (plugins.rb was not found in the plugin.)
-Status: open
++ 
++ RESOLUTION: the machine, not the gem. bundler-source-vault-0.2.4 as published
++ contains plugins.rb (verified against rubygems.org; identical to 0.2.2 but for
++ versions). The trigger is a ghost installation in an ambient gem root:
++ specifications/bundler-source-vault-0.2.4.gemspec still present after
++ gems/bundler-source-vault-0.2.4/ was removed (interrupted uninstall or
++ hand-cleaned gem home). Bundler's Gemfile-driven plugin install then walks
++ into an upstream bug: resolution materializes the plugin as the installed
++ stub; rubygems.org's compact index carries created_at, and the cooldown
++ backfill (Source::Rubygems#backfill_created_at) attaches the remote to that
++ stub; download() therefore swaps the freshly fetched package spec into the
++ stub, and the installed? check inside install() memoizes that spec's
++ full_gem_path while its loaded_from is still nil -- the Gem.dir fallback,
++ i.e. the ghost's ambient path. Gem::Installer then extracts the gem
++ correctly into .bundle/plugin, but the poisoned memo survives, install()
++ copies it back onto the stub, and validate_plugin! checks plugins.rb against
++ the dead ambient directory instead of the copy it just installed. Hence the
++ report's shape -- "Installing bundler-source-vault 0.2.4" every run, then
++ MalformattedPlugin -- and hence its permanence: rm -rf .bundle, deleting the
++ lockfile and gemvault doctor all rebuilt project state while the wreck sat
++ in the ambient gem home. Present in bundler 4.0.17, 4.0.18 and master;
++ worth filing at rubygems/rubygems.
++ 
++ gemvault doctor now repairs the wreck: Gemvault::GhostSpecification finds
++ specifications whose gem directory is gone across Gem.path for the two gems
++ this project ships, and doctor removes them (reporting each) before its
++ existing uninstall-and-reinstall; a removal it cannot perform is one line on
++ stderr and exit 1. Replicated first by spec/integration/ghost_plugin_spec.rb
++ (real container, real ghost, real exit code): bundle install fails with
++ exactly the reported message, and the doctor context recovers to a complete
++ bundle. Unit cover in spec/gemvault/ghost_specification_spec.rb and
++ spec/gemvault/cli/commands/doctor_spec.rb.
++ 
++ The integration suite could not have caught this: GemIndex served only the
++ legacy marshal index, and only a compact index that carries created_at sends
++ Bundler down the stub-with-remote path. GemIndex now serves the compact
++ index too (versions and info/NAME with checksum and created_at, rendered by
++ GemIndexFiles), matching what rubygems.org sends, with the marshal files
++ kept for `gem install --source`.
+Status: closed
