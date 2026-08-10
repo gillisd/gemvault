@@ -19,6 +19,6 @@ RSpec.describe "sqlite3 as an optional dependency" do
     legacy_dbvault
     allow(Gemvault::Vault).to receive(:require_relative).with("dbvault")
                                                         .and_raise(LoadError.new("cannot load such file -- sqlite3"))
-    expect { Gemvault::Vault.open(vault_path) { |v| v } }.to raise_error(Gemvault::Vault::Error, /sqlite3/)
+    expect { open_vault { |v| v } }.to raise_error(Gemvault::Vault::Error, /sqlite3/)
   end
 end

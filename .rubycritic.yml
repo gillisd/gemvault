@@ -7,9 +7,15 @@ no_browser: true # default is false
 formats: # Available values are: html, json, console, lint. Default value is html.
   - console
   - json
-minimum_score: 95 # default is 0
+minimum_score: 90 # was 95; 90 permitted by David
+# spec/ example files are deliberately not scored: flog charges a fixed
+# multiplier per block level, so idiomatic RSpec describe/context nesting reads
+# as complexity. Spec style is rubocop-rspec's job. spec/support/ stays in --
+# the container harness (ContainerImage, Shell, Podman, GemIndex, ...) is plain
+# Ruby that deserves the same gate as lib/. Minitest files likewise. The spec/
+# exclusion and the 90 gate below were permitted by David.
 paths: # Files to analyse. Churn calculation is scoped to these files when using Git SCM.
   - "lib/"
-  - "spec/"
+  - "spec/support/"
   - "test/"
   - "shim/"

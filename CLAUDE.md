@@ -105,15 +105,19 @@ bundle exec rake spec:build      # rebuild the container image
 bundle exec rake spec:teardown   # remove it
 ```
 
-- `test/vault_test.rb` — unit tests for Vault class
-- `test/vault_source_test.rb` — unit tests for Bundler source plugin
-- `test/cli_test.rb` — CLI tests
-- `test/rubygems_plugin_test.rb` — source, resolver, monkey-patches, gem install integration, file:// URI, verbose logging
+- `test/vault_{lifecycle,mutation,entries,content}_test.rb` — unit tests for the Vault facade
+- `test/vault_source_*_test.rb` — unit tests for the Bundler source plugin (metadata, gemspecs, modes, install)
+- `test/cli_*_test.rb` — in-process CLI tests (new, add, list, remove, extract, and top-level dispatch; upgrade and doctor are covered by RSpec under `spec/gemvault/cli`)
+- `test/rubygems_*_test.rb` — RubyGems source, resolver set, monkey-patches, URI handling
 - `spec/integration/` — end-to-end specs, each run inside a podman container
 - `spec/support/` — script fragments the integration specs assemble into those containers
 
 Integration specs serve the tree's own gems from a local gem index (`GemIndex`)
 to avoid rubygems.org resolution during testing.
+
+Rubycritic scores `lib/`, `test/` and `shim/` but not `spec/`: flog taxes each
+block-nesting level, so idiomatic describe/context nesting reads as complexity.
+rubocop-rspec owns spec style.
 
 ### Container fidelity — do not undo these
 
