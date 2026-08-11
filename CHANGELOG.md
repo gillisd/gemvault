@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is shared with the RubyGems source via `Gemvault::VaultPath` (issue #9).
 
 ### Fixed
+- `gemvault doctor` now repairs ghost installations: a
+  `specifications/<gem>-<version>.gemspec` left behind after its gem directory
+  was removed (interrupted uninstall, hand-cleaned gem home), even when the
+  record itself is truncated or unreadable. Such a ghost of
+  `bundler-source-vault` makes every `bundle install` fail with
+  `Bundler::Plugin::MalformattedPlugin (plugins.rb was not found in the
+  plugin.)` — Bundler reinstalls the gem correctly but validates the ghost's
+  dead path — and nothing project-local can recover, because the wreck lives
+  in the ambient gem home (issue #23).
 - `bundle plugin install bundler-source-vault` no longer dies with
   `LoadError: cannot load such file -- bundler/plugin/vault_source`. The shim's
   `plugins.rb` now derives the gem root from its own installed location (local
