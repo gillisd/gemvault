@@ -90,7 +90,7 @@ module Gemvault
 
         @manifest = Manifest.parse(read_manifest_json)
         Vault.assert_readable!(version: @manifest.format_version, path: @path)
-      rescue JSON::ParserError, Gem::Package::TarInvalidError, ArgumentError, Errno::EINVAL
+      rescue Json::ParseError, Gem::Package::TarInvalidError, ArgumentError, Errno::EINVAL
         raise Vault::Error, "Not a valid Tarvault: #{@path}"
       end
     end

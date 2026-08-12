@@ -21,6 +21,15 @@ RSpec.describe "Gemvault::Tarvault reading" do
     end
   end
 
+  describe "a vault whose manifest is not JSON" do
+    it "raises Vault::Error naming the vault, not the parser's failure" do
+      Gemvault::Tarball.new(vault_path).write(
+        [Gemvault::ArchiveEntry.new(name: "manifest.json", bytes: "{not json")],
+      )
+      expect { reopen_tarvault { |v| v } }.to raise_error(Gemvault::Vault::Error, /Not a valid Tarvault/)
+    end
+  end
+
   describe "#gem_entries / #specs" do
     it "lists entries as GemEntry objects" do
       tarvault_with(foo_gem)
