@@ -56,6 +56,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   resolving a newer bundler-source-vault while the plugin index still names
   the old one. The first copy wins, matching the guard plugins.rb already
   applies to the vault source class (issue #26).
+- gemvault no longer loads the json gem at all. `Gemvault::Json` reads and
+  writes the manifest itself (byte-identical to `JSON.pretty_generate`), so
+  on rubies that resolve `require "json"` through gem activation, gemvault
+  can never be the component that activates a json newer than the project's
+  lockfile and detonates `bundle exec` with `You have already activated
+  json …` (issue #25).
 - `bundle plugin install bundler-source-vault` no longer dies with
   `LoadError: cannot load such file -- bundler/plugin/vault_source`. The shim's
   `plugins.rb` now derives the gem root from its own installed location (local

@@ -1163,7 +1163,26 @@ Description: Project with Gemfile + locked json version + gemvault throws "bundl
 + /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.18/lib/bundler/runtime.rb:328:in 'Bundler::Runtime#check_for_activated_spec!': You have already activated json 2.21.2, but your Gemfile requires json 2.19.7. Prepending `bundle exec` to your command may solve this. (Gem::LoadError)"
 + 
 + I believe this error to be coming from gemvault's dependency on JSON. It is clear that dependencies are cursed in this project, whether its the added load time for reinstalling them on every `bundle install`, or errors like this one. Rather than rely on JSON, I think it would be better to just marshal our own manifest, or use some other serialization tool if any that rubygems already provides.
-Status: open
++
++ RESOLUTION: gemvault no longer loads the json gem, ever. Gemvault::Json
++ reads and writes the manifest itself, byte-identical to JSON.pretty_generate
++ so existing vaults are indistinguishable, keeping manifest.json readable
++ rather than switching to Marshal. Whether gemvault's `require "json"` was
++ the activator on the reported machine cannot be settled from here: bundler
++ flows load json themselves before gemvault's require runs on the Fedora
++ reproduction stack (where require resolves json from the stdlib path with
++ no activation at all), and any component's early require conflicts with a
++ lock older than the machine's newest json. What is certain is that on
++ rbenv-style stacks require-does-activate, gemvault held a live require in
++ its vault-read path, and it can no longer be the component that detonates
++ check_for_activated_spec!. Pinned by spec/gemvault/json_optional_spec.rb
++ (a vault round-trip leaves JSON undefined -- red against the old code),
++ codec cover in json_parse_spec.rb and json_pretty_generate_spec.rb, and
++ spec/integration/json_activation_spec.rb driving the full flow on a machine
++ whose newest json gem is an unusable stand-in. The stale-lock machine state
++ itself is repaired by aligning lockfile and installed json -- outside
++ gemvault's reach.
+Status: closed
 
 Id: 27
 Updated: Wed, 12 Aug 2026 16:05:55 +0000

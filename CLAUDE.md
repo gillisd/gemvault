@@ -165,6 +165,6 @@ container.
 
 - `bundler` — NOT a dependency; the plugin always runs inside an existing Bundler process, and declaring it breaks gem activation under `bundle exec`'s restricted GEM_PATH
 - `command_kit` (~> 0.6) — runtime (CLI)
-- `json` — NOT a dependency, though it backs the tarball vault's manifest. A default gem upstream; distros that unbundle it (Fedora's `rubygem-json`) still install it alongside ruby itself, and it stays requireable even under `bundle exec`'s restricted view. Declaring it would compile a native extension on every `gem install gemvault` for no gain.
+- `json` — NOT a dependency and never loaded at runtime. `Gemvault::Json` reads and writes the manifest itself: on rubies that resolve `require "json"` through gem activation, a require inside a Bundler-managed process activates the newest installed copy, and a project locking an older one dies in `check_for_activated_spec!` (issue #25). Specs use the real gem to cross-check the codec's output; that is the only place it may be required.
 - `sqlite3` (~> 2.0) — NOT a runtime dependency; loaded lazily only to read a legacy SQLite (Dbvault) vault. Declared in the Gemfile for development/test.
 - `minitest`, `rspec`, `rake` — development

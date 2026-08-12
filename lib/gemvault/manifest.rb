@@ -1,6 +1,6 @@
-require "json"
 require "digest"
 require_relative "gem_entry"
+require_relative "json"
 
 module Gemvault
   # The manifest.json stored as the first entry of a Tarvault. Records each
@@ -36,7 +36,7 @@ module Gemvault
     def self.empty(created_at:) = new(created_at:, records: [])
 
     def self.parse(json)
-      data = JSON.parse(json, symbolize_names: true)
+      data = Json.parse(json)
       records = data.fetch(:gems, []).map { |gem| StoredGem.from_h(gem) }
       format_version = (data[:vault_version] || FORMAT_VERSION).to_i
       new(created_at: data[:created_at], records:, format_version:)
@@ -73,6 +73,6 @@ module Gemvault
       }
     end
 
-    def to_json(*_args) = JSON.pretty_generate(to_h)
+    def to_json(*_args) = Json.pretty_generate(to_h)
   end
 end
