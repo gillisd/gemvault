@@ -7,8 +7,21 @@ RSpec.describe "Gemvault::Tarvault#add" do
 
   it "preserves a supplied created_at" do
     create_tarvault do |v|
+      v.add(foo_gem, created_at: "2000-01-01T00:00:00Z")
+      expect(v.gem_entries.first.created_at).to eq("2000-01-01T00:00:00Z")
+    end
+  end
+
+  it "stores a legacy vault's created_at in the vault's own notation" do
+    create_tarvault do |v|
       v.add(foo_gem, created_at: "2000-01-01 00:00:00")
-      expect(v.gem_entries.first.created_at).to eq("2000-01-01 00:00:00")
+      expect(v.gem_entries.first.created_at).to eq("2000-01-01T00:00:00Z")
+    end
+  end
+
+  it "refuses a created_at no vault could store" do
+    create_tarvault do |v|
+      expect { v.add(foo_gem, created_at: "whenever") }.to raise_error(Gemvault::Timestamp::Error)
     end
   end
 

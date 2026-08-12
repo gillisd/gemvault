@@ -1163,7 +1163,41 @@ Description: Project with Gemfile + locked json version + gemvault throws "bundl
 + /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.18/lib/bundler/runtime.rb:328:in 'Bundler::Runtime#check_for_activated_spec!': You have already activated json 2.21.2, but your Gemfile requires json 2.19.7. Prepending `bundle exec` to your command may solve this. (Gem::LoadError)"
 + 
 + I believe this error to be coming from gemvault's dependency on JSON. It is clear that dependencies are cursed in this project, whether its the added load time for reinstalling them on every `bundle install`, or errors like this one. Rather than rely on JSON, I think it would be better to just marshal our own manifest, or use some other serialization tool if any that rubygems already provides.
-Status: open
++
++ RESOLUTION: gemvault no longer loads json, and the manifest is no longer a
++ JSON document. Whether gemvault's require was the activator on the reported
++ machine cannot be settled from here -- on the Fedora reproduction stack
++ require resolves json from the stdlib path with no activation at all, and
++ bundler loads json itself before the vault source runs -- but on rbenv-style
++ stacks require does activate, gemvault held a live require in its
++ vault-read path, and it can no longer be the component that detonates
++ check_for_activated_spec!.
++
++ Marshal was considered as the reporter suggested and rejected: a .gemv is a
++ file that arrives from elsewhere, the manifest is the root of trust (the
++ SHA256 digests live inside it, so nothing verifies it first), and
++ Marshal.load runs attacker-chosen code during load itself -- demonstrated
++ here, a hash key's #hash fires inside load before the caller touches the
++ result. `gemvault list` on an untrusted vault would become arbitrary code
++ execution, and Marshal's versioned wire format would break the portability
++ a .gemv exists for.
++
++ What replaced JSON is neither: the manifest was never document-shaped. It is
++ a table -- a header plus fixed-arity records of scalars, no nesting, no free
++ text -- and every field is drawn from an alphabet without whitespace once
++ times are canonicalized (Gemvault::Timestamp; rubygems itself validates gem
++ names against /\A[a-zA-Z0-9._-]+\z/). Gemvault::ManifestText writes and
++ reads it as lines. There is no recursion to exhaust the stack, no escape
++ grammar, no backtracking, and no library to load -- the same reasoning that
++ keeps BundlerPluginIndex from requiring yaml. Reading validates every field
++ and rejects everything else, because the file comes from elsewhere; writing
++ trusts the value objects this library constructed. Precedent is rubygems'
++ own compact index and Gemfile.lock, both line-oriented text.
++
++ Format version 3; vaults are inspectable with `tar -xOf v.gemv manifest`.
++ A format-2 (manifest.json) vault is detected by entry name and refused with
++ a message naming the cause, without parsing its notation.
+Status: closed
 
 Id: 27
 Updated: Wed, 12 Aug 2026 16:05:55 +0000

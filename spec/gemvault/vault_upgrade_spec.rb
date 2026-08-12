@@ -13,7 +13,7 @@ RSpec.describe Gemvault::VaultUpgrade do
 
     it "renders the format change and gem count" do
       legacy_dbvault
-      expect(upgrade.plan.to_s).to eq("format 1 -> 2 (2 gems)")
+      expect(upgrade.plan.to_s).to eq("format 1 -> 3 (2 gems)")
     end
 
     it "is a no-op for an already-current vault" do

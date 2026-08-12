@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Tarball vault format ("Tarvault"): new vaults are portable tarballs with a
-  `manifest.json` index and per-gem SHA256 integrity, with no sqlite3 dependency
-  on the read/write path (works on JRuby). The original SQLite format
-  ("Dbvault") is still read transparently.
+  plain-text `manifest` index and per-gem SHA256 integrity, with no sqlite3
+  dependency on the read/write path (works on JRuby). The original SQLite
+  format ("Dbvault") is still read transparently.
 - Vaults carry an explicit on-disk **format version**, decoupled from the gem
   version and validated on open; gemvault refuses a vault written by a newer
   gemvault instead of misreading it.
@@ -101,6 +101,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gemvault through `require_relative` alone (issue #13).
 
 ### Changed
+- The manifest is now line-oriented text rather than JSON (vault format 3).
+  It was never document-shaped: a header plus one whitespace-separated line
+  per gem — name, version, platform, stored-at, SHA256, encrypted — with no
+  nesting and no free text, so `tar -xOf myvault.gemv manifest` gives you
+  something `grep` and `awk` read directly. Because every field comes from an
+  alphabet without whitespace, reading needs no parser beyond `split` plus
+  per-field validation: no recursion to exhaust the stack, no escape grammar,
+  and no library to load — which is what stops gemvault from ever activating
+  a json gem a project had locked (issue #25). Times are stored as
+  `2026-08-12T18:23:32Z`; a legacy vault's `2026-08-12 18:23:32` is converted
+  on upgrade. A format-2 vault (`manifest.json`) is refused with a message
+  naming the cause rather than a parse error.
 - `sqlite3` is no longer a runtime dependency. Gemvault runs dependency-free on
   the tarball path (including JRuby); `sqlite3` is loaded lazily only to read a
   legacy SQLite vault, with a clear error if it is not installed.
@@ -112,10 +124,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `spec:integration` rake task exists alongside a non-integration `spec:core`, the
   unit job no longer needs podman, and the integration job installs podman
   when the runner image lacks it.
-- Reading a vault's `manifest.json` is now strict: an entry missing any required
-  field (`name`, `version`, `platform`, `created_at`, `sha256`, `encrypted`)
-  raises instead of silently loading `nil` fields, so a truncated or hand-edited
-  manifest fails fast rather than yielding a subtly broken vault.
+- Reading a vault's manifest is now strict: every field is validated against
+  its own alphabet, so a truncated or hand-edited manifest fails fast rather
+  than yielding a subtly broken vault.
 
 ### Deprecated
 - The SQLite vault format is deprecated and now **read-only**: existing SQLite

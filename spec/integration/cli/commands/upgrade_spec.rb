@@ -1,6 +1,6 @@
 RSpec.describe "gemvault upgrade", :integration do
   it "converts a Dbvault into a Tarvault" do
-    expect(run_upgrade(followup: "tar -tf $V")).to succeed_showing("Upgraded", "manifest.json", "foo-1.0.0.gem")
+    expect(run_upgrade(followup: "tar -tf $V")).to succeed_showing("Upgraded", "manifest", "foo-1.0.0.gem")
   end
 
   it "preserves all gems" do

@@ -1,9 +1,9 @@
 require "gemvault/tarvault"
 
 RSpec.describe "Gemvault::Tarvault lifecycle", :aggregate_failures do
-  it "creates an empty vault whose manifest.json is the first tar entry" do
+  it "creates an empty vault whose manifest is the first tar entry" do
     create_tarvault { |v| expect(v.size).to eq(0) }
-    expect(first_tar_entry_name(vault_path)).to eq("manifest.json")
+    expect(first_tar_entry_name(vault_path)).to eq("manifest")
   end
 
   it "raises Vault::Error when creating over an existing file" do

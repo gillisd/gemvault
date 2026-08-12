@@ -1,14 +1,13 @@
 require "gemvault"
 require "gemvault/tarvault"
 require "sqlite3"
-require "json"
 
 RSpec.describe "vault format versioning" do
   let(:declared_format_version) { open_vault(&:format_version) }
 
-  it "reports format_version 2 for a Tarvault" do
+  it "reports format_version 3 for a Tarvault" do
     current_tarvault
-    expect(declared_format_version).to eq(2)
+    expect(declared_format_version).to eq(3)
   end
 
   it "reports format_version 1 for a Dbvault" do
@@ -35,10 +34,9 @@ RSpec.describe "vault format versioning" do
 
   def bump_tarvault_version(path:, version:)
     archive = Gemvault::Tarball.new(path)
-    manifest = JSON.parse(archive.read("manifest.json"))
-    manifest["vault_version"] = version
-    gems = archive.entries.reject { |entry| entry.name == "manifest.json" }
-    manifest_entry = Gemvault::ArchiveEntry.new(name: "manifest.json", bytes: JSON.generate(manifest))
-    archive.write([manifest_entry] + gems)
+    name = Gemvault::ManifestText::FILENAME
+    bumped = archive.read(name).sub(/\Agemvault \d+/, "gemvault #{version}")
+    gems = archive.entries.reject { |entry| entry.name == name }
+    archive.write([Gemvault::ArchiveEntry.new(name:, bytes: bumped)] + gems)
   end
 end

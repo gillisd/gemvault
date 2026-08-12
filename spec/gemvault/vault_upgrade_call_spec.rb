@@ -21,9 +21,9 @@ RSpec.describe Gemvault::VaultUpgrade, "#call" do
       expect(names).to contain_exactly("foo", "bar")
     end
 
-    it "preserves each gem's created_at" do
+    it "preserves each gem's created_at, in the new format's notation" do
       after = open_vault { |v| v.gem_entries.first.created_at }
-      expect(after).to eq("2000-01-01 00:00:00")
+      expect(after).to eq("2000-01-01T00:00:00Z")
     end
 
     it "writes a .bak backup by default" do

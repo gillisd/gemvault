@@ -27,7 +27,7 @@ Do NOT modify `.rubocop.yml` or use inline `# rubocop:disable` tags without expl
 
 ## Project Overview
 
-Multi-gem portable archives. A single `.gemv` file is a tarball holding multiple `.gem` files plus a `manifest.json` index; legacy SQLite vaults are read-only.
+Multi-gem portable archives. A single `.gemv` file is a tarball holding multiple `.gem` files plus a line-oriented `manifest` index; legacy SQLite vaults are read-only.
 
 Two gems, one repo:
 
@@ -59,6 +59,8 @@ gem install --source file:///path/to/myvault.gemv foo
 
 - `gemvault.gemspec` — main gem spec (name: `gemvault`)
 - `lib/gemvault/vault.rb` — Vault facade choosing a backend by file format (Tarvault current, legacy Dbvault read-only)
+- `lib/gemvault/manifest_text.rb` — the manifest's on-disk notation: a header plus one whitespace-separated line per gem, validated field by field on read
+- `lib/gemvault/timestamp.rb` — the space-free notation a vault records times in, and conversion of a legacy vault's
 - `lib/gemvault/cli.rb` — CLI dispatcher (new/add/list/remove/extract)
 - `lib/gemvault/ghost_specification.rb` — installation records whose gem directory is gone; swept by `gemvault doctor` (issue #23)
 - `lib/bundler/plugin/vault_source.rb` — Bundler `Plugin::API::Source` implementation
@@ -165,6 +167,6 @@ container.
 
 - `bundler` — NOT a dependency; the plugin always runs inside an existing Bundler process, and declaring it breaks gem activation under `bundle exec`'s restricted GEM_PATH
 - `command_kit` (~> 0.6) — runtime (CLI)
-- `json` — NOT a dependency, though it backs the tarball vault's manifest. A default gem upstream; distros that unbundle it (Fedora's `rubygem-json`) still install it alongside ruby itself, and it stays requireable even under `bundle exec`'s restricted view. Declaring it would compile a native extension on every `gem install gemvault` for no gain.
+- `json` — NOT a dependency and never loaded at runtime. The manifest is a table, not a document, so `Gemvault::ManifestText` reads and writes it directly; nothing in `lib/` may `require "json"`. On rubies where require resolves through gem activation, a require inside a Bundler process activates the newest installed json and a project locking an older one dies in `check_for_activated_spec!` (issue #25).
 - `sqlite3` (~> 2.0) — NOT a runtime dependency; loaded lazily only to read a legacy SQLite (Dbvault) vault. Declared in the Gemfile for development/test.
 - `minitest`, `rspec`, `rake` — development

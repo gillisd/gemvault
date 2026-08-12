@@ -64,7 +64,17 @@ gemvault upgrade myvault.gemv --no-backup  # skip the default myvault.gemv.bak c
 
 ## How It Works
 
-The gemv file is a tarball containing your .gem files and a json manifest. It has no dependencies other than the tar utilities that rubygems provides.
+The gemv file is a tarball containing your .gem files and a plain-text manifest. It has no dependencies other than the tar utilities that rubygems provides.
+
+```console
+$ tar -xOf myvault.gemv manifest
+gemvault 3
+created 2026-08-12T18:23:32Z
+
+rails 7.1.3 ruby 2026-08-12T18:23:32Z 9f2c...  0
+```
+
+One header, then one line per gem: name, version, platform, when it was stored, its SHA256, and whether it is encrypted. Every field is drawn from an alphabet without whitespace, so reading the index needs no parser beyond `split` — and `grep`, `awk` and `cut` work on it directly.
 
 When Bundler sees `type: :vault` in your Gemfile, it auto-installs the `bundler-source-vault` plugin from rubygems.org. The plugin implements the `Bundler::Plugin::API::Source` interface — it reads gemspecs from the vault, participates in dependency resolution, then extracts and installs gems from the vault's blob storage.
 

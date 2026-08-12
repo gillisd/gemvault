@@ -7,12 +7,12 @@ RSpec.describe Gemvault::Tarball do
     it "round-trips a named entry's exact bytes" do
       archive.write(entries)
       expect(archive.read("foo-1.0.0.gem")).to eq(blob)
-      expect(archive.read("manifest.json")).to eq("{}")
+      expect(archive.read("manifest")).to eq("x")
     end
 
-    it "writes entries in the given order with manifest.json first" do
+    it "writes entries in the given order with the manifest first" do
       archive.write(entries)
-      expect(first_tar_entry_name(path)).to eq("manifest.json")
+      expect(first_tar_entry_name(path)).to eq("manifest")
     end
   end
 

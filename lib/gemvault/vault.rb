@@ -22,7 +22,7 @@ module Gemvault
     TAR_MAGIC = "ustar".freeze
     TAR_MAGIC_OFFSET = 257
 
-    CURRENT_FORMAT = 2
+    CURRENT_FORMAT = 3
     MIN_READABLE_FORMAT = 1
 
     def_delegators :@backend,
