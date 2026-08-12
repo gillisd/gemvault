@@ -54,6 +54,21 @@ RSpec.describe Gemvault::LegacyTarvault do
     end
   end
 
+  describe "a stored member that is not a readable gem" do
+    subject(:vault) { described_class.new(vault_path) }
+
+    before do
+      Gemvault::Tarball.new(vault_path).write(
+        [Gemvault::ArchiveEntry.new(name: "manifest.json", bytes: "{}"),
+         Gemvault::ArchiveEntry.new(name: "foo-1.0.0.gem", bytes: "not a gem")],
+      )
+    end
+
+    it "raises Vault::Error naming the vault rather than a tar library's error" do
+      expect { vault.gem_entries }.to raise_error(Gemvault::Vault::Error, /Not a valid Tarvault/)
+    end
+  end
+
   describe "writing" do
     it "refuses add, pointing at upgrade" do
       expect { vault.add("x.gem") }.to raise_error(Gemvault::Vault::ReadOnlyError, /upgrade/)

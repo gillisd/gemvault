@@ -94,11 +94,19 @@ module Gemvault
     # A tarball indexed the way vaults were through format 2. Asked by name
     # rather than by version, because the version is recorded in the very
     # index this gemvault no longer reads.
+    #
+    # An archive too damaged to enumerate answers no rather than raising here.
+    # This runs ahead of every backend, so a wreck raised from it would escape
+    # the rescue Tarvault opens with and reach the user as a tar library's
+    # backtrace; declining instead leaves that path to report it as the
+    # Vault::Error it has always been.
     def self.legacy_tarvault?(path)
       require_relative "manifest_text"
       require_relative "tarball"
       names = Tarball.new(path).names
       !names.include?(ManifestText::FILENAME) && names.include?(ManifestText::LEGACY_FILENAME)
+    rescue Gem::Package::Error, ArgumentError, Errno::EINVAL
+      false
     end
 
     def initialize(path, create: false)

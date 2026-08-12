@@ -42,6 +42,20 @@ RSpec.describe "vault format versioning" do
     expect { open_vault { |v| v } }.to raise_error(Gemvault::Vault::Error, /Unrecognized/)
   end
 
+  it "refuses a tar whose later entry headers are corrupt" do
+    current_tarvault
+    corrupt_second_entry_header(vault_path)
+    expect { open_vault { |v| v } }.to raise_error(Gemvault::Vault::Error, /Not a valid Tarvault/)
+  end
+
+  def corrupt_second_entry_header(path)
+    bytes = File.binread(path)
+    header = bytes.byteslice(0, 512).sub(/\0+\z/, "").bytesize
+    offset = 512 + (((header / 512) + 1) * 512)
+    bytes[offset + 148, 8] = "XXXXXXXX"
+    File.binwrite(path, bytes)
+  end
+
   def bump_tarvault_version(path:, version:)
     archive = Gemvault::Tarball.new(path)
     name = Gemvault::ManifestText::FILENAME

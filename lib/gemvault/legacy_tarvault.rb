@@ -57,7 +57,7 @@ module Gemvault
     end
 
     def gem_entries
-      @gem_entries ||= gem_members.map { |member| entry_for(member) }.sort_by { |gem| [gem.name, gem.version] }
+      @gem_entries ||= derived_entries
     end
 
     def format_version = FORMAT_VERSION
@@ -77,6 +77,15 @@ module Gemvault
 
       @opened_at = Timestamp.now
       Deprecation.warn_once(deprecation_message)
+    end
+
+    # Deriving the index means reading the archive and every gem in it, so it
+    # meets the same wreckage Tarvault's open path does and owes the user the
+    # same answer: the vault named, not a tar library's error.
+    def derived_entries
+      gem_members.map { |member| entry_for(member) }.sort_by { |gem| [gem.name, gem.version] }
+    rescue Gem::Package::Error, ArgumentError, Errno::EINVAL
+      raise Vault::Error, "Not a valid Tarvault: #{@path}"
     end
 
     def gem_members
