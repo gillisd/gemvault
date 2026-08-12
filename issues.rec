@@ -1087,3 +1087,12 @@ Updated: Mon, 10 Aug 2026 23:16:35 +0000
 Name: doctor prints a backtrace when the plugin uninstall step fails
 Description: gemvault doctor's `bundle plugin uninstall` step runs with exception: true; a nonzero exit raises RuntimeError and a missing bundle raises Errno::ENOENT, and both escape Command#run to command_kit's ExceptionHandler, which prints error.full_message -- a full backtrace -- violating the one-line-and-exit-1 convention issue #15 established. Adjacent to issue #14 (doctor failing under bundler/inline). The ghost-specification sweep added for issue #23 reports its own failures as one line; the uninstall step should match.
 Status: open
+
+Id: 25
+Updated: Tue, 11 Aug 2026 20:05:27 -0400
+Name: Project with Gemfile + locked json version + gemvault throws error
+Description: Project with Gemfile + locked json version + gemvault throws "bundler: failed to load command: rails (/private/tmp/local/flipmine/flipmine/vendor/ruby/4.0.0/bin/rails)
++ /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.18/lib/bundler/runtime.rb:328:in 'Bundler::Runtime#check_for_activated_spec!': You have already activated json 2.21.2, but your Gemfile requires json 2.19.7. Prepending `bundle exec` to your command may solve this. (Gem::LoadError)"
++ 
++ I believe this error to be coming from gemvault's dependency on JSON. It is clear that dependencies are cursed in this project, whether its the added load time for reinstalling them on every `bundle install`, or errors like this one. Rather than rely on JSON, I think it would be better to just marshal our own manifest, or use some other serialization tool if any that rubygems already provides.
+Status: open
