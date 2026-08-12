@@ -818,7 +818,11 @@ Id: 16
 Updated: Wed, 29 Jul 2026 18:25:48 -0400
 Name: Add jruby-ci workflow
 Description: It should be already set up on the jruby-support branch. It just needs to be picked from it. DO NOT use the other code in that - it is very outdated
-Status: open
++
++ RESOLUTION: shipped in commit 635ba41 ("ci: add JRuby test job") -- the jruby
++ job in .github/workflows/ci.yml runs the minitest suite on jruby-10.1.0.0 and
++ is green on CI.
+Status: closed
 
 Id: 17
 Updated: Thu, 30 Jul 2026 00:07:42 +0000
@@ -1007,7 +1011,15 @@ Description: [dev@rstore]/workspace% bundle install
 + 	from /usr/local/bin/bundle:25:in '<main>'
 + 
 + Though I will add that gemvault doctor followed by bundle install fixed the issue
-Status: open
++
++ RESOLUTION: the broken-plugin-path wreck, recovered exactly as reported --
++ gemvault doctor then bundle install. The plugin index entry pointed into a
++ reinstalled rbenv ruby's gem home; bundler does not revalidate stored plugin
++ paths, skips loading the plugin, and crashes in SourceList#add_plugin_source,
++ upstream behavior README documents under "A broken plugin path". doctor is
++ the repair. Hinting at doctor from the failure site was considered and
++ declined: the crash happens in bundler frames before any gemvault code loads.
+Status: closed
 
 Id: 21
 Updated: Fri, 31 Jul 2026 13:54:09 -0400
@@ -1046,6 +1058,9 @@ Description: bundler-cache: true on the ruby/setup-ruby action will not work cor
 +         run: | # confine gems to vendor/bundle so the cache never shadows vendor/vendored.gemv
 +           bundle config set --local path vendor/bundle
 +           bundle install --jobs 4 --retry 3
+Status: open
+
+Id: 26
 Updated: Mon, 10 Aug 2026 10:14:51 -0400
 Name: Gemvault spams warnings on bundle install
 Description: /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:31: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::GEM
