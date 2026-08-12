@@ -71,8 +71,11 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
       end
     end
 
-    context "when there is no Gemfile to reinstall from" do
+    context "when there is no Gemfile but the project owns a plugin root" do
       let(:gemfile) { instance_double(Gemvault::BundlerGemfile, exist?: false) }
+      let(:plugin_root) do
+        instance_double(Gemvault::BundlerPluginRoot, unreachable?: true, local: Pathname(".bundle/plugin"))
+      end
 
       before { allow(command).to receive(:puts) }
 
@@ -98,6 +101,36 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
         command.run
 
         expect(command).to have_received(:puts).with(/inline gemfile/)
+      end
+    end
+
+    context "when there is neither a Gemfile nor a project plugin root" do
+      let(:gemfile) { instance_double(Gemvault::BundlerGemfile, exist?: false) }
+
+      before { allow(command).to receive(:puts) }
+
+      it "does not exec bundle install" do
+        command.run
+
+        expect(command).not_to have_received(:exec)
+      end
+
+      it "still uninstalls the plugin" do
+        command.run
+
+        expect(command).to have_received(:system)
+      end
+
+      it "does not claim to have cleared the project's index" do
+        command.run
+
+        expect(command).not_to have_received(:puts).with(/Cleared/)
+      end
+
+      it "points at the project directory to reinstall" do
+        command.run
+
+        expect(command).to have_received(:puts).with(/project directory/)
       end
     end
 

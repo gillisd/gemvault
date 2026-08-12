@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plugin.)` — Bundler reinstalls the gem correctly but validates the ghost's
   dead path — and nothing project-local can recover, because the wreck lives
   in the ambient gem home (issue #23).
+- `gemvault doctor` now works in a project whose Gemfile is inline
+  (`bundler/inline`). Such a script keeps its plugin index in
+  `<project>/.bundle/plugin`, a root bundler only consults mid-script, so
+  doctor's uninstall silently repaired nothing and the `bundle install` that
+  followed dumped bundler's entire usage screen. Doctor now reaches the
+  project's index the way `bundler/inline` does and, with no Gemfile to
+  reinstall from, says so and exits 0 — the inline gemfile reinstalls the
+  plugin the next time the script runs (issue #14). Run outside any project,
+  doctor no longer claims to have cleared a project index it never touched.
 - `bundle plugin install bundler-source-vault` no longer dies with
   `LoadError: cannot load such file -- bundler/plugin/vault_source`. The shim's
   `plugins.rb` now derives the gem root from its own installed location (local

@@ -15,7 +15,8 @@ module Gemvault
   # whatever it points at, existing or not -- bundler/inline relies on that,
   # setting it to a bare "Gemfile" purely to make Bundler treat the working
   # directory as the app root. The question here is whether +bundle install+
-  # could work, so a value that is not a file counts as no Gemfile.
+  # could work, so a value that does not name a file is ignored and the
+  # walk-up search decides instead.
   class BundlerGemfile
     # Checked in this order within each directory, as Bundler checks them.
     NAMES = ["gems.rb", "Gemfile"].freeze

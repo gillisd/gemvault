@@ -83,7 +83,16 @@ module Gemvault
         # repair has already happened; only the reinstall is unavailable.
         def reinstall_or_explain
           return exec("bundle", "install") if gemfile.exist?
+          return explain_inline_repair if plugin_root.unreachable?
 
+          puts "No Gemfile here to reinstall from -- re-run gemvault doctor from the"
+          puts "project directory to reinstall the plugin."
+        end
+
+        # The local path is named only when it was the uninstall's target;
+        # otherwise bundler worked against its global root, and naming this
+        # project's path would misreport what happened.
+        def explain_inline_repair
           puts "Cleared the #{PLUGIN} plugin index at #{plugin_root.local}."
           puts "No Gemfile here to reinstall from -- an inline gemfile installs the plugin"
           puts "again the next time the script runs."
