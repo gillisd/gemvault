@@ -750,7 +750,42 @@ Id: 14
 Updated: Wed, 29 Jul 2026 16:41:11 -0400
 Name: gemvault doctor fails when bundler/inline is used
 Description: Loudly fails with 2 errors, one of which is "can't find gemfile"
-Status: open
++
++ RESOLUTION: both errors reproduced in podman, and doctor turned out to be
++ broken twice over rather than once.
++
++ (1) "Plugin bundler-source-vault is not installed". bundler/inline sets
++ BUNDLE_GEMFILE to a bare "Gemfile" for the life of the script (bundler
++ inline.rb:53), so Bundler.root is the script's working directory and the plugin
++ index is written to <project>/.bundle/plugin. A later `gemvault doctor` sets no
++ such variable and finds no Gemfile on disk, so Bundler::Plugin.root --
++ local_root only when SharedHelpers.in_bundle?, global_root otherwise
++ (plugin.rb:162) -- falls back to ~/.bundle/plugin. The uninstall therefore
++ looked in the wrong root and repaired nothing, silently.
++
++ (2) "Could not locate Gemfile". doctor then exec'd `bundle install`, which with
++ no Gemfile prints its entire usage screen and exits 10 -- reading as gemvault
++ itself failing, after the repair it was asked for had already not happened.
++
++ doctor now runs the uninstall with BUNDLE_GEMFILE="Gemfile" when the project
++ owns a plugin root Bundler would ignore, which is bundler/inline's own trick and
++ needs no file to exist; verified against the real thing (plain uninstall says
++ "not installed", the same command with BUNDLE_GEMFILE set says "Uninstalled
++ plugin bundler-source-vault" and empties the index). When no Gemfile exists it
++ skips the reinstall and says so, exiting 0, because clearing the entry is the
++ repair and only the reinstall is unavailable -- an inline gemfile reinstalls the
++ plugin the next time the script runs.
++
++ Gemvault::BundlerGemfile mirrors SharedHelpers#find_gemfile and
++ Gemvault::BundlerPluginRoot mirrors Plugin.root, both reimplemented rather than
++ delegated because bundler is deliberately not a dependency and doctor runs
++ outside any Bundler process. Replicated first by
++ spec/integration/cli/commands/doctor_inline_spec.rb -- all 8 examples failed
++ against the old code -- with unit cover in spec/gemvault/bundler_gemfile_spec.rb,
++ spec/gemvault/bundler_plugin_root_spec.rb and the extended doctor_spec.rb. The
++ inline support now runs its script from the project directory, as a real user
++ does; that is what puts the plugin root where the report describes.
+Status: closed
 
 Id: 15
 Updated: Wed, 29 Jul 2026 17:39:23 -0400

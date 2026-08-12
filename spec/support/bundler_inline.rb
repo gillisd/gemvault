@@ -7,6 +7,18 @@ module BundlerInline
     podman_run(inline_script("gemfile"))
   end
 
+  # `gemvault doctor` in a project whose Gemfile is inline. bundler/inline sets
+  # BUNDLE_GEMFILE to a bare "Gemfile", so Bundler's plugin root is the
+  # directory the script ran from -- the reporter's project directory.
+  def run_doctor_after_inline(followup: "")
+    podman_run(<<~SH)
+      #{inline_script("gemfile(true)")}
+      cd $WORKDIR
+      gemvault doctor
+      #{followup}
+    SH
+  end
+
   def inline_script(gemfile_call)
     <<~SH
       #{GemIndex.serve_preamble}
@@ -25,7 +37,7 @@ module BundlerInline
       require "vault_test_gem"
       puts VaultTestGem::VERSION
       RUBY
-      ruby $WORKDIR/inline_test.rb
+      cd $WORKDIR && ruby $WORKDIR/inline_test.rb
     SH
   end
 end

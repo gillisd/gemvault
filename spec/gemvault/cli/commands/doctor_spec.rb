@@ -6,12 +6,18 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
     let(:stderr) { StringIO.new }
     let(:command) { described_class.new(stdout: stdout, stderr: stderr) }
     let(:uninstall) { ["bundle", "plugin", "uninstall", "bundler-source-vault"] }
+    let(:gemfile) { instance_double(Gemvault::BundlerGemfile, exist?: true) }
+    let(:plugin_root) do
+      instance_double(Gemvault::BundlerPluginRoot, unreachable?: false, local: Pathname(".bundle/plugin"))
+    end
 
     def ghost_double(path)
       instance_double(Gemvault::GhostSpecification, to_s: path)
     end
 
     before do
+      allow(Gemvault::BundlerGemfile).to receive(:new).and_return(gemfile)
+      allow(Gemvault::BundlerPluginRoot).to receive(:new).and_return(plugin_root)
       allow(Gemvault::GhostSpecification).to receive(:of).and_return([])
       allow(command).to receive(:system).and_return(true)
       allow(command).to receive(:exec)
@@ -20,7 +26,7 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
     it "uninstalls the bundler-source-vault plugin, raising on failure" do
       command.run
 
-      expect(command).to have_received(:system).with(*uninstall, exception: true)
+      expect(command).to have_received(:system).with({}, *uninstall, exception: true)
     end
 
     it "execs bundle install" do
@@ -49,6 +55,82 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
       it "does not exec bundle install", :aggregate_failures do
         expect { command.run }.to raise_error(RuntimeError)
         expect(command).not_to have_received(:exec)
+      end
+    end
+
+    context "when the plugin root is one bundler would ignore" do
+      let(:plugin_root) do
+        instance_double(Gemvault::BundlerPluginRoot, unreachable?: true, local: Pathname(".bundle/plugin"))
+      end
+
+      it "points bundler at the project as bundler/inline does" do
+        command.run
+
+        expect(command).to have_received(:system)
+          .with({ "BUNDLE_GEMFILE" => "Gemfile" }, *uninstall, exception: true)
+      end
+    end
+
+    context "when there is no Gemfile but the project owns a plugin root" do
+      let(:gemfile) { instance_double(Gemvault::BundlerGemfile, exist?: false) }
+      let(:plugin_root) do
+        instance_double(Gemvault::BundlerPluginRoot, unreachable?: true, local: Pathname(".bundle/plugin"))
+      end
+
+      before { allow(command).to receive(:puts) }
+
+      it "does not exec bundle install" do
+        command.run
+
+        expect(command).not_to have_received(:exec)
+      end
+
+      it "still uninstalls the plugin" do
+        command.run
+
+        expect(command).to have_received(:system)
+      end
+
+      it "reports the index it cleared" do
+        command.run
+
+        expect(command).to have_received(:puts).with(/plugin index/)
+      end
+
+      it "explains that an inline gemfile reinstalls it" do
+        command.run
+
+        expect(command).to have_received(:puts).with(/inline gemfile/)
+      end
+    end
+
+    context "when there is neither a Gemfile nor a project plugin root" do
+      let(:gemfile) { instance_double(Gemvault::BundlerGemfile, exist?: false) }
+
+      before { allow(command).to receive(:puts) }
+
+      it "does not exec bundle install" do
+        command.run
+
+        expect(command).not_to have_received(:exec)
+      end
+
+      it "still uninstalls the plugin" do
+        command.run
+
+        expect(command).to have_received(:system)
+      end
+
+      it "does not claim to have cleared the project's index" do
+        command.run
+
+        expect(command).not_to have_received(:puts).with(/Cleared/)
+      end
+
+      it "points at the project directory to reinstall" do
+        command.run
+
+        expect(command).to have_received(:puts).with(/project directory/)
       end
     end
 

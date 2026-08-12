@@ -98,7 +98,9 @@ To recover, update the Gemfile to point at the new path and run:
 gemvault doctor
 ```
 
-`doctor` removes any ghost installation records, clears the broken entry from bundler's plugin index (`bundle plugin uninstall bundler-source-vault`) and then re-runs `bundle install`, which reinstalls the plugin against whatever the current Gemfile declares. Run it from your project directory. If a ghost record sits in a root-owned gem home, doctor says so on one line — re-run it with permissions for that gem home (e.g. `sudo gemvault doctor`).
+`doctor` removes any ghost installation records, clears the broken entry from bundler's plugin index (`bundle plugin uninstall bundler-source-vault`) and then, when a Gemfile exists, re-runs `bundle install`, which reinstalls the plugin against whatever the current Gemfile declares. Run it from your project directory. If a ghost record sits in a root-owned gem home, doctor says so on one line — re-run it with permissions for that gem home (e.g. `sudo gemvault doctor`).
+
+A project whose Gemfile is inline (`require "bundler/inline"`) works too. Such a script keeps its plugin index in `<project>/.bundle/plugin`, a root bundler only consults while the script runs; doctor reaches it the same way the script did. With no Gemfile on disk there is nothing to reinstall from, so doctor clears the entry, says so, and exits 0 — the inline gemfile reinstalls the plugin the next time the script runs. Run outside any project, doctor works against bundler's global index and points you back at the project directory for the reinstall.
 
 The published `bundler-source-vault` gem installed from rubygems.org is immune to this: it lives in a bundler-managed directory that does not move.
 
