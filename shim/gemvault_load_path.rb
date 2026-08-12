@@ -1,3 +1,10 @@
+# Bundler can evaluate two installed copies of the shim in one process -- an
+# upgrade resolving a newer bundler-source-vault while the index still names
+# the old one -- and require_relative cannot deduplicate across paths, so a
+# second copy would reopen the module and warn on every constant. The first
+# copy wins, as it does for Bundler::Plugin::VaultSource in plugins.rb.
+return if defined?(BundlerSourceVault::GemvaultLoadPath)
+
 module BundlerSourceVault
   # Finds gemvault, and the runtime dependencies it needs, across every gem root
   # that could hold either, and puts their require paths on $LOAD_PATH.

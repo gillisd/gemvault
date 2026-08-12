@@ -1066,7 +1066,19 @@ Name: Gemvault spams warnings on bundle install
 Description: /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:31: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::GEM
 + /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:32: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::SHIM
 + /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:33: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::VAULT_SOURCE
-Status: open
++
++ RESOLUTION: bundler can evaluate two installed copies of the shim in one
++ process -- an upgrade resolving a newer bundler-source-vault while the index
++ still names the old one, the dual-version plugin root the failure report
++ also recorded as issue #29 -- and require_relative cannot deduplicate
++ across paths, so the second copy reopened GemvaultLoadPath and warned on
++ every constant. gemvault_load_path.rb now returns before redefining
++ anything when the module is already loaded, first copy winning as
++ plugins.rb already arranges for Bundler::Plugin::VaultSource. Replicated by
++ spec/shim_reload_spec.rb (two copies loaded in one process, red against the
++ old shim), with the plain-install path guarded in
++ spec/integration/bundle_install_spec.rb.
+Status: closed
 
 Id: 23
 Updated: Mon, 10 Aug 2026 17:40:28 -0400
