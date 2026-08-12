@@ -8,38 +8,55 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
     let(:uninstall) { ["bundle", "plugin", "uninstall", "bundler-source-vault"] }
     let(:gemfile) { instance_double(Gemvault::BundlerGemfile, exist?: true) }
     let(:plugin_root) do
-      instance_double(Gemvault::BundlerPluginRoot, unreachable?: false, local: Pathname(".bundle/plugin"))
+      instance_double(Gemvault::BundlerPluginRoot, unreachable?: false, local: Pathname(".bundle/plugin"),
+                                                   consulted: Pathname(".bundle/plugin"))
+    end
+    let(:index) do
+      instance_double(Gemvault::BundlerPluginIndex, snapshot: "recorded index", restore: nil)
     end
 
     def ghost_double(path)
       instance_double(Gemvault::GhostSpecification, to_s: path)
     end
 
+    def invoke_run
+      command.run
+    rescue SystemExit => e
+      e.status
+    end
+
     before do
       allow(Gemvault::BundlerGemfile).to receive(:new).and_return(gemfile)
       allow(Gemvault::BundlerPluginRoot).to receive(:new).and_return(plugin_root)
+      allow(Gemvault::BundlerPluginIndex).to receive(:new).and_return(index)
       allow(Gemvault::GhostSpecification).to receive(:of).and_return([])
       allow(command).to receive(:system).and_return(true)
-      allow(command).to receive(:exec)
     end
 
-    it "uninstalls the bundler-source-vault plugin, raising on failure" do
+    it "uninstalls the bundler-source-vault plugin" do
       command.run
 
-      expect(command).to have_received(:system).with({}, *uninstall, exception: true)
+      expect(command).to have_received(:system).with({}, *uninstall)
     end
 
-    it "execs bundle install" do
+    it "runs bundle install as a child of the doctor" do
       command.run
 
-      expect(command).to have_received(:exec).with("bundle", "install")
+      expect(command).to have_received(:system).with("bundle", "install")
     end
 
-    it "uninstalls the plugin before execing bundle install", :aggregate_failures do
+    it "snapshots the plugin index before uninstalling", :aggregate_failures do
       command.run
 
-      expect(command).to have_received(:system).ordered
-      expect(command).to have_received(:exec).ordered
+      expect(index).to have_received(:snapshot).ordered
+      expect(command).to have_received(:system).with({}, *uninstall).ordered
+    end
+
+    it "uninstalls the plugin before reinstalling", :aggregate_failures do
+      command.run
+
+      expect(command).to have_received(:system).with({}, *uninstall).ordered
+      expect(command).to have_received(:system).with("bundle", "install").ordered
     end
 
     it "looks for ghost specifications of both gems it ships", :aggregate_failures do
@@ -50,39 +67,110 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
     end
 
     context "when the plugin uninstall fails" do
-      before { allow(command).to receive(:system).and_raise("uninstall failed") }
+      before { allow(command).to receive(:system).with({}, *uninstall).and_return(false) }
 
-      it "does not exec bundle install", :aggregate_failures do
-        expect { command.run }.to raise_error(RuntimeError)
-        expect(command).not_to have_received(:exec)
+      it "reports the failure as a single line" do
+        invoke_run
+
+        expect(stderr.string).to eq("doctor: bundle plugin uninstall bundler-source-vault failed\n")
+      end
+
+      it "exits 1" do
+        expect(invoke_run).to eq(1)
+      end
+
+      it "does not attempt the reinstall" do
+        invoke_run
+
+        expect(command).not_to have_received(:system).with("bundle", "install")
+      end
+
+      it "leaves the index alone" do
+        invoke_run
+
+        expect(index).not_to have_received(:restore)
+      end
+    end
+
+    context "when bundle install fails with the plugin reinstalled" do
+      before do
+        allow(command).to receive(:system).with("bundle", "install").and_return(false)
+        allow(index).to receive(:registered?).with("bundler-source-vault").and_return(true)
+      end
+
+      it "reports the partial repair as a single line" do
+        invoke_run
+
+        expect(stderr.string).to eq(
+          "doctor: bundle install failed; the bundler-source-vault plugin itself was reinstalled " \
+          "-- fix the install error and re-run bundle install\n",
+        )
+      end
+
+      it "exits 1" do
+        expect(invoke_run).to eq(1)
+      end
+
+      it "does not restore the index" do
+        invoke_run
+
+        expect(index).not_to have_received(:restore)
+      end
+    end
+
+    context "when bundle install fails before the plugin was reinstalled" do
+      before do
+        allow(command).to receive(:system).with("bundle", "install").and_return(false)
+        allow(index).to receive(:registered?).with("bundler-source-vault").and_return(false)
+      end
+
+      it "restores the index it snapshotted" do
+        invoke_run
+
+        expect(index).to have_received(:restore).with("recorded index")
+      end
+
+      it "reports the restore as a single line" do
+        invoke_run
+
+        expect(stderr.string).to eq(
+          "doctor: bundle install failed before reinstalling bundler-source-vault; restored the " \
+          "previous plugin index -- fix the install error and re-run gemvault doctor\n",
+        )
+      end
+
+      it "exits 1" do
+        expect(invoke_run).to eq(1)
       end
     end
 
     context "when the plugin root is one bundler would ignore" do
       let(:plugin_root) do
-        instance_double(Gemvault::BundlerPluginRoot, unreachable?: true, local: Pathname(".bundle/plugin"))
+        instance_double(Gemvault::BundlerPluginRoot, unreachable?: true, local: Pathname(".bundle/plugin"),
+                                                     consulted: Pathname(".bundle/plugin"))
       end
 
       it "points bundler at the project as bundler/inline does" do
         command.run
 
         expect(command).to have_received(:system)
-          .with({ "BUNDLE_GEMFILE" => "Gemfile" }, *uninstall, exception: true)
+          .with({ "BUNDLE_GEMFILE" => "Gemfile" }, *uninstall)
       end
     end
 
     context "when there is no Gemfile but the project owns a plugin root" do
       let(:gemfile) { instance_double(Gemvault::BundlerGemfile, exist?: false) }
       let(:plugin_root) do
-        instance_double(Gemvault::BundlerPluginRoot, unreachable?: true, local: Pathname(".bundle/plugin"))
+        instance_double(Gemvault::BundlerPluginRoot, unreachable?: true, local: Pathname(".bundle/plugin"),
+                                                     consulted: Pathname(".bundle/plugin"))
       end
 
       before { allow(command).to receive(:puts) }
 
-      it "does not exec bundle install" do
+      it "does not run bundle install" do
         command.run
 
-        expect(command).not_to have_received(:exec)
+        expect(command).not_to have_received(:system).with("bundle", "install")
       end
 
       it "still uninstalls the plugin" do
@@ -109,10 +197,10 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
 
       before { allow(command).to receive(:puts) }
 
-      it "does not exec bundle install" do
+      it "does not run bundle install" do
         command.run
 
-        expect(command).not_to have_received(:exec)
+        expect(command).not_to have_received(:system).with("bundle", "install")
       end
 
       it "still uninstalls the plugin" do
@@ -159,7 +247,7 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
         command.run
 
         expect(ghost).to have_received(:delete).ordered
-        expect(command).to have_received(:system).ordered
+        expect(command).to have_received(:system).with({}, *uninstall).ordered
       end
     end
 
@@ -220,17 +308,10 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
         expect(stdout.string).to eq("Removed ghost specification /roots/specifications/gemvault-0.2.3.gemspec\n")
       end
 
-      it "does not touch the plugin", :aggregate_failures do
+      it "does not touch the plugin" do
         invoke_run
 
         expect(command).not_to have_received(:system)
-        expect(command).not_to have_received(:exec)
-      end
-
-      def invoke_run
-        command.run
-      rescue SystemExit => e
-        e.status
       end
     end
   end

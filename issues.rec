@@ -1136,7 +1136,13 @@ Id: 24
 Updated: Mon, 10 Aug 2026 23:16:35 +0000
 Name: doctor prints a backtrace when the plugin uninstall step fails
 Description: gemvault doctor's `bundle plugin uninstall` step runs with exception: true; a nonzero exit raises RuntimeError and a missing bundle raises Errno::ENOENT, and both escape Command#run to command_kit's ExceptionHandler, which prints error.full_message -- a full backtrace -- violating the one-line-and-exit-1 convention issue #15 established. Adjacent to issue #14 (doctor failing under bundler/inline). The ghost-specification sweep added for issue #23 reports its own failures as one line; the uninstall step should match.
-Status: open
++
++ RESOLUTION: fixed alongside issue #27's transactional rework. The uninstall
++ step no longer runs with exception: true; a failing or missing bundle is one
++ line on stderr ("doctor: bundle plugin uninstall bundler-source-vault
++ failed") and exit 1, matching the convention issues #15 and #23 established,
++ and the snapshotted index is left untouched.
+Status: closed
 
 Id: 25
 Updated: Tue, 11 Aug 2026 20:05:27 -0400
@@ -1163,7 +1169,21 @@ Description: Reported from a container where bundle install could not succeed
 + index rather than exec'ing into `bundle install`, so a failed dependency
 + install cannot take the plugin down with it; or restore the previous index
 + when the step after the uninstall fails.
-Status: open
++
++ RESOLUTION: the uninstall-reinstall pair is now transactional. doctor
++ snapshots the plugin index bundler will consult (Gemvault::BundlerPluginIndex
++ over BundlerPluginRoot#consulted) before clearing it, runs `bundle install`
++ as a child instead of exec'ing into it, and on failure checks whether the
++ plugin came back: reinstalled means the repair stands and the one-line error
++ says only the bundle is unfinished; not reinstalled means the snapshot is
++ restored, so the machine is left as found and re-running doctor once the
++ install error is fixed recovers fully. Replicated first by
++ spec/integration/cli/commands/doctor_reinstall_failure_spec.rb -- doctor run
++ against a Gemfile still naming a renamed plugin path, an un-installable
++ bundle in the reporter's shape -- which fails against the old code and
++ proves the restored index heals on the next run. Unit cover in
++ spec/gemvault/bundler_plugin_index_spec.rb and the reworked doctor_spec.rb.
+Status: closed
 
 Id: 28
 Updated: Wed, 12 Aug 2026 16:05:55 +0000

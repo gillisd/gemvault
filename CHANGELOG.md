@@ -42,6 +42,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reinstall from, says so and exits 0 — the inline gemfile reinstalls the
   plugin the next time the script runs (issue #14). Run outside any project,
   doctor no longer claims to have cleared a project index it never touched.
+- `gemvault doctor` no longer strands a machine without the plugin. Its
+  closing `bundle install` does more than reinstall the plugin, and when that
+  extra work failed (a Ruby version pin, an unresolvable gem) the already-run
+  uninstall had cleared the plugin index for nothing — strictly worse than
+  the wreck doctor was asked to repair. The index is now snapshotted before
+  the uninstall and restored when the reinstall never happened, `bundle
+  install` runs as a child rather than replacing the process, and every
+  failure is one line on stderr and exit 1 instead of a backtrace
+  (issues #27, #24).
 - `bundle plugin install bundler-source-vault` no longer dies with
   `LoadError: cannot load such file -- bundler/plugin/vault_source`. The shim's
   `plugins.rb` now derives the gem root from its own installed location (local

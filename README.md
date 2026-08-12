@@ -102,6 +102,8 @@ gemvault doctor
 
 A project whose Gemfile is inline (`require "bundler/inline"`) works too. Such a script keeps its plugin index in `<project>/.bundle/plugin`, a root bundler only consults while the script runs; doctor reaches it the same way the script did. With no Gemfile on disk there is nothing to reinstall from, so doctor clears the entry, says so, and exits 0 — the inline gemfile reinstalls the plugin the next time the script runs. Run outside any project, doctor works against bundler's global index and points you back at the project directory for the reinstall.
 
+The repair is transactional. `bundle install` does more than reinstall the plugin, and that extra work can fail on its own — a Ruby version pin, an unresolvable gem. When it does, doctor says so in one line and exits 1; and if the failure struck before the plugin was reinstalled, doctor puts the plugin index back the way it found it. A failed run never leaves the machine with less than it started with — fix the install error and re-run.
+
 The published `bundler-source-vault` gem installed from rubygems.org is immune to this: it lives in a bundler-managed directory that does not move.
 
 ## Development
