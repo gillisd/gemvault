@@ -100,6 +100,18 @@ module VaultedProject
     SH
   end
 
+  # The reporter's own flow for issue #23: bundle install fails, then the
+  # doctor is asked to repair the machine, and the scenario's closing install
+  # confirms the recovery. The guard exit aborts if the first install
+  # unexpectedly succeeds, so the doctor is only ever credited with a recovery
+  # it actually performed.
+  def self.recovering_with_the_doctor
+    <<~SH
+      bundle install && exit 90
+      gemvault doctor
+    SH
+  end
+
   def self.reinstall_with(gemfile)
     "#{gemfile}bundle install\n"
   end

@@ -60,6 +60,7 @@ gem install --source file:///path/to/myvault.gemv foo
 - `gemvault.gemspec` — main gem spec (name: `gemvault`)
 - `lib/gemvault/vault.rb` — Vault facade choosing a backend by file format (Tarvault current, legacy Dbvault read-only)
 - `lib/gemvault/cli.rb` — CLI dispatcher (new/add/list/remove/extract)
+- `lib/gemvault/ghost_specification.rb` — installation records whose gem directory is gone; swept by `gemvault doctor` (issue #23)
 - `lib/bundler/plugin/vault_source.rb` — Bundler `Plugin::API::Source` implementation
 - `lib/rubygems_plugin.rb` — RubyGems plugin: monkey-patches for `--source myvault.gemv` support
 - `lib/rubygems/source/vault.rb` — `Gem::Source::Vault` class (spec loading, download, `file://` URI handling, verbose logging)
@@ -115,9 +116,9 @@ bundle exec rake spec:teardown   # remove it
 Integration specs serve the tree's own gems from a local gem index (`GemIndex`)
 to avoid rubygems.org resolution during testing.
 
-Rubycritic scores `lib/`, `test/` and `shim/` but not `spec/`: flog taxes each
-block-nesting level, so idiomatic describe/context nesting reads as complexity.
-rubocop-rspec owns spec style.
+Rubycritic scores `lib/`, `spec/support/`, `test/` and `shim/` but not spec
+example files: flog taxes each block-nesting level, so idiomatic
+describe/context nesting reads as complexity. rubocop-rspec owns spec style.
 
 ### Container fidelity — do not undo these
 
