@@ -20,6 +20,12 @@ module Gemvault
       each_entry.map { |member| ArchiveEntry.new(name: member.full_name, bytes: member.read) }
     end
 
+    # The member names alone. Reads tar headers without any member's bytes, so
+    # a caller asking what kind of vault this is does not load the whole file.
+    def names
+      each_entry.map(&:full_name)
+    end
+
     def write(entries)
       Tempfile.create(["tarvault", ".tar"], @path.dirname) do |tmp|
         write_entries(io: tmp, entries:)

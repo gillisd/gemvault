@@ -111,8 +111,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and no library to load — which is what stops gemvault from ever activating
   a json gem a project had locked (issue #25). Times are stored as
   `2026-08-12T18:23:32Z`; a legacy vault's `2026-08-12 18:23:32` is converted
-  on upgrade. A format-2 vault (`manifest.json`) is refused with a message
-  naming the cause rather than a parse error.
+  on upgrade. A format-2 vault (`manifest.json`) stays readable: it opens
+  read-only through the same path a legacy SQLite vault does, and
+  `gemvault upgrade` migrates it. That backend never parses the old manifest —
+  it derives the index from the stored gems, each of which carries its own
+  gemspec — so migrated gems keep their identity but are restamped, the old
+  index's times being unrecoverable.
 - `sqlite3` is no longer a runtime dependency. Gemvault runs dependency-free on
   the tarball path (including JRuby); `sqlite3` is loaded lazily only to read a
   legacy SQLite vault, with a clear error if it is not installed.

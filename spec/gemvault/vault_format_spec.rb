@@ -15,6 +15,16 @@ RSpec.describe "vault format versioning" do
     expect(declared_format_version).to eq(1)
   end
 
+  it "reports format_version 2 for a tarvault whose index is manifest.json" do
+    legacy_tarvault
+    expect(declared_format_version).to eq(2)
+  end
+
+  it "opens a format-2 tarvault read-only rather than refusing it" do
+    legacy_tarvault
+    expect(open_vault { |v| v.gem_entries.map(&:name) }).to contain_exactly("foo", "bar")
+  end
+
   it "refuses a Tarvault whose declared version is newer than READABLE_FORMATS" do
     current_tarvault
     bump_tarvault_version(path: vault_path, version: 99)

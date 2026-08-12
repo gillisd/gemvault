@@ -48,19 +48,19 @@ gemvault upgrade myvault.gemv                 # migrate to the current format
 
 ## Vault format versioning
 
-Every vault records an on-disk **format version** — `1` for the original SQLite format, `2` for the current tarball format. This version lives inside the file and is **independent of the gemvault gem version**: it changes only when the storage layout changes, so upgrading the gem never invalidates your vaults.
+Every vault records an on-disk **format version** — `1` for the original SQLite format, `2` for a tarball with a JSON manifest, `3` for the current tarball with a plain-text manifest. This version lives inside the file and is **independent of the gemvault gem version**: it changes only when the storage layout changes, so upgrading the gem never invalidates your vaults.
 
 gemvault reads any format up to the one it understands and **refuses a vault written by a newer gemvault** with a clear message (rather than silently misreading it).
 
-The SQLite format (`1`) is **deprecated and read-only**: you can still read and migrate an existing SQLite vault, but `add`/`remove` are refused and print `gemvault upgrade`. Opening one shows a one-time deprecation notice (silence it with `GEMVAULT_SILENCE_DEPRECATIONS=1`). SQLite support will be removed in a future release (0.3–0.5). To migrate a vault to the current format:
+Formats `1` (SQLite) and `2` (JSON manifest) are **deprecated and read-only**: you can still list, extract from, and migrate an existing one, but `add`/`remove` are refused and print `gemvault upgrade`. Opening one shows a one-time deprecation notice (silence it with `GEMVAULT_SILENCE_DEPRECATIONS=1`). SQLite support will be removed in a future release (0.3–0.5). To migrate a vault to the current format:
 
 ```bash
-gemvault upgrade myvault.gemv              # e.g. SQLite (v1) -> tarball (v2)
+gemvault upgrade myvault.gemv              # e.g. SQLite (v1) or JSON manifest (v2) -> current (v3)
 gemvault upgrade myvault.gemv --dry-run    # show the plan, change nothing
 gemvault upgrade myvault.gemv --no-backup  # skip the default myvault.gemv.bak copy
 ```
 
-`upgrade` preserves every gem and its timestamp, writes `myvault.gemv.bak` by default, and is a no-op on an already-current vault.
+`upgrade` preserves every gem, writes `myvault.gemv.bak` by default, and is a no-op on an already-current vault. Timestamps survive a v1 upgrade; a v2 vault's are restamped, because its stored times live in the JSON index this gemvault deliberately no longer reads — the gems themselves are read straight out of the tarball.
 
 ## How It Works
 

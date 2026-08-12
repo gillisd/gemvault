@@ -1195,8 +1195,20 @@ Description: Project with Gemfile + locked json version + gemvault throws "bundl
 + own compact index and Gemfile.lock, both line-oriented text.
 +
 + Format version 3; vaults are inspectable with `tar -xOf v.gemv manifest`.
-+ A format-2 (manifest.json) vault is detected by entry name and refused with
-+ a message naming the cause, without parsing its notation.
++
++ An existing format-2 vault keeps working. Gemvault::LegacyTarvault opens one
++ read-only, exactly as Dbvault does for SQLite, so `gemvault upgrade` migrates
++ it through the ordinary pipeline rather than leaving its gems stranded behind
++ an error. That backend never parses manifest.json: it derives the index from
++ the payload, since every stored .gem carries the gemspec the manifest's
++ identity fields came from -- which keeps the old notation from re-entering
++ the codebase and makes the reader indifferent to a damaged manifest. Two
++ things the old index held are lost with it: each gem's stored time (entries
++ are restamped on open, and the deprecation notice says so) and the per-gem
++ digests (the new vault records fresh digests of exactly the bytes it copied).
++ Covered end to end by spec/integration/cli/commands/legacy_tarvault_spec.rb
++ against a committed format-2 fixture: list, extract, refused add, upgrade,
++ and writing to the upgraded vault.
 Status: closed
 
 Id: 27

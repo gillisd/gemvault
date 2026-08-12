@@ -85,7 +85,20 @@ module Gemvault
 
     def self.build_tarvault(path, create:)
       require_relative "tarvault"
-      Tarvault.new(path, create:)
+      return Tarvault.new(path, create:) if create || !legacy_tarvault?(path)
+
+      require_relative "legacy_tarvault"
+      LegacyTarvault.new(path)
+    end
+
+    # A tarball indexed the way vaults were through format 2. Asked by name
+    # rather than by version, because the version is recorded in the very
+    # index this gemvault no longer reads.
+    def self.legacy_tarvault?(path)
+      require_relative "manifest_text"
+      require_relative "tarball"
+      names = Tarball.new(path).names
+      !names.include?(ManifestText::FILENAME) && names.include?(ManifestText::LEGACY_FILENAME)
     end
 
     def initialize(path, create: false)

@@ -58,7 +58,8 @@ gem install --source file:///path/to/myvault.gemv foo
 ## Architecture
 
 - `gemvault.gemspec` — main gem spec (name: `gemvault`)
-- `lib/gemvault/vault.rb` — Vault facade choosing a backend by file format (Tarvault current, legacy Dbvault read-only)
+- `lib/gemvault/vault.rb` — Vault facade choosing a backend by file format (Tarvault current; Dbvault and LegacyTarvault read-only)
+- `lib/gemvault/legacy_tarvault.rb` — read-only backend for a format-2 (manifest.json) vault; derives its index from the stored gems instead of parsing that manifest, so `gemvault upgrade` migrates one through the ordinary pipeline
 - `lib/gemvault/manifest_text.rb` — the manifest's on-disk notation: a header plus one whitespace-separated line per gem, validated field by field on read
 - `lib/gemvault/timestamp.rb` — the space-free notation a vault records times in, and conversion of a legacy vault's
 - `lib/gemvault/cli.rb` — CLI dispatcher (new/add/list/remove/extract)

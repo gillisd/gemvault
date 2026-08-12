@@ -14,6 +14,28 @@ module UpgradeCommand
     SH
   end
 
+  def run_on_legacy_tarvault(command:)
+    podman_run(<<~SH)
+      #{legacy_tarvault_preamble}
+      #{command}
+    SH
+  end
+
+  # Copies the committed format-2 vault fixture (manifest.json index) into the
+  # container, standing in for a vault a user made with gemvault 0.2.x, and
+  # builds a gem at $NEW_GEM so an add is refused for being read-only rather
+  # than for naming a file that is not there.
+  def legacy_tarvault_preamble
+    <<~SH
+      set -e
+      export WORKDIR=$(mktemp -d)
+      export V=$WORKDIR/test.gemv
+      cp /gem/spec/fixtures/legacy-v2.gemv $V
+      #{FixtureScript.gem_builds(gems: [["newcomer", "1.0.0"]], files: {}, dependencies: {})}
+      export NEW_GEM=$WORKDIR/gems/newcomer/newcomer-1.0.0.gem
+    SH
+  end
+
   def run_on_dbvault(command:)
     podman_run(<<~SH)
       #{dbvault_preamble}
