@@ -1,5 +1,6 @@
 require_relative "../command"
 require_relative "../../bundler_gemfile"
+require_relative "../../bundler_plugin_index"
 require_relative "../../bundler_plugin_root"
 require_relative "../../ghost_specification"
 
@@ -31,6 +32,13 @@ module Gemvault
       # A project whose Gemfile is inline has no Gemfile to reinstall from, and
       # keeps its plugins in a root Bundler will not consult unless told to.
       # Both are handled below.
+      #
+      # The repair is transactional. `bundle install` does more than reinstall
+      # the plugin, and that extra work can fail on its own; the index the
+      # uninstall clears is snapshotted first and put back when the reinstall
+      # never happened, so a failed run leaves the machine as found rather
+      # than with no plugin at all (issue #27). Every failure is one line on
+      # stderr and exit 1 (issue #24).
       class Doctor < Command
         description "Repair broken bundler-source-vault plugin state and reinstall the plugin"
 
@@ -47,8 +55,9 @@ module Gemvault
             print_error("#{e.message} #{PERMISSION_HINT}")
             exit(1)
           end
-          system(uninstall_env, "bundle", "plugin", "uninstall", PLUGIN, exception: true)
-          reinstall_or_explain
+          saved = index.snapshot
+          uninstall_plugin
+          reinstall_or_explain(saved)
         end
 
         private
@@ -68,6 +77,10 @@ module Gemvault
           @plugin_root ||= BundlerPluginRoot.new(gemfile: gemfile)
         end
 
+        def index
+          @index ||= BundlerPluginIndex.new(plugin_root.consulted)
+        end
+
         # bundler/inline's own trick: a non-empty BUNDLE_GEMFILE is the whole of
         # what Bundler::Plugin.root consults to prefer a project's plugin
         # directory over the global one, so setting it reaches the entry that
@@ -78,18 +91,47 @@ module Gemvault
           { "BUNDLE_GEMFILE" => "Gemfile" }
         end
 
+        def uninstall_plugin
+          return if system(uninstall_env, "bundle", "plugin", "uninstall", PLUGIN)
+
+          print_error("bundle plugin uninstall #{PLUGIN} failed")
+          exit(1)
+        end
+
         # `bundle install` with no Gemfile prints its entire usage screen and
         # exits 10, which reads as gemvault itself failing. By this point the
         # repair has already happened; only the reinstall is unavailable.
-        def reinstall_or_explain
-          return exec("bundle", "install") if gemfile.exist?
+        def reinstall_or_explain(saved)
+          return reinstall(saved) if gemfile.exist?
           return explain_inline_repair if plugin_root.unreachable?
 
           puts "No Gemfile here to reinstall from -- re-run gemvault doctor from the"
           puts "project directory to reinstall the plugin."
         end
 
-        # The local path is named only when it was the uninstall's target;
+        def reinstall(saved)
+          return if system("bundle", "install")
+          return exit_partially_repaired if index.registered?(PLUGIN)
+
+          exit_restoring(saved)
+        end
+
+        # The plugin came back before the install died, so the repair stands;
+        # only the rest of the bundle is unfinished.
+        def exit_partially_repaired
+          print_error("bundle install failed; the #{PLUGIN} plugin itself was reinstalled " \
+                      "-- fix the install error and re-run bundle install")
+          exit(1)
+        end
+
+        def exit_restoring(saved)
+          index.restore(saved)
+          print_error("bundle install failed before reinstalling #{PLUGIN}; restored the " \
+                      "previous plugin index -- fix the install error and re-run gemvault doctor")
+          exit(1)
+        end
+
+        # The local path is named only when it was the uninstall's target --
         # otherwise bundler worked against its global root, and naming this
         # project's path would misreport what happened.
         def explain_inline_repair

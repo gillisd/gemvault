@@ -13,14 +13,36 @@ module Gemvault
   class BundlerPluginRoot
     LOCAL_DIR = ".bundle/plugin".freeze
 
-    def initialize(dir: Dir.pwd, gemfile: BundlerGemfile.new(dir: dir))
+    def initialize(dir: Dir.pwd, gemfile: BundlerGemfile.new(dir: dir), env: ENV)
       @dir = Pathname(dir)
       @gemfile = gemfile
+      @env = env
     end
 
     # The project's own plugin root, whether or not Bundler would consult it.
     def local
       @dir.expand_path / LOCAL_DIR
+    end
+
+    # Where Bundler keeps plugins for a user outside any project, mirroring
+    # Bundler's user_bundle_path lookup for plugins: <tt>BUNDLE_USER_PLUGIN</tt>
+    # names the root directly, <tt>BUNDLE_USER_HOME</tt> relocates
+    # <tt>.bundle</tt>, and the home directory is the default.
+    def global
+      named = @env["BUNDLE_USER_PLUGIN"]
+      return Pathname(named) if named
+
+      Pathname(@env["BUNDLE_USER_HOME"] || File.join(Dir.home, ".bundle")) / "plugin"
+    end
+
+    # The plugin root Bundler will consult here: beside the Gemfile when one
+    # was found, the project's own root when doctor points Bundler at it (see
+    # #unreachable?), the global root otherwise.
+    def consulted
+      return @gemfile.path.dirname / LOCAL_DIR if @gemfile.exist?
+      return local if unreachable?
+
+      global
     end
 
     # Whether this project has a plugin root that Bundler currently ignores.
