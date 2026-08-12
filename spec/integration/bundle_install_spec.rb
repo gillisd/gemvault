@@ -3,6 +3,10 @@ RSpec.describe "bundle install with vault source", :integration do
     expect(install_and_require_single_gem).to succeed_showing("1.0.0")
   end
 
+  it "does not spam constant redefinition warnings" do
+    expect(install_and_require_single_gem).to succeed.without("already initialized constant")
+  end
+
   it "installs multiple gems from one vault" do
     expect(install_multiple_gems)
       .to succeed_showing("alpha_vault (1.0.0)", "beta_vault (2.0.0)", "gamma_vault (3.0.0)")

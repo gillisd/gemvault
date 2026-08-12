@@ -51,6 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   install` runs as a child rather than replacing the process, and every
   failure is one line on stderr and exit 1 instead of a backtrace
   (issues #27, #24).
+- The shim no longer spams `already initialized constant` warnings when
+  bundler evaluates two installed copies of it in one process — an upgrade
+  resolving a newer bundler-source-vault while the plugin index still names
+  the old one. The first copy wins, matching the guard plugins.rb already
+  applies to the vault source class (issue #26).
 - `bundle plugin install bundler-source-vault` no longer dies with
   `LoadError: cannot load such file -- bundler/plugin/vault_source`. The shim's
   `plugins.rb` now derives the gem root from its own installed location (local
