@@ -1146,3 +1146,48 @@ Description: Project with Gemfile + locked json version + gemvault throws "bundl
 + 
 + I believe this error to be coming from gemvault's dependency on JSON. It is clear that dependencies are cursed in this project, whether its the added load time for reinstalling them on every `bundle install`, or errors like this one. Rather than rely on JSON, I think it would be better to just marshal our own manifest, or use some other serialization tool if any that rubygems already provides.
 Status: open
+
+Id: 27
+Updated: Wed, 12 Aug 2026 16:05:55 +0000
+Name: gemvault doctor can leave the machine with no plugin at all
+Description: Reported from a container where bundle install could not succeed
++ (ruby version pin mismatch): doctor removed ghost records, uninstalled the
++ plugin, emptied .bundle/plugin/index, then exec'd bundle install -- which
++ failed, leaving no plugin installed. Strictly worse than the broken-path
++ state doctor was invoked to repair, and recoverable only by knowing to run
++ `bundle plugin install bundler-source-vault` by hand. doctor repairs by
++ mutation with no dry-run, no report of findings before acting, and no
++ rollback when the reinstall it hands off to fails. Suggested in the report:
++ report-then-fix (--dry-run, or report by default and repair under --fix);
++ reinstall the plugin directly with `bundle plugin install` and verify the
++ index rather than exec'ing into `bundle install`, so a failed dependency
++ install cannot take the plugin down with it; or restore the previous index
++ when the step after the uninstall fails.
+Status: open
+
+Id: 28
+Updated: Wed, 12 Aug 2026 16:05:55 +0000
+Name: plugins.rb dies with a bare LoadError when gemvault is installed nowhere
+Description: A plugin root holding only the shim -- the normal state wherever
++ `gem install gemvault` has run, since Bundler skips installing a plugin
++ dependency already present -- stops loading when the tree lands on a machine
++ with no gemvault in any gem root: GemvaultLoadPath.entries returns [] and
++ `require "bundler/plugin/vault_source"` raises a bare LoadError with no hint.
++ Observed after a macOS working tree was copied into a Linux container (the
++ shim alone in .bundle/plugin, gemvault absent from every gem root on the
++ box); also reachable by `gem uninstall gemvault` on a single machine. The
++ ambient-root search cannot cover gemvault being truly absent. Suggested:
++ fail with an explicit "gemvault not found in any gem root" message naming
++ the remedy (gem install gemvault, or bundle plugin uninstall + install to
++ get a self-contained root), or vendor gemvault into the shim.
+Status: open
+
+Id: 29
+Updated: Wed, 12 Aug 2026 16:05:55 +0000
+Name: Stale plugin versions are never reaped from the plugin root
+Description: bundler-source-vault-0.2.4 survived in the plugin root's gems/,
++ specifications/ and cache/ across the 0.2.5 upgrade and an explicit `bundle
++ plugin uninstall`; only 0.2.5 was ever referenced by the index. Possibly
++ Bundler's doing rather than the plugin's, but doctor is well placed to sweep
++ plugin-root versions the index no longer references.
+Status: open
