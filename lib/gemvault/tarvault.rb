@@ -32,6 +32,7 @@ module Gemvault
 
       spec = spec_from_gem_file(gem_path)
       entry = GemEntry.from_spec(spec, created_at: Timestamp.canonical(created_at || Timestamp.now))
+      raise_if_unwritable(entry, gem_path)
       raise_if_duplicate(entry)
       store(entry:, bytes: gem_path.binread)
     end
@@ -140,6 +141,18 @@ module Gemvault
       return unless @manifest.find(entry)
 
       raise Vault::DuplicateGemError, "Gem already in vault: #{entry}"
+    end
+
+    # A spec arrives inside a gem file this library did not write, and
+    # Gem::Package#spec never validates it; a field the manifest's notation
+    # cannot hold would corrupt the whole vault on the next read.
+    def raise_if_unwritable(entry, gem_path)
+      field = ManifestText.unwritable_field(entry)
+      return unless field
+
+      value = entry.public_send(field).to_s[0, 60]
+      raise Vault::InvalidGemError,
+            "Invalid gem file #{gem_path}: #{field} #{value.inspect} cannot be stored in a manifest"
     end
   end
 end

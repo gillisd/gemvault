@@ -1,6 +1,8 @@
 require "gemvault/tarvault"
 
 RSpec.describe "Gemvault::Tarvault#add" do
+  def space_named_gem = build_gem(name: "foo bar", version: "1.0.0")
+
   it "stores a gem and increments size" do
     create_tarvault { |v| expect { v.add(foo_gem) }.to change { v.size }.from(0).to(1) }
   end
@@ -32,6 +34,20 @@ RSpec.describe "Gemvault::Tarvault#add" do
   it "raises Vault::InvalidGemError for a non-gem file" do
     (gem_dir / "bad.gem").write("not a gem")
     create_tarvault { |v| expect { v.add(gem_dir / "bad.gem") }.to raise_error(Gemvault::Vault::InvalidGemError) }
+  end
+
+  it "raises Vault::InvalidGemError naming the field for a gem a manifest cannot hold" do
+    create_tarvault do |v|
+      expect { v.add(space_named_gem) }
+        .to raise_error(Gemvault::Vault::InvalidGemError, /name "foo bar"/)
+    end
+  end
+
+  it "leaves the vault intact after refusing a gem a manifest cannot hold", :aggregate_failures do
+    tarvault_with(foo_gem) do |v|
+      expect { v.add(space_named_gem) }.to raise_error(Gemvault::Vault::InvalidGemError)
+    end
+    reopen_tarvault { |v| expect(v.gem_entries.map(&:name)).to eq(["foo"]) }
   end
 
   it "raises Vault::DuplicateGemError on the same name/version/platform" do

@@ -26,8 +26,11 @@ module Gemvault
   # locked (issue #25).
   #
   # Reading validates every field, because a vault is a file that arrives from
-  # elsewhere; writing does not, because the values come from value objects
-  # this library constructed.
+  # elsewhere. Writing trusts the values this library computed or normalized
+  # (digests, flags, times through Gemvault::Timestamp) -- but a gem's
+  # identity arrives in a gem file this library did not write, and
+  # <tt>Gem::Package#spec</tt> never validates it, so a vault asks
+  # unwritable_field before admitting a gem.
   module ManifestText
     # Raised when text is not a manifest this gemvault can read.
     class MalformedError < StandardError; end
@@ -56,6 +59,10 @@ module Gemvault
     # name version platform stored-at sha256 encrypted
     RECORD = /\A(#{NAME}) (#{VERSION}) (#{PLATFORM}) (#{STAMP}) (#{DIGEST}) (#{FLAG})\z/
 
+    # The spec-supplied alphabets anchored singly, for asking whether one
+    # field fits before a record is written.
+    IDENTITY_ALPHABETS = { name: /\A#{NAME}\z/, version: /\A#{VERSION}\z/, platform: /\A#{PLATFORM}\z/ }.freeze
+
     ENCRYPTED = "1".freeze
 
     module_function
@@ -73,6 +80,15 @@ module Gemvault
       gem = record.gem
       [gem.name, gem.version, gem.platform, gem.created_at,
        record.sha256, record.encrypted ? ENCRYPTED : "0"].join(" ")
+    end
+
+    # :call-seq:
+    #   unwritable_field(entry) -> Symbol or nil
+    #
+    # The first of +entry+'s identity fields holding a value outside its
+    # alphabet, or nil when a record for +entry+ would read back intact.
+    def unwritable_field(entry)
+      IDENTITY_ALPHABETS.each_key.find { |field| !IDENTITY_ALPHABETS[field].match?(entry.public_send(field)) }
     end
 
     # :call-seq:
