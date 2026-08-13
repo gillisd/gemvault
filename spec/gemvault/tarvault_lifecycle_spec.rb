@@ -20,6 +20,12 @@ RSpec.describe "Gemvault::Tarvault lifecycle", :aggregate_failures do
     expect { Gemvault::Tarvault.new(gem_dir / "bad.gemv") }.to raise_error(Gemvault::Vault::Error)
   end
 
+  it "treats a tar holding only the legacy manifest.json as missing its manifest" do
+    Gemvault::Tarball.new(vault_path).write([Gemvault::ArchiveEntry.new(name: "manifest.json", bytes: "{}")])
+    expect { Gemvault::Tarvault.new(vault_path) }
+      .to raise_error(Gemvault::Vault::Error, /missing manifest/)
+  end
+
   it "reopens and preserves data" do
     tarvault_with(foo_gem)
     reopen_tarvault { |v| expect(v.size).to eq(1) }

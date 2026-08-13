@@ -99,18 +99,9 @@ module Gemvault
 
     def read_manifest
       text = @archive.read(ManifestText::FILENAME)
-      return text if text
+      raise Vault::Error, "Not a valid Tarvault (missing manifest): #{@path}" unless text
 
-      raise Vault::Error, "Vault #{@path} was written by an older gemvault; re-create it" if json_manifest?
-
-      raise Vault::Error, "Not a valid Tarvault (missing manifest): #{@path}"
-    end
-
-    # Vaults through format 2 kept the index in manifest.json. Recognizing that
-    # entry only tells the user which gemvault wrote the file; nothing here
-    # reads its notation.
-    def json_manifest?
-      !@archive.read(ManifestText::LEGACY_FILENAME).nil?
+      text
     end
 
     def store(entry:, bytes:)

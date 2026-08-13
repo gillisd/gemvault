@@ -23,19 +23,12 @@ RSpec.describe "Gemvault::Tarvault reading" do
 
   describe "a vault whose manifest gemvault did not write" do
     def vault_holding(manifest)
-      Gemvault::Tarball.new(vault_path).write([Gemvault::ArchiveEntry.new(name: name_of(manifest), bytes: manifest)])
+      Gemvault::Tarball.new(vault_path).write([Gemvault::ArchiveEntry.new(name: "manifest", bytes: manifest)])
     end
-
-    def name_of(manifest) = manifest.start_with?("{") ? "manifest.json" : "manifest"
 
     it "raises Vault::Error naming the vault when the manifest is malformed" do
       vault_holding("gemvault 3\nnot a manifest\n")
       expect { reopen_tarvault { |v| v } }.to raise_error(Gemvault::Vault::Error, /Not a valid Tarvault/)
-    end
-
-    it "tells the user a JSON-manifest vault predates this gemvault" do
-      vault_holding(%({"vault_version":2,"format":"tarvault","created_at":"t","gems":[]}))
-      expect { reopen_tarvault { |v| v } }.to raise_error(Gemvault::Vault::Error, /older gemvault/)
     end
   end
 
