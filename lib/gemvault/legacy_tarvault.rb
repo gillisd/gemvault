@@ -1,4 +1,8 @@
 require "pathname"
+# rubygems loads zlib and psych only as it inflates a gem's metadata, so the
+# rescue below requires them itself to name their errors whichever one fires.
+require "psych"
+require "zlib"
 require_relative "vault"
 require_relative "vault_session"
 require_relative "gem_extraction"
@@ -83,9 +87,11 @@ module Gemvault
     # meets the same wreckage Tarvault's open path does and owes the user the
     # same answer: the vault named, not a tar library's error.
     def derived_entries
-      gem_members.map { |member| entry_for(member) }.sort_by { |gem| [gem.name, gem.version] }
-    rescue Gem::Package::Error, ArgumentError, Errno::EINVAL
-      raise Vault::Error, "Not a valid Tarvault: #{@path}"
+      begin
+        gem_members.map { |member| entry_for(member) }.sort_by { |gem| [gem.name, gem.version] }
+      rescue Gem::Exception, Psych::Exception, Zlib::Error, ArgumentError, Errno::EINVAL
+        raise Vault::Error, "Not a valid Tarvault: #{@path}"
+      end
     end
 
     def gem_members
