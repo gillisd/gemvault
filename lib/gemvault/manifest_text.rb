@@ -53,17 +53,25 @@ module Gemvault
     FLAG = "[01]".freeze
 
     # gemvault <version>
-    MAGIC_LINE = /\A#{MAGIC} (\d+)\z/
+    MAGIC_LINE = /\A#{MAGIC} (?<version>\d+)\z/
     # created <timestamp>
-    CREATED_LINE = /\Acreated (#{STAMP})\z/
-    # name version platform stored-at sha256 encrypted
-    RECORD = /\A(#{NAME}) (#{VERSION}) (#{PLATFORM}) (#{STAMP}) (#{DIGEST}) (#{FLAG})\z/
+    CREATED_LINE = /\Acreated (?<created_at>#{STAMP})\z/
+    # A record line's fields, in the order the line carries them.
+    RECORD_FIELDS = { name: NAME, version: VERSION, platform: PLATFORM,
+                      stored_at: STAMP, sha256: DIGEST, encrypted: FLAG }.freeze
+    RECORD = /\A#{RECORD_FIELDS.map { |field, alphabet| "(?<#{field}>#{alphabet})" }.join(" ")}\z/
 
     # The spec-supplied alphabets anchored singly, for asking whether one
     # field fits before a record is written.
     IDENTITY_ALPHABETS = { name: /\A#{NAME}\z/, version: /\A#{VERSION}\z/, platform: /\A#{PLATFORM}\z/ }.freeze
 
     ENCRYPTED = "1".freeze
+
+    # The lines every manifest opens with: the format version the writing
+    # gemvault declared, the vault's creation time, and a blank separator.
+    class Header < Data.define(:format_version, :created_at)
+      def lines = ["#{MAGIC} #{format_version}", "created #{created_at}", ""]
+    end
 
     module_function
 
@@ -72,8 +80,8 @@ module Gemvault
     #
     # +manifest+ as the text a vault stores.
     def render(manifest)
-      header = ["#{MAGIC} #{Manifest::FORMAT_VERSION}", "created #{manifest.created_at}", ""]
-      "#{(header + manifest.records.map { |record| record_line(record) }).join("\n")}\n"
+      header = Header.new(format_version: Manifest::FORMAT_VERSION, created_at: manifest.created_at)
+      "#{(header.lines + manifest.records.map { |record| record_line(record) }).join("\n")}\n"
     end
 
     def record_line(record)
@@ -99,9 +107,9 @@ module Gemvault
     # as parsed, readability being Vault.assert_readable!'s question.
     def parse(text)
       lines = text.to_s.lines(chomp: true)
-      version, created_at = read_header(lines)
+      header = read_header(lines)
       records = lines.drop(HEADER_LINES).map { |line| read_record(line) }
-      Manifest.new(created_at:, records:, format_version: version)
+      Manifest.new(created_at: header.created_at, records:, format_version: header.format_version)
     end
 
     def read_header(lines)
@@ -109,14 +117,14 @@ module Gemvault
 
       magic, created, separator = lines
       reject(separator, reason: "expected a blank line after the header") unless separator.empty?
-      [read_version(magic), read_created(created)]
+      Header.new(format_version: read_version(magic), created_at: read_created(created))
     end
 
     def read_version(line)
-      Integer(capture(line, pattern: MAGIC_LINE, expecting: "expected a #{MAGIC} version line")[1], 10)
+      Integer(capture(line, pattern: MAGIC_LINE, expecting: "expected a #{MAGIC} version line")[:version], 10)
     end
 
-    def read_created(line) = capture(line, pattern: CREATED_LINE, expecting: "expected a created line")[1]
+    def read_created(line) = capture(line, pattern: CREATED_LINE, expecting: "expected a created line")[:created_at]
 
     def capture(line, pattern:, expecting:)
       pattern.match(line) || reject(line, reason: expecting)
@@ -124,8 +132,9 @@ module Gemvault
 
     def read_record(line)
       fields = capture(line, pattern: RECORD, expecting: "expected a gem record")
-      entry = GemEntry.new(name: fields[1], version: fields[2], platform: fields[3], created_at: fields[4])
-      Manifest::StoredGem.new(gem: entry, sha256: fields[5], encrypted: fields[6] == ENCRYPTED)
+      entry = GemEntry.new(name: fields[:name], version: fields[:version],
+                           platform: fields[:platform], created_at: fields[:stored_at])
+      Manifest::StoredGem.new(gem: entry, sha256: fields[:sha256], encrypted: fields[:encrypted] == ENCRYPTED)
     end
 
     # Truncated because a rejected line is arbitrary bytes from a file the
