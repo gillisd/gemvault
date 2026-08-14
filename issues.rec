@@ -1209,6 +1209,15 @@ Description: Project with Gemfile + locked json version + gemvault throws "bundl
 + Covered end to end by spec/integration/cli/commands/legacy_tarvault_spec.rb
 + against a committed format-2 fixture: list, extract, refused add, upgrade,
 + and writing to the upgraded vault.
++
++ Settled after all: the Fedora image reproduces the rbenv-style stack once
++ the unbundled stdlib json is cleared away -- require then resolves through
++ gem activation, exactly the reported semantics.
++ spec/integration/locked_json_spec.rb runs the reporter's flow (a project
++ locking an older json than the machine's newest, gemvault ambient, bundle
++ exec through the vault source) and fails against a gemvault that requires
++ json on either the CLI path or the plugin path, the latter dying with the
++ reported check_for_activated_spec! error verbatim.
 Status: closed
 
 Id: 27
