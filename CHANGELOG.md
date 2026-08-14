@@ -16,8 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   version and validated on open; gemvault refuses a vault written by a newer
   gemvault instead of misreading it.
 - `gemvault upgrade` migrates a vault to the current format (e.g. SQLite → tar),
-  preserving every gem and timestamp, writing a `.bak` backup by default, with
-  `--dry-run` and `--no-backup` flags. It is a no-op on an already-current vault.
+  preserving every gem, writing a `.bak` backup by default, with `--dry-run` and
+  `--no-backup` flags. Timestamps survive a v1 upgrade; a v2 vault's are
+  restamped, its stored times living in an index this gemvault no longer reads
+  (see Changed). It is a no-op on an already-current vault.
 
 - All CLI commands accept `vault://` and `file://` locators wherever they take
   a vault path, e.g. `gemvault list vault:///path/to/myvault.gemv`; resolution
@@ -83,17 +85,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   evaluation, so `Gemvault::GemEntry` can no longer be defined twice from two
   different gem roots (issue #13).
 - `gemvault new` no longer raises `cannot load such file -- json` on a stock
-  distro ruby. json backs the tarball vault's manifest, so every current-format
-  vault needs it; it is a default gem upstream but a separate package on
-  distros, where `dnf install ruby` leaves it absent. It is now a declared
-  runtime dependency.
+  distro ruby, where json is a default gem upstream but a separate package that
+  `dnf install ruby` leaves absent. json backed the tarball vault's manifest
+  when this was first fixed by declaring it a runtime dependency; the manifest
+  is now plain text and gemvault never loads json at runtime, so the failure is
+  retired outright rather than papered over (see Changed, issue #25).
 - Reading a vault through the Bundler source no longer raises `cannot load such
   file -- json` either. Loading gemvault off `$LOAD_PATH` skips activation, and
-  therefore skips its dependencies, so the declared dependency alone did not
-  reach the plugin path. The shim now resolves gemvault's declared runtime
-  dependencies the same way it resolves gemvault and puts their require paths —
-  extension directories included — on `$LOAD_PATH`. A dependency it cannot find
-  is skipped rather than fatal, which is what activation could not do.
+  therefore skips its dependencies, so a declared dependency (json, at the time)
+  never reached the plugin path. The shim now resolves gemvault's declared
+  runtime dependencies the same way it resolves gemvault and puts their require
+  paths — extension directories included — on `$LOAD_PATH`; a dependency it
+  cannot find is skipped rather than fatal, which is what activation could not
+  do. The manifest being plain text, nothing on this path requires json at all
+  (see Changed, issue #25).
 - `bundle install` no longer fails with `Could not find 'command_kit' (~> 0.6)`
   when gemvault is installed into the plugin root without its dependencies.
   Loading the vault source no longer activates the gemvault gem, which would
