@@ -4,9 +4,10 @@ require_relative "vault_session"
 
 module Gemvault
   # The public vault interface. Delegates storage to a backend chosen by file
-  # format: a Dbvault (SQLite) for existing SQLite files, a Tarvault (tarball)
-  # otherwise. New vaults are Tarvaults. Only the selected backend is loaded,
-  # so the tar path never requires sqlite3.
+  # format: a Dbvault (SQLite) for existing SQLite files, a read-only
+  # LegacyTarvault for a tarball still indexed by manifest.json, and a Tarvault
+  # for every other tarball. New vaults are Tarvaults. Only the selected
+  # backend is loaded, so the tar path never requires sqlite3.
   class Vault
     extend VaultSession
     extend Forwardable
@@ -103,10 +104,13 @@ module Gemvault
     def self.legacy_tarvault?(path)
       require_relative "manifest_text"
       require_relative "tarball"
-      names = Tarball.new(path).names
-      !names.include?(ManifestText::FILENAME) && names.include?(ManifestText::LEGACY_FILENAME)
-    rescue Gem::Package::Error, ArgumentError, Errno::EINVAL
-      false
+
+      begin
+        names = Tarball.new(path).names
+        !names.include?(ManifestText::FILENAME) && names.include?(ManifestText::LEGACY_FILENAME)
+      rescue Gem::Package::Error, ArgumentError, Errno::EINVAL
+        false
+      end
     end
 
     def initialize(path, create: false)

@@ -94,8 +94,9 @@ module Gemvault
     # :call-seq:
     #   parse(text) -> Manifest
     #
-    # The Manifest +text+ describes. Raises MalformedError for anything this
-    # gemvault did not write.
+    # The Manifest +text+ describes. Raises MalformedError for anything outside
+    # the notation above; the version a well-formed header declares is returned
+    # as parsed, readability being Vault.assert_readable!'s question.
     def parse(text)
       lines = text.to_s.lines(chomp: true)
       version, created_at = read_header(lines)
@@ -107,27 +108,29 @@ module Gemvault
       raise MalformedError, "Not a gemvault manifest: no header" if lines.size < HEADER_LINES
 
       magic, created, separator = lines
-      reject(separator, "expected a blank line after the header") unless separator.empty?
+      reject(separator, reason: "expected a blank line after the header") unless separator.empty?
       [read_version(magic), read_created(created)]
     end
 
-    def read_version(line) = Integer(capture(MAGIC_LINE, line, "expected a #{MAGIC} version line")[1], 10)
+    def read_version(line)
+      Integer(capture(line, pattern: MAGIC_LINE, expecting: "expected a #{MAGIC} version line")[1], 10)
+    end
 
-    def read_created(line) = capture(CREATED_LINE, line, "expected a created line")[1]
+    def read_created(line) = capture(line, pattern: CREATED_LINE, expecting: "expected a created line")[1]
 
-    def capture(pattern, line, expectation)
-      pattern.match(line) || reject(line, expectation)
+    def capture(line, pattern:, expecting:)
+      pattern.match(line) || reject(line, reason: expecting)
     end
 
     def read_record(line)
-      fields = capture(RECORD, line, "expected a gem record")
+      fields = capture(line, pattern: RECORD, expecting: "expected a gem record")
       entry = GemEntry.new(name: fields[1], version: fields[2], platform: fields[3], created_at: fields[4])
       Manifest::StoredGem.new(gem: entry, sha256: fields[5], encrypted: fields[6] == ENCRYPTED)
     end
 
     # Truncated because a rejected line is arbitrary bytes from a file the
     # caller did not write, and it is about to be printed.
-    def reject(line, reason)
+    def reject(line, reason:)
       raise MalformedError, "Not a gemvault manifest (#{reason}): #{line.to_s[0, 60].inspect}"
     end
 
