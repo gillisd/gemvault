@@ -750,10 +750,10 @@ Id: 14
 Updated: Wed, 29 Jul 2026 16:41:11 -0400
 Name: gemvault doctor fails when bundler/inline is used
 Description: Loudly fails with 2 errors, one of which is "can't find gemfile"
-+
++ 
 + RESOLUTION: both errors reproduced in podman, and doctor turned out to be
 + broken twice over rather than once.
-+
++ 
 + (1) "Plugin bundler-source-vault is not installed". bundler/inline sets
 + BUNDLE_GEMFILE to a bare "Gemfile" for the life of the script (bundler
 + inline.rb:53), so Bundler.root is the script's working directory and the plugin
@@ -762,11 +762,11 @@ Description: Loudly fails with 2 errors, one of which is "can't find gemfile"
 + local_root only when SharedHelpers.in_bundle?, global_root otherwise
 + (plugin.rb:162) -- falls back to ~/.bundle/plugin. The uninstall therefore
 + looked in the wrong root and repaired nothing, silently.
-+
++ 
 + (2) "Could not locate Gemfile". doctor then exec'd `bundle install`, which with
 + no Gemfile prints its entire usage screen and exits 10 -- reading as gemvault
 + itself failing, after the repair it was asked for had already not happened.
-+
++ 
 + doctor now runs the uninstall with BUNDLE_GEMFILE="Gemfile" when the project
 + owns a plugin root Bundler would ignore, which is bundler/inline's own trick and
 + needs no file to exist; verified against the real thing (plain uninstall says
@@ -775,7 +775,7 @@ Description: Loudly fails with 2 errors, one of which is "can't find gemfile"
 + skips the reinstall and says so, exiting 0, because clearing the entry is the
 + repair and only the reinstall is unavailable -- an inline gemfile reinstalls the
 + plugin the next time the script runs.
-+
++ 
 + Gemvault::BundlerGemfile mirrors SharedHelpers#find_gemfile and
 + Gemvault::BundlerPluginRoot mirrors Plugin.root, both reimplemented rather than
 + delegated because bundler is deliberately not a dependency and doctor runs
@@ -818,7 +818,7 @@ Id: 16
 Updated: Wed, 29 Jul 2026 18:25:48 -0400
 Name: Add jruby-ci workflow
 Description: It should be already set up on the jruby-support branch. It just needs to be picked from it. DO NOT use the other code in that - it is very outdated
-+
++ 
 + RESOLUTION: shipped in commit 635ba41 ("ci: add JRuby test job") -- the jruby
 + job in .github/workflows/ci.yml runs the minitest suite on jruby-10.1.0.0 and
 + is green on CI.
@@ -1011,7 +1011,7 @@ Description: [dev@rstore]/workspace% bundle install
 + 	from /usr/local/bin/bundle:25:in '<main>'
 + 
 + Though I will add that gemvault doctor followed by bundle install fixed the issue
-+
++ 
 + RESOLUTION: the broken-plugin-path wreck, recovered exactly as reported --
 + gemvault doctor then bundle install. The plugin index entry pointed into a
 + reinstalled rbenv ruby's gem home; bundler does not revalidate stored plugin
@@ -1066,7 +1066,7 @@ Name: Gemvault spams warnings on bundle install
 Description: /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:31: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::GEM
 + /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:32: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::SHIM
 + /workspace/.bundle/plugin/gems/bundler-source-vault-0.2.2/gemvault_load_path.rb:33: warning: already initialized constant BundlerSourceVault::GemvaultLoadPath::VAULT_SOURCE
-+
++ 
 + RESOLUTION: bundler can evaluate two installed copies of the shim in one
 + process -- an upgrade resolving a newer bundler-source-vault while the index
 + still names the old one, the dual-version plugin root the failure report
@@ -1148,7 +1148,7 @@ Id: 24
 Updated: Mon, 10 Aug 2026 23:16:35 +0000
 Name: doctor prints a backtrace when the plugin uninstall step fails
 Description: gemvault doctor's `bundle plugin uninstall` step runs with exception: true; a nonzero exit raises RuntimeError and a missing bundle raises Errno::ENOENT, and both escape Command#run to command_kit's ExceptionHandler, which prints error.full_message -- a full backtrace -- violating the one-line-and-exit-1 convention issue #15 established. Adjacent to issue #14 (doctor failing under bundler/inline). The ghost-specification sweep added for issue #23 reports its own failures as one line; the uninstall step should match.
-+
++ 
 + RESOLUTION: fixed alongside issue #27's transactional rework. The uninstall
 + step no longer runs with exception: true; a failing or missing bundle is one
 + line on stderr ("doctor: bundle plugin uninstall bundler-source-vault
@@ -1163,7 +1163,7 @@ Description: Project with Gemfile + locked json version + gemvault throws "bundl
 + /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.18/lib/bundler/runtime.rb:328:in 'Bundler::Runtime#check_for_activated_spec!': You have already activated json 2.21.2, but your Gemfile requires json 2.19.7. Prepending `bundle exec` to your command may solve this. (Gem::LoadError)"
 + 
 + I believe this error to be coming from gemvault's dependency on JSON. It is clear that dependencies are cursed in this project, whether its the added load time for reinstalling them on every `bundle install`, or errors like this one. Rather than rely on JSON, I think it would be better to just marshal our own manifest, or use some other serialization tool if any that rubygems already provides.
-+
++ 
 + RESOLUTION: gemvault no longer loads json, and the manifest is no longer a
 + JSON document. Whether gemvault's require was the activator on the reported
 + machine cannot be settled from here -- on the Fedora reproduction stack
@@ -1172,7 +1172,7 @@ Description: Project with Gemfile + locked json version + gemvault throws "bundl
 + stacks require does activate, gemvault held a live require in its
 + vault-read path, and it can no longer be the component that detonates
 + check_for_activated_spec!.
-+
++ 
 + Marshal was considered as the reporter suggested and rejected: a .gemv is a
 + file that arrives from elsewhere, the manifest is the root of trust (the
 + SHA256 digests live inside it, so nothing verifies it first), and
@@ -1181,7 +1181,7 @@ Description: Project with Gemfile + locked json version + gemvault throws "bundl
 + result. `gemvault list` on an untrusted vault would become arbitrary code
 + execution, and Marshal's versioned wire format would break the portability
 + a .gemv exists for.
-+
++ 
 + What replaced JSON is neither: the manifest was never document-shaped. It is
 + a table -- a header plus fixed-arity records of scalars, no nesting, no free
 + text -- and every field is drawn from an alphabet without whitespace once
@@ -1193,9 +1193,9 @@ Description: Project with Gemfile + locked json version + gemvault throws "bundl
 + and rejects everything else, because the file comes from elsewhere; writing
 + trusts the value objects this library constructed. Precedent is rubygems'
 + own compact index and Gemfile.lock, both line-oriented text.
-+
++ 
 + Format version 3; vaults are inspectable with `tar -xOf v.gemv manifest`.
-+
++ 
 + An existing format-2 vault keeps working. Gemvault::LegacyTarvault opens one
 + read-only, exactly as Dbvault does for SQLite, so `gemvault upgrade` migrates
 + it through the ordinary pipeline rather than leaving its gems stranded behind
@@ -1209,7 +1209,7 @@ Description: Project with Gemfile + locked json version + gemvault throws "bundl
 + Covered end to end by spec/integration/cli/commands/legacy_tarvault_spec.rb
 + against a committed format-2 fixture: list, extract, refused add, upgrade,
 + and writing to the upgraded vault.
-+
++ 
 + Settled after all: the Fedora image reproduces the rbenv-style stack once
 + the unbundled stdlib json is cleared away -- require then resolves through
 + gem activation, exactly the reported semantics.
@@ -1236,7 +1236,7 @@ Description: Reported from a container where bundle install could not succeed
 + index rather than exec'ing into `bundle install`, so a failed dependency
 + install cannot take the plugin down with it; or restore the previous index
 + when the step after the uninstall fails.
-+
++ 
 + RESOLUTION: the uninstall-reinstall pair is now transactional. doctor
 + snapshots the plugin index bundler will consult (Gemvault::BundlerPluginIndex
 + over BundlerPluginRoot#consulted) before clearing it, runs `bundle install`
@@ -1277,4 +1277,15 @@ Description: bundler-source-vault-0.2.4 survived in the plugin root's gems/,
 + plugin uninstall`; only 0.2.5 was ever referenced by the index. Possibly
 + Bundler's doing rather than the plugin's, but doctor is well placed to sweep
 + plugin-root versions the index no longer references.
+Status: open
+
+Id: 30
+Updated: Fri, 14 Aug 2026 22:15:19 -0400
+Name: This message has many problems
+Description: 1. severity is unclear
++ 2. it doesn't make sense gramatically and contextually. what is "2" serving here? Is that the version number? I don't understand. horrible messaging
++ gemvault: format 2 vaults are read-only, and their stored times cannot be recovered. Migrate /workspace/update-gemvault-0.2.6/vendor/vendored_gems.gemv with: gemvault upgrade /workspace/update-gemvault-0.2.6/vendor/vendored_gems.gemv
++ sidekiq-ent-7.3.1
++ sidekiq-pro-7.3.4
++ stripe-ruby-mock-3.1.0.rc3
 Status: open
