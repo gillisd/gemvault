@@ -21,6 +21,17 @@ RSpec.describe "Gemvault::Tarvault reading" do
     end
   end
 
+  describe "a vault whose manifest gemvault did not write" do
+    def vault_holding(manifest)
+      Gemvault::Tarball.new(vault_path).write([Gemvault::ArchiveEntry.new(name: "manifest", bytes: manifest)])
+    end
+
+    it "raises Vault::Error naming the vault when the manifest is malformed" do
+      vault_holding("gemvault 3\nnot a manifest\n")
+      expect { reopen_tarvault { |v| v } }.to raise_error(Gemvault::Vault::Error, /Not a valid Tarvault/)
+    end
+  end
+
   describe "#gem_entries / #specs" do
     it "lists entries as GemEntry objects" do
       tarvault_with(foo_gem)

@@ -6,7 +6,9 @@ require_relative "deprecation"
 module Gemvault
   # Migrates a vault to the current storage format by reading it through its
   # existing backend and rewriting it through the current-format writer, then
-  # atomically swapping the file into place. Preserves each gem's created_at.
+  # atomically swapping the file into place. Each gem's created_at carries
+  # over as the source backend reports it -- which for a format-2 vault is a
+  # fresh stamp, its stored times being unreadable (see LegacyTarvault).
   class VaultUpgrade
     include FileUtils
 
@@ -22,8 +24,8 @@ module Gemvault
       end
     end
 
-    # Copies gems from a source vault into a target vault, preserving each
-    # gem's stored timestamp. Holds the two endpoints so the per-gem call
+    # Copies gems from a source vault into a target vault, carrying each
+    # entry's created_at across. Holds the two endpoints so the per-gem call
     # takes only the entry.
     class GemCopy < Data.define(:source, :target)
       def call(entry)

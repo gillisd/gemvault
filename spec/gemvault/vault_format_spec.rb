@@ -1,19 +1,28 @@
 require "gemvault"
 require "gemvault/tarvault"
 require "sqlite3"
-require "json"
 
 RSpec.describe "vault format versioning" do
   let(:declared_format_version) { open_vault(&:format_version) }
 
-  it "reports format_version 2 for a Tarvault" do
+  it "reports format_version 3 for a Tarvault" do
     current_tarvault
-    expect(declared_format_version).to eq(2)
+    expect(declared_format_version).to eq(3)
   end
 
   it "reports format_version 1 for a Dbvault" do
     legacy_dbvault
     expect(declared_format_version).to eq(1)
+  end
+
+  it "reports format_version 2 for a tarvault whose index is manifest.json" do
+    legacy_tarvault
+    expect(declared_format_version).to eq(2)
+  end
+
+  it "opens a format-2 tarvault read-only rather than refusing it" do
+    legacy_tarvault
+    expect(open_vault { |v| v.gem_entries.map(&:name) }).to contain_exactly("foo", "bar")
   end
 
   it "refuses a Tarvault whose declared version is newer than READABLE_FORMATS" do
@@ -33,12 +42,25 @@ RSpec.describe "vault format versioning" do
     expect { open_vault { |v| v } }.to raise_error(Gemvault::Vault::Error, /Unrecognized/)
   end
 
+  it "refuses a tar whose later entry headers are corrupt" do
+    current_tarvault
+    corrupt_second_entry_header(vault_path)
+    expect { open_vault { |v| v } }.to raise_error(Gemvault::Vault::Error, /Not a valid Tarvault/)
+  end
+
+  def corrupt_second_entry_header(path)
+    bytes = File.binread(path)
+    header = bytes.byteslice(0, 512).sub(/\0+\z/, "").bytesize
+    offset = 512 + (((header / 512) + 1) * 512)
+    bytes[offset + 148, 8] = "XXXXXXXX"
+    File.binwrite(path, bytes)
+  end
+
   def bump_tarvault_version(path:, version:)
     archive = Gemvault::Tarball.new(path)
-    manifest = JSON.parse(archive.read("manifest.json"))
-    manifest["vault_version"] = version
-    gems = archive.entries.reject { |entry| entry.name == "manifest.json" }
-    manifest_entry = Gemvault::ArchiveEntry.new(name: "manifest.json", bytes: JSON.generate(manifest))
-    archive.write([manifest_entry] + gems)
+    name = Gemvault::ManifestText::FILENAME
+    bumped = archive.read(name).sub(/\Agemvault \d+/, "gemvault #{version}")
+    gems = archive.entries.reject { |entry| entry.name == name }
+    archive.write([Gemvault::ArchiveEntry.new(name:, bytes: bumped)] + gems)
   end
 end

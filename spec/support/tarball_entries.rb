@@ -4,7 +4,7 @@ RSpec.shared_context "with a two-entry tarball" do
   let(:blob) { "BINARY#{0.chr}DATA" }
   let(:entries) do
     [
-      Gemvault::ArchiveEntry.new(name: "manifest.json", bytes: "{}"),
+      Gemvault::ArchiveEntry.new(name: "manifest", bytes: "x"),
       Gemvault::ArchiveEntry.new(name: "foo-1.0.0.gem", bytes: blob),
     ]
   end

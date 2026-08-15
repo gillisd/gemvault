@@ -9,15 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Tarball vault format ("Tarvault"): new vaults are portable tarballs with a
-  `manifest.json` index and per-gem SHA256 integrity, with no sqlite3 dependency
-  on the read/write path (works on JRuby). The original SQLite format
-  ("Dbvault") is still read transparently.
+  plain-text `manifest` index and per-gem SHA256 integrity, with no sqlite3
+  dependency on the read/write path (works on JRuby). The original SQLite
+  format ("Dbvault") is still read transparently.
 - Vaults carry an explicit on-disk **format version**, decoupled from the gem
   version and validated on open; gemvault refuses a vault written by a newer
   gemvault instead of misreading it.
 - `gemvault upgrade` migrates a vault to the current format (e.g. SQLite → tar),
-  preserving every gem and timestamp, writing a `.bak` backup by default, with
-  `--dry-run` and `--no-backup` flags. It is a no-op on an already-current vault.
+  preserving every gem, writing a `.bak` backup by default, with `--dry-run` and
+  `--no-backup` flags. Timestamps survive a v1 upgrade; a v2 vault's are
+  restamped, its stored times living in an index this gemvault no longer reads
+  (see Changed). It is a no-op on an already-current vault.
 
 - All CLI commands accept `vault://` and `file://` locators wherever they take
   a vault path, e.g. `gemvault list vault:///path/to/myvault.gemv`; resolution
@@ -83,17 +85,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   evaluation, so `Gemvault::GemEntry` can no longer be defined twice from two
   different gem roots (issue #13).
 - `gemvault new` no longer raises `cannot load such file -- json` on a stock
-  distro ruby. json backs the tarball vault's manifest, so every current-format
-  vault needs it; it is a default gem upstream but a separate package on
-  distros, where `dnf install ruby` leaves it absent. It is now a declared
-  runtime dependency.
+  distro ruby, where json is a default gem upstream but a separate package that
+  `dnf install ruby` leaves absent. json backed the tarball vault's manifest
+  when this was first fixed by declaring it a runtime dependency; the manifest
+  is now plain text and gemvault never loads json at runtime, so the failure is
+  retired outright rather than papered over (see Changed, issue #25).
 - Reading a vault through the Bundler source no longer raises `cannot load such
   file -- json` either. Loading gemvault off `$LOAD_PATH` skips activation, and
-  therefore skips its dependencies, so the declared dependency alone did not
-  reach the plugin path. The shim now resolves gemvault's declared runtime
-  dependencies the same way it resolves gemvault and puts their require paths —
-  extension directories included — on `$LOAD_PATH`. A dependency it cannot find
-  is skipped rather than fatal, which is what activation could not do.
+  therefore skips its dependencies, so a declared dependency (json, at the time)
+  never reached the plugin path. The shim now resolves gemvault's declared
+  runtime dependencies the same way it resolves gemvault and puts their require
+  paths — extension directories included — on `$LOAD_PATH`; a dependency it
+  cannot find is skipped rather than fatal, which is what activation could not
+  do. The manifest being plain text, nothing on this path requires json at all
+  (see Changed, issue #25).
 - `bundle install` no longer fails with `Could not find 'command_kit' (~> 0.6)`
   when gemvault is installed into the plugin root without its dependencies.
   Loading the vault source no longer activates the gemvault gem, which would
@@ -101,6 +106,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gemvault through `require_relative` alone (issue #13).
 
 ### Changed
+- The manifest is now line-oriented text rather than JSON (vault format 3).
+  It was never document-shaped: a header plus one whitespace-separated line
+  per gem — name, version, platform, stored-at, SHA256, encrypted — with no
+  nesting and no free text, so `tar -xOf myvault.gemv manifest` gives you
+  something `grep` and `awk` read directly. Because every field comes from an
+  alphabet without whitespace, reading needs no parser beyond `split` plus
+  per-field validation: no recursion to exhaust the stack, no escape grammar,
+  and no library to load — which is what stops gemvault from ever activating
+  a json gem a project had locked (issue #25). Times are stored as
+  `2026-08-12T18:23:32Z`; a legacy vault's `2026-08-12 18:23:32` is converted
+  on upgrade. A format-2 vault (`manifest.json`) stays readable: it opens
+  read-only through the same path a legacy SQLite vault does, and
+  `gemvault upgrade` migrates it. That backend never parses the old manifest —
+  it derives the index from the stored gems, each of which carries its own
+  gemspec — so migrated gems keep their identity but are restamped, the old
+  index's times being unrecoverable.
 - `sqlite3` is no longer a runtime dependency. Gemvault runs dependency-free on
   the tarball path (including JRuby); `sqlite3` is loaded lazily only to read a
   legacy SQLite vault, with a clear error if it is not installed.
@@ -112,10 +133,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `spec:integration` rake task exists alongside a non-integration `spec:core`, the
   unit job no longer needs podman, and the integration job installs podman
   when the runner image lacks it.
-- Reading a vault's `manifest.json` is now strict: an entry missing any required
-  field (`name`, `version`, `platform`, `created_at`, `sha256`, `encrypted`)
-  raises instead of silently loading `nil` fields, so a truncated or hand-edited
-  manifest fails fast rather than yielding a subtly broken vault.
+- Reading a vault's manifest is now strict: every field is validated against
+  its own alphabet, so a truncated or hand-edited manifest fails fast rather
+  than yielding a subtly broken vault.
 
 ### Deprecated
 - The SQLite vault format is deprecated and now **read-only**: existing SQLite

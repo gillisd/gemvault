@@ -4,9 +4,10 @@ require_relative "vault_session"
 
 module Gemvault
   # The public vault interface. Delegates storage to a backend chosen by file
-  # format: a Dbvault (SQLite) for existing SQLite files, a Tarvault (tarball)
-  # otherwise. New vaults are Tarvaults. Only the selected backend is loaded,
-  # so the tar path never requires sqlite3.
+  # format: a Dbvault (SQLite) for existing SQLite files, a read-only
+  # LegacyTarvault for a tarball still indexed by manifest.json, and a Tarvault
+  # for every other tarball. New vaults are Tarvaults. Only the selected
+  # backend is loaded, so the tar path never requires sqlite3.
   class Vault
     extend VaultSession
     extend Forwardable
@@ -22,7 +23,7 @@ module Gemvault
     TAR_MAGIC = "ustar".freeze
     TAR_MAGIC_OFFSET = 257
 
-    CURRENT_FORMAT = 2
+    CURRENT_FORMAT = 3
     MIN_READABLE_FORMAT = 1
 
     def_delegators :@backend,
@@ -85,7 +86,31 @@ module Gemvault
 
     def self.build_tarvault(path, create:)
       require_relative "tarvault"
-      Tarvault.new(path, create:)
+      return Tarvault.new(path, create:) if create || !legacy_tarvault?(path)
+
+      require_relative "legacy_tarvault"
+      LegacyTarvault.new(path)
+    end
+
+    # A tarball indexed the way vaults were through format 2. Asked by name
+    # rather than by version, because the version is recorded in the very
+    # index this gemvault no longer reads.
+    #
+    # An archive too damaged to enumerate answers no rather than raising here.
+    # This runs ahead of every backend, so a wreck raised from it would escape
+    # the rescue Tarvault opens with and reach the user as a tar library's
+    # backtrace; declining instead leaves that path to report it as the
+    # Vault::Error it has always been.
+    def self.legacy_tarvault?(path)
+      require_relative "manifest_text"
+      require_relative "tarball"
+
+      begin
+        names = Tarball.new(path).names
+        !names.include?(ManifestText::FILENAME) && names.include?(ManifestText::LEGACY_FILENAME)
+      rescue Gem::Package::Error, ArgumentError, Errno::EINVAL
+        false
+      end
     end
 
     def initialize(path, create: false)

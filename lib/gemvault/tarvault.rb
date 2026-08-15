@@ -1,16 +1,17 @@
-require "time"
 require "pathname"
 require_relative "vault"
 require_relative "vault_session"
 require_relative "gem_extraction"
 require_relative "manifest"
+require_relative "manifest_text"
+require_relative "timestamp"
 require_relative "tarball"
 require_relative "archive_entry"
 require_relative "gem_entry"
 require_relative "gem_reference"
 
 module Gemvault
-  # A Tarvault: a tarball whose first entry is manifest.json and whose
+  # A Tarvault: a tarball whose first entry is the manifest and whose
   # remaining entries are .gem files. Portable, dependency-free storage.
   class Tarvault
     extend VaultSession
@@ -30,7 +31,8 @@ module Gemvault
       raise Vault::NotFoundError, "Gem file not found: #{gem_path}" unless gem_path.file?
 
       spec = spec_from_gem_file(gem_path)
-      entry = GemEntry.from_spec(spec, created_at: created_at || timestamp)
+      entry = GemEntry.from_spec(spec, created_at: Timestamp.canonical(created_at || Timestamp.now))
+      raise_if_unwritable(entry, gem_path:)
       raise_if_duplicate(entry)
       store(entry:, bytes: gem_path.binread)
     end
@@ -80,7 +82,7 @@ module Gemvault
     def create_vault!
       raise Vault::Error, "Vault already exists: #{@path}" if @path.exist?
 
-      @manifest = Manifest.empty(created_at: timestamp)
+      @manifest = Manifest.empty(created_at: Timestamp.now)
       rewrite([])
     end
 
@@ -88,18 +90,18 @@ module Gemvault
       begin
         raise Vault::NotFoundError, "Vault not found: #{@path}" unless @path.exist?
 
-        @manifest = Manifest.parse(read_manifest_json)
+        @manifest = ManifestText.parse(read_manifest)
         Vault.assert_readable!(version: @manifest.format_version, path: @path)
-      rescue JSON::ParserError, Gem::Package::TarInvalidError, ArgumentError, Errno::EINVAL
+      rescue ManifestText::MalformedError, Gem::Package::TarInvalidError, ArgumentError, Errno::EINVAL
         raise Vault::Error, "Not a valid Tarvault: #{@path}"
       end
     end
 
-    def read_manifest_json
-      json = @archive.read(Manifest::FILENAME)
-      raise Vault::Error, "Not a valid Tarvault (missing manifest): #{@path}" unless json
+    def read_manifest
+      text = @archive.read(ManifestText::FILENAME)
+      raise Vault::Error, "Not a valid Tarvault (missing manifest): #{@path}" unless text
 
-      json
+      text
     end
 
     def store(entry:, bytes:)
@@ -109,12 +111,12 @@ module Gemvault
     end
 
     def rewrite(gems)
-      manifest_entry = ArchiveEntry.new(name: Manifest::FILENAME, bytes: @manifest.to_json)
+      manifest_entry = ArchiveEntry.new(name: ManifestText::FILENAME, bytes: ManifestText.render(@manifest))
       @archive.write([manifest_entry] + gems)
     end
 
     def survivors
-      @archive.entries.reject { |entry| entry.name == Manifest::FILENAME }
+      @archive.entries.reject { |entry| entry.name == ManifestText::FILENAME }
     end
 
     def survivors_excluding(dropped)
@@ -132,8 +134,16 @@ module Gemvault
       raise Vault::DuplicateGemError, "Gem already in vault: #{entry}"
     end
 
-    def timestamp
-      Time.now.utc.strftime("%Y-%m-%d %H:%M:%S")
+    # A spec arrives inside a gem file this library did not write, and
+    # Gem::Package#spec never validates it; a field the manifest's notation
+    # cannot hold would corrupt the whole vault on the next read.
+    def raise_if_unwritable(entry, gem_path:)
+      field = ManifestText.unwritable_field(entry)
+      return unless field
+
+      value = entry.public_send(field).to_s[0, 60]
+      raise Vault::InvalidGemError,
+            "Invalid gem file #{gem_path}: #{field} #{value.inspect} cannot be stored in a manifest"
     end
   end
 end

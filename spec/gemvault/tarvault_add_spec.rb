@@ -1,14 +1,29 @@
 require "gemvault/tarvault"
 
 RSpec.describe "Gemvault::Tarvault#add" do
+  def space_named_gem = build_gem(name: "foo bar", version: "1.0.0")
+
   it "stores a gem and increments size" do
     create_tarvault { |v| expect { v.add(foo_gem) }.to change { v.size }.from(0).to(1) }
   end
 
   it "preserves a supplied created_at" do
     create_tarvault do |v|
+      v.add(foo_gem, created_at: "2000-01-01T00:00:00Z")
+      expect(v.gem_entries.first.created_at).to eq("2000-01-01T00:00:00Z")
+    end
+  end
+
+  it "stores a legacy vault's created_at in the vault's own notation" do
+    create_tarvault do |v|
       v.add(foo_gem, created_at: "2000-01-01 00:00:00")
-      expect(v.gem_entries.first.created_at).to eq("2000-01-01 00:00:00")
+      expect(v.gem_entries.first.created_at).to eq("2000-01-01T00:00:00Z")
+    end
+  end
+
+  it "refuses a created_at no vault could store" do
+    create_tarvault do |v|
+      expect { v.add(foo_gem, created_at: "whenever") }.to raise_error(Gemvault::Timestamp::Error)
     end
   end
 
@@ -19,6 +34,20 @@ RSpec.describe "Gemvault::Tarvault#add" do
   it "raises Vault::InvalidGemError for a non-gem file" do
     (gem_dir / "bad.gem").write("not a gem")
     create_tarvault { |v| expect { v.add(gem_dir / "bad.gem") }.to raise_error(Gemvault::Vault::InvalidGemError) }
+  end
+
+  it "raises Vault::InvalidGemError naming the field for a gem a manifest cannot hold" do
+    create_tarvault do |v|
+      expect { v.add(space_named_gem) }
+        .to raise_error(Gemvault::Vault::InvalidGemError, /name "foo bar"/)
+    end
+  end
+
+  it "leaves the vault intact after refusing a gem a manifest cannot hold", :aggregate_failures do
+    tarvault_with(foo_gem) do |v|
+      expect { v.add(space_named_gem) }.to raise_error(Gemvault::Vault::InvalidGemError)
+    end
+    reopen_tarvault { |v| expect(v.gem_entries.map(&:name)).to eq(["foo"]) }
   end
 
   it "raises Vault::DuplicateGemError on the same name/version/platform" do

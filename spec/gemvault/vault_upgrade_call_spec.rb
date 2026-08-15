@@ -6,6 +6,36 @@ RSpec.describe Gemvault::VaultUpgrade, "#call" do
 
   def backup_written? = File.exist?("#{vault_path}.bak")
 
+  context "with a format-2 Tarvault" do
+    before do
+      legacy_tarvault
+      upgrade.call
+    end
+
+    it "converts it into a current-format Tarvault at the same path" do
+      open_vault { |v| expect(v.format_version).to eq(Gemvault::Vault::CURRENT_FORMAT) }
+    end
+
+    it "preserves every gem" do
+      names = open_vault { |v| v.gem_entries.map(&:name) }
+      expect(names).to contain_exactly("foo", "bar")
+    end
+
+    it "keeps each gem installable" do
+      specs = open_vault { |v| v.specs.map(&:full_name) }
+      expect(specs).to contain_exactly("foo-1.0.0", "bar-2.0.0")
+    end
+
+    it "stamps the migrated gems, the old index's times being unreadable" do
+      stamps = open_vault { |v| v.gem_entries.map(&:created_at) }
+      expect(stamps).to all(match(Gemvault::Timestamp::CANONICAL))
+    end
+
+    it "writes a .bak backup by default" do
+      expect(backup_written?).to be(true)
+    end
+  end
+
   context "with a legacy Dbvault" do
     before do
       legacy_dbvault
@@ -21,9 +51,9 @@ RSpec.describe Gemvault::VaultUpgrade, "#call" do
       expect(names).to contain_exactly("foo", "bar")
     end
 
-    it "preserves each gem's created_at" do
+    it "preserves each gem's created_at, in the new format's notation" do
       after = open_vault { |v| v.gem_entries.first.created_at }
-      expect(after).to eq("2000-01-01 00:00:00")
+      expect(after).to eq("2000-01-01T00:00:00Z")
     end
 
     it "writes a .bak backup by default" do
