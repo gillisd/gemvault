@@ -1289,3 +1289,39 @@ Description: 1. severity is unclear
 + sidekiq-pro-7.3.4
 + stripe-ruby-mock-3.1.0.rc3
 Status: open
+
+Id: 31
+Updated: Tue, 18 Aug 2026 12:33:27 -0400
+Name: CRITICAL REGRESSION Gems installed with "gem install --source myvault.gemv" no longer work
+Description: See the following sequence of commands and the error message. This path used to work
++ 
++ gem install --source ~/repos/vault/rubylib/myvault.gemv reversal-store
++ Successfully installed reversal-store-0.2.4
++ Parsing documentation for reversal-store-0.2.4
++ Installing ri documentation for reversal-store-0.2.4
++ Done installing documentation for reversal-store after 0 seconds
++ 1 gem installed
++ UNIX-2021% gemvault -V
++ gemvault 0.2.7
++ UNIX-2021% rstore list
++ /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/source_list.rb:59:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
++ 
++       add_source_to_list Plugin.source(source).new(options), @plugin_sources
++                                               ^^^^
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/dsl.rb:131:in 'Bundler::Dsl#source'
++ 	from /Users/davidgillis/repos/reversal-store/Gemfile:20:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/dsl.rb:49:in 'BasicObject#instance_eval'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/dsl.rb:49:in 'block in Bundler::Dsl#eval_gemfile'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/dsl.rb:326:in 'Bundler::Dsl#with_gemfile'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/dsl.rb:47:in 'Bundler::Dsl#eval_gemfile'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/dsl.rb:13:in 'Bundler::Dsl.evaluate'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/definition.rb:40:in 'Bundler::Definition.build'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler.rb:234:in 'Bundler.definition'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler.rb:159:in 'Bundler.setup'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/setup.rb:16:in 'block in <top (required)>'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/ui/shell.rb:177:in 'Bundler::UI::Shell#with_level'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/ui/shell.rb:122:in 'Bundler::UI::Shell#silence'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/setup.rb:16:in '<top (required)>'
++ 	from /usr/local/bin/rstore:8:in 'Kernel#require'
++ 	from /usr/local/bin/rstore:8:in '<main>'
+Status: open
