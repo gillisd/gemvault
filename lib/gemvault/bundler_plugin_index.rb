@@ -37,6 +37,16 @@ module Gemvault
       record_line(plugin)&.slice(/: "(.*)"/, 1)
     end
 
+    # Rewrites every path the index records for +plugin+ -- the plugin_paths
+    # entry and the load_paths entry, the latter with bundler's trailing "/."
+    # variant -- to +destination+. A plugin the index does not list is left
+    # untouched.
+    def repoint(plugin, destination)
+      old = recorded_path(plugin) or return
+
+      file.write(file.read.gsub(%r{"#{Regexp.escape(old)}(/\.)?"}) { %("#{destination}") })
+    end
+
     # :call-seq:
     #   snapshot -> String or nil
     #
