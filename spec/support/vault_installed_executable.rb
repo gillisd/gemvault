@@ -44,11 +44,47 @@ module VaultInstalledExecutable
     SH
   end
 
+  def run_relocated_tool(after_moving:)
+    podman_run(<<~SH)
+      #{GemIndex.serve_preamble}
+      #{tool_vault_preamble}
+      #{project_beside_the_vault}
+      #{VaultedApp.vendored_install}
+      gem install --no-document --source $WORKDIR/test.gemv #{TOOL_GEM}
+      cd $WORKDIR && mv app relocated && cd $WORKDIR/relocated
+      #{after_moving}
+      #{TOOL_GEM}
+    SH
+  end
+
+  def doctor_after_the_crash
+    <<~SH
+      #{TOOL_GEM} && exit 90
+      gemvault doctor
+    SH
+  end
+
   private
 
   def tool_vault_preamble
     FixtureScript.preamble(gems: [["vault_test_gem", "1.0.0"], [TOOL_GEM, "1.0.0"]],
                            files: { TOOL_GEM => TOOL_FILES })
+  end
+
+  # The reporter's layout: the vault lives outside the project, so moving the
+  # project directory strands only the plugin index's recorded paths.
+  def project_beside_the_vault
+    <<~SH
+      mkdir $WORKDIR/app
+      cd $WORKDIR/app
+      cat > Gemfile <<GEMFILE
+      #{GemIndex.source_line}
+
+      source "$WORKDIR/test.gemv", type: :vault do
+        gem "vault_test_gem"
+      end
+      GEMFILE
+    SH
   end
 end
 
