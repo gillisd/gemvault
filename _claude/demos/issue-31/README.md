@@ -53,5 +53,9 @@ Needs a ruby satisfying the gemspec's `required_ruby_version` (pass
 bundler 4.0.17 and command_kit. Serves its gem index on port 8808.
 Verified 2026-08-18 against ruby 3.4.9 / bundler 4.0.17.
 
-Both scripts exit 0 when the crash reproduces and 1 if the decayed machine
-unexpectedly works — so a future fix flips them, same as the failing spec.
+Both scripts exit 0 when the crash reproduces and 1 when the decayed machine
+works. micro.sh is gemvault-free, so it keeps reproducing until bundler fixes
+the upstream behavior. demo.sh builds the working tree, so on a tree carrying
+the `Gemvault::AmbientRegistration` settle (the issue #31 fix) it exits 1
+with "UNEXPECTED: the tool ran on the decayed machine" — that flip is the
+fix demonstrating itself, verified 2026-08-19.
