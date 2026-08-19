@@ -30,6 +30,15 @@ module Gemvault
   class AmbientRegistration
     PLUGIN = "bundler-source-vault".freeze
 
+    # Relocates an ambient registration of +plugin+, when one exists, into the
+    # plugin root that registered it. A machine this cannot be done on --
+    # read-only roots, permission refusals -- is left as found.
+    def self.settle(plugin = PLUGIN, roots: bundler_roots)
+      of(plugin, roots: roots)&.settle
+    rescue SystemCallError
+      nil
+    end
+
     def self.of(plugin, roots: bundler_roots)
       roots = roots.map { |root| Pathname(root) }
 
@@ -75,5 +84,41 @@ module Gemvault
       @record = record
     end
     private_class_method :new
+
+    def settle
+      materialize
+      adopt(@record, specifications_dir / @record.basename)
+      @index.repoint(@plugin, settled_dir)
+    end
+
+    private
+
+    def settled_dir
+      @root / "gems" / @recorded.basename
+    end
+
+    def specifications_dir
+      ensure_dir(@root / "specifications")
+    end
+
+    def materialize
+      return if settled_dir.directory?
+
+      ensure_dir(@root / "gems")
+      ensure_dir(settled_dir)
+      @recorded.children.select(&:file?).each { |file| adopt(file, settled_dir / file.basename) }
+    end
+
+    def adopt(source, target)
+      return if target.file?
+
+      target.binwrite(source.binread)
+      target.chmod(0o644)
+    end
+
+    def ensure_dir(dir)
+      dir.mkdir(0o755) unless dir.directory?
+      dir
+    end
   end
 end
