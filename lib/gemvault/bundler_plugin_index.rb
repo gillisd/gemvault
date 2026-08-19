@@ -25,7 +25,16 @@ module Gemvault
 
     # Whether plugin_paths currently lists +plugin+.
     def registered?(plugin)
-      plugin_paths.any? { |line| line.match?(/\A\s{2}#{Regexp.escape(plugin)}:/) }
+      !record_line(plugin).nil?
+    end
+
+    # :call-seq:
+    #   recorded_path(plugin) -> String or nil
+    #
+    # The installation path plugin_paths records for +plugin+, +nil+ when the
+    # index does not list it. Bundler's emitter writes the value double-quoted.
+    def recorded_path(plugin)
+      record_line(plugin)&.slice(/: "(.*)"/, 1)
     end
 
     # :call-seq:
@@ -45,6 +54,10 @@ module Gemvault
     end
 
     private
+
+    def record_line(plugin)
+      plugin_paths.find { |line| line.match?(/\A\s{2}#{Regexp.escape(plugin)}:/) }
+    end
 
     def plugin_paths
       return [] unless file.file?

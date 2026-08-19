@@ -55,6 +55,27 @@ RSpec.describe Gemvault::BundlerPluginIndex do
     end
   end
 
+  describe "#recorded_path" do
+    it "answers the path plugin_paths records for the plugin" do
+      write_index(registering)
+      expect(index.recorded_path("bundler-source-vault")).to eq("/roots/plugin/gems/bundler-source-vault-0.2.5")
+    end
+
+    it "is nil when the plugin is not registered" do
+      write_index(registering)
+      expect(index.recorded_path("bundler-source-fake")).to be_nil
+    end
+
+    it "is nil when the index was emptied" do
+      write_index(emptied)
+      expect(index.recorded_path("bundler-source-vault")).to be_nil
+    end
+
+    it "is nil when no index exists" do
+      expect(index.recorded_path("bundler-source-vault")).to be_nil
+    end
+  end
+
   describe "#snapshot" do
     it "captures the index content" do
       write_index(registering)
