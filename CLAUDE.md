@@ -64,6 +64,7 @@ gem install --source file:///path/to/myvault.gemv foo
 - `lib/gemvault/timestamp.rb` — the space-free notation a vault records times in, and conversion of a legacy vault's times into it
 - `lib/gemvault/cli.rb` — CLI dispatcher (new/add/list/remove/extract)
 - `lib/gemvault/ghost_specification.rb` — installation records whose gem directory is gone; swept by `gemvault doctor` (issue #23)
+- `lib/gemvault/ambient_registration.rb` — a plugin registration recorded in a gem home instead of the plugin root; settled into the root while the recorded copy is still alive (issue #31)
 - `lib/bundler/plugin/vault_source.rb` — Bundler `Plugin::API::Source` implementation
 - `lib/rubygems_plugin.rb` — RubyGems plugin: monkey-patches for `--source myvault.gemv` support
 - `lib/rubygems/source/vault.rb` — `Gem::Source::Vault` class (spec loading, download, `file://` URI handling, verbose logging)

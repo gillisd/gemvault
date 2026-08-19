@@ -1324,4 +1324,42 @@ Description: See the following sequence of commands and the error message. This 
 + 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/setup.rb:16:in '<top (required)>'
 + 	from /usr/local/bin/rstore:8:in 'Kernel#require'
 + 	from /usr/local/bin/rstore:8:in '<main>'
-Status: open
++
++ RESOLUTION: not a gemvault regression -- no gemvault code runs before the
++ crash, and the break predates 0.2.7. Bundler's plugin installer, finding
++ bundler-source-vault already installed as an ambient gem, skips populating
++ the plugin root and records the gem home's absolute paths in the project's
++ .bundle/plugin/index (the ambient state issues #13/#23 document). Since
++ bundler 2.6.0 (rubygems/rubygems 0c6ad3ecbb, still on master),
++ Plugin.load_plugin skips a plugin whose recorded paths no longer exist,
++ behind a warning bundler/setup's ui.silence swallows; Plugin.source("vault")
++ then returns nil and SourceList#add_plugin_source does nil.new -- the
++ reported error, with no remedy named. Any ordinary decay detonates it: gem
++ cleanup after upgrading gemvault (why the report blames 0.2.7), a ruby
++ switch, gem uninstall. Worth filing at rubygems/rubygems, and it is one
++ upstream defect wearing three costumes: the Gemfile-inferred plugin install
++ resolves against the ambient gem world because it skips the
++ configure_gem_home_and_path(Plugin.root) step the explicit `bundle plugin
++ install` path performs -- the same shortcut behind issues #13 and #23.
++
++ Gemvault::AmbientRegistration now settles the registration while the
++ recorded copy is still alive -- payload and installation record copied into
++ the plugin root, index repointed at the copy -- invoked from
++ VaultSource#initialize, so any bundle command during the alive window
++ immunizes the project, and on fixed gemvault the poison never outlives the
++ install that wrote it. A registration with no installation record beside it
++ (path:, git:, source tree) is deliberately left alone. Machines already
++ decayed, or wrecked by moving the project directory (no alive window), are
++ repaired by gemvault doctor, whose uninstall-and-reinstall already handles
++ the dead-path entry.
++
++ Replicated first by spec/integration/vault_installed_executable_spec.rb --
++ the reported invocation verbatim: gem install --source out of a real vault,
++ the installed executable run through bundler/setup, real exit code -- red
++ with the reported NoMethodError before the fix. The moved-project flavor and
++ its doctor recovery are pinned in the same spec. Unit cover in
++ spec/gemvault/ambient_registration_spec.rb and the extended
++ bundler_plugin_index_spec.rb. Mechanism demos (poisoned index, silenced
++ warning, verbatim crash on bundler 2.6.9 and 4.0.17) live in
++ _claude/demos/issue-31/.
+Status: closed

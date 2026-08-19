@@ -26,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is shared with the RubyGems source via `Gemvault::VaultPath` (issue #9).
 
 ### Fixed
+- A plugin registration pointing into the gem home -- the state Bundler leaves
+  behind when an ambient `bundler-source-vault` satisfies its plugin installer
+  -- no longer breaks the project forever once that copy is cleaned up or the
+  ruby is switched. The vault source settles such a registration into the
+  plugin root while it is still alive, so `bundler/setup` (and every
+  executable installed from a vault) keeps working after the ambient copy is
+  gone; a machine already broken, or broken by moving the project directory,
+  is repaired by `gemvault doctor` (issue #31).
 - `gemvault doctor` now repairs ghost installations: a
   `specifications/<gem>-<version>.gemspec` left behind after its gem directory
   was removed (interrupted uninstall, hand-cleaned gem home), even when the
