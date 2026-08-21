@@ -81,6 +81,7 @@ gem install --source file:///path/to/myvault.gemv foo
 - Vault opened/closed per operation in the source plugin (no persistent connection)
 - `fetch_gemspec_files` checks installed state — Bundler computes `full_gem_path` as `dirname(loaded_from)`, so `loaded_from` must point inside the gem directory
 - `bundler-source-vault` name exists because Bundler auto-infers plugin name from `type: :vault` → `bundler-source-vault`
+- `lib/rubygems_plugin.rb` and every file it reaches use `require_relative`, plus explicit `require "rubygems/..."` for the RubyGems files they patch — Bundler loads a path gem's plugin by absolute path with nothing activated and lib/ off the load path (issue #32)
 - `file://` URIs stripped to plain paths in `Gem::Source::Vault#initialize`
 - Verbose logging via `Gem::UserInteraction#verbose` for `--verbose` support
 - `shim/plugins.rb` loads gemvault by putting its `lib` on `$LOAD_PATH`, never by
