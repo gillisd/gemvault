@@ -1397,10 +1397,16 @@ Description: how can you say this issue is fixed and the pr approved when after
 + is why the suite never saw it -- and Bundler only performs the load on a
 + run with gems left to install, which is why it looks intermittent.
 +
-+ The three requires are now require_relative, and the plugin requires the
-+ rubygems files it patches (rubygems/source, rubygems/user_interaction)
-+ instead of leaning on Bundler having loaded them first -- the same
-+ no-activation doctrine shim/plugins.rb documents. Replicated first by
++ The three requires are now require_relative, guarded to defer to a
++ Gemvault core already loaded: plain require_relative force-loads the
++ plugin's own tree, and the superseded-gemvault integration spec caught it
++ clashing with the shim's pinned copy (constant redefinitions, then
++ superclass mismatch for GemEntry -- the old global require had deferred by
++ load-path accident). First copy wins, as shim/gemvault_load_path.rb
++ documents. The plugin also requires the rubygems files it patches
++ (rubygems/source, rubygems/user_interaction) instead of leaning on Bundler
++ having loaded them first -- the same no-activation doctrine
++ shim/plugins.rb documents. Replicated first by
 + spec/integration/path_bundled_gemvault_spec.rb: a project bundling the
 + tree with `gem "gemvault", path:` on a machine with no ambient gemvault,
 + real bundle install, real exit code, asserting the warning absent and the

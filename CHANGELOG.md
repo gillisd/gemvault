@@ -32,8 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on every `bundle install` that has gems to install. Bundler loads a path
   gem's `lib/rubygems_plugin.rb` by absolute path with nothing activated and
   the tree's lib/ off the load path, so the plugin now reaches every file it
-  needs by `require_relative` and requires the RubyGems files it patches
-  itself (issue #32).
+  needs by `require_relative` -- deferring to a gemvault core something else
+  already loaded, so a superseded install's plugin stub cannot clash with the
+  shim's pinned copy -- and requires the RubyGems files it patches itself
+  (issue #32).
 - A plugin registration pointing into the gem home -- the state Bundler leaves
   behind when an ambient `bundler-source-vault` satisfies its plugin installer
   -- no longer breaks the project forever once that copy is cleaned up or the
