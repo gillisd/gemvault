@@ -1,7 +1,9 @@
-require "gemvault/vault"
-require "gemvault/vault_path"
-require "gemvault/gem_entry"
+require_relative "../../gemvault/vault"
+require_relative "../../gemvault/vault_path"
+require_relative "../../gemvault/gem_entry"
 require "pathname"
+require "rubygems/source"
+require "rubygems/user_interaction"
 
 ##
 # A source backed by a .gemv vault file: a tar archive of .gem files indexed
