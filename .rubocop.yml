@@ -84,9 +84,9 @@ Claude/NoOverlyDefensiveCode:
 Style/SafeNavigation:
   MaxChainLength: 2
 
-# Allow `return a, b` for tuple-style returns.
+# Explicitly prohibit `return a, b` for tuple-style returns.
 Style/RedundantReturn:
-  AllowMultipleReturnValues: true
+  AllowMultipleReturnValues: false
 
 # ===========================================================================
 # Overrides from rubocop-performance — disable chain-hostile cops
