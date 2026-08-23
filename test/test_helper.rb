@@ -17,11 +17,11 @@ module GemvaultTestHelper
   # @param options [Hash] forwarded to GemFactory (dir:, platform:, files:, dependencies:)
   # @return [Pathname] absolute path to the built .gem file
   def build_gem(name:, version:, **options)
-    GemFactory.new(name: name, version: version, **options).build
+    GemFactory.new(name:, version:, **options).build
   end
 
   def gem_entry(name:, version:)
-    Gemvault::GemEntry.new(name: name, version: version)
+    Gemvault::GemEntry.new(name:, version:)
   end
 
   def teardown
@@ -43,7 +43,7 @@ module GemvaultTestHelper
   def build_subdir_gem(name:, version:, subdir:, **options)
     dir = @gem_build_dir / subdir
     dir.mkpath
-    build_gem(name: name, version: version, dir: dir, **options)
+    build_gem(name:, version:, dir:, **options)
   end
 
   def populate_vault(path:, gem_paths:)

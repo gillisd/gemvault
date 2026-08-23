@@ -10,7 +10,7 @@ module FixtureScript
     <<~SH
       set -e
       export WORKDIR=$(mktemp -d)
-      #{gem_builds(gems: gems, files: files, dependencies: dependencies)}
+      #{gem_builds(gems:, files:, dependencies:)}
       gemvault new $WORKDIR/test && #{vault_add_commands(gems)}
     SH
   end
@@ -19,14 +19,14 @@ module FixtureScript
   # creates, for projects that draw gems from more than one vault.
   def self.additional_vault(vault:, gems:, files: {}, dependencies: {})
     <<~SH
-      #{gem_builds(gems: gems, files: files, dependencies: dependencies)}
+      #{gem_builds(gems:, files:, dependencies:)}
       gemvault new $WORKDIR/#{vault} && #{vault_add_commands(gems, vault)}
     SH
   end
 
   def self.gem_builds(gems:, files:, dependencies:)
     gems.map { |name, version|
-      build_gem(name: name, version: version, files: files, dependencies: dependencies)
+      build_gem(name:, version:, files:, dependencies:)
     }.join("\n")
   end
 
@@ -35,9 +35,9 @@ module FixtureScript
     deps = dependencies.fetch(name, [])
 
     <<~SH
-      #{file_write_commands(name: name, gem_files: gem_files)}
+      #{file_write_commands(name:, gem_files:)}
       cd $WORKDIR/gems/#{name} && cat > #{name}.gemspec <<'GEMSPEC'
-      #{gemspec_body(name: name, version: version, gem_files: gem_files, deps: deps)}
+      #{gemspec_body(name:, version:, gem_files:, deps:)}
       GEMSPEC
       gem build #{name}.gemspec 2>&1
     SH

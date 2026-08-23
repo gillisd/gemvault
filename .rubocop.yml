@@ -9,7 +9,6 @@
 # readable for humans.
 # ===========================================================================
 
-<% require_relative "rubocop/branch_cohort" %>
 plugins:
   - rubocop-claude
   - rubocop-rspec
@@ -31,9 +30,6 @@ AllCops:
     - rakelib/version_tag.rb
     - rakelib/github_release.rb
     - rakelib/strict_shell.rb
-
-<%= RuboCop::BranchCohort.create(plugins: ['kaizo']) %>
-
 # ===========================================================================
 # Overrides from stock — personal style preferences
 # ===========================================================================
@@ -193,3 +189,24 @@ RSpec/NamedSubject:
 # have_file_content matcher accepts a filename string in expect()
 RSpec/ExpectActual:
   Enabled: false
+
+Kaizo/SpecComment:
+  Enabled: true
+  Exclude:
+    - "spec/support/**/*"
+
+Kaizo/PositionalArguments:
+  Enabled: true
+  Max: 1
+
+Kaizo/KeywordArguments:
+  Enabled: true
+  Exclude:
+    - "spec/support/**/*"
+    - "test/**/*"
+
+Kaizo/TotalArguments:
+  Enabled: true
+  Exclude:
+    - "spec/support/**/*"
+    - "test/**/*"

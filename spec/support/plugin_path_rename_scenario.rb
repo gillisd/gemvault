@@ -55,7 +55,7 @@ module PluginPathRenameScenario
     output, = podman_run(SCRIPT)
     _, _, after_initial = output.partition(INITIAL_INSTALL_MARK)
     broken, _, healed = after_initial.partition(BROKEN_STATE_MARK)
-    Outcome.new(broken: broken, healed: healed)
+    Outcome.new(broken:, healed:)
   end
 end
 

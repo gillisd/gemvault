@@ -49,19 +49,19 @@ class VaultSourceInstallTest < VaultSourceTestCase
   def reinstalled_output(force: false)
     source, spec = prepared_alpha
     source.install(spec)
-    [capture_reinstall_output(source: source, spec: spec, force: force), spec]
+    [capture_reinstall_output(source:, spec:, force:), spec]
   end
 
   def prepared_alpha
     source = create_vault_source(@vault_path)
     source.dependency_names = %w[alpha]
-    [source, find_spec(source: source, name: "alpha")]
+    [source, find_spec(source:, name: "alpha")]
   end
 
   def capture_reinstall_output(source:, spec:, force: false)
     out, _err = capture_io do
       Bundler.ui = Bundler::UI::Shell.new
-      source.install(spec, force: force)
+      source.install(spec, force:)
     end
     out
   end

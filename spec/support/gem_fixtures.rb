@@ -10,7 +10,7 @@ module GemFixtures
   end
 
   def build_gem(name:, version:, **options)
-    GemFactory.new(name: name, version: version, dir: gem_dir, **options).build
+    GemFactory.new(name:, version:, dir: gem_dir, **options).build
   end
 
   def vault_path
@@ -18,7 +18,7 @@ module GemFixtures
   end
 
   def current_tarvault(name: "foo", version: "1.0.0")
-    Gemvault::Vault.open(vault_path, create: true) { |vault| vault.add(build_gem(name: name, version: version)) }
+    Gemvault::Vault.open(vault_path, create: true) { |vault| vault.add(build_gem(name:, version:)) }
     vault_path
   end
 

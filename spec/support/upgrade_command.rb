@@ -9,7 +9,7 @@ module UpgradeCommand
 
   def run_upgrade_on_tarvault(gems:, upgrade_args: "")
     podman_run(<<~SH)
-      #{FixtureScript.preamble(gems: gems)}
+      #{FixtureScript.preamble(gems:)}
       gemvault upgrade $WORKDIR/test.gemv #{upgrade_args}
     SH
   end

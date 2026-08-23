@@ -46,9 +46,7 @@ module RuboCop
     # target is yielded and kept only when the block returns a truthy value.
     #
     #   BranchCohort.create plugins: ['rubocop-rspec', 'rubocop-performance']
-    #   BranchCohort.create(cops: ['Style/FrozenStringLiteralComment']) do |target|
     #     target.extname == '.rb'
-    #   end
     def self.create(...)
       new(...)
     end
@@ -74,8 +72,8 @@ module RuboCop
     # per cop key.  This is what an ERB <tt><%= %></tt> interpolates.
     def to_s
       @cops.to_h { |cop| [cop, { 'Include' => globs }] }
-           .to_yaml
-           .delete_prefix("---\n")
+        .to_yaml
+        .delete_prefix("---\n")
     end
 
     private

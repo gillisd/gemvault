@@ -13,7 +13,7 @@ class VaultTestCase < Minitest::Test
 
   def specific_version_ref(name:, version:)
     Gemvault::GemReference::SpecificVersion.new(
-      name: name, version: Gem::Version.new(version),
+      name:, version: Gem::Version.new(version),
     )
   end
 

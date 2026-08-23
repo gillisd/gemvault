@@ -3,8 +3,8 @@ module GemInstall
   INSTALLED_SUFFIXED_VERSION = /installed suffix_gem-0\.2\.1\.patch1/i
 
   def run_gem_install(gem_name:, vault_flags:, assertions:, version: "1.0.0")
-    podman_run(gem_install_script(gem_name: gem_name, vault_flags: vault_flags, assertions: assertions,
-                                  version: version))
+    podman_run(gem_install_script(gem_name:, vault_flags:, assertions:,
+                                  version:))
   end
 
   def install_and_require_gem

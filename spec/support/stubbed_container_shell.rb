@@ -1,6 +1,6 @@
 RSpec.shared_context "with a stubbed container shell" do
   subject(:image) do
-    ContainerImage.new(name: image_name, root: "/src/root", digest: "abc123", shell: shell, log: log)
+    ContainerImage.new(name: image_name, root: "/src/root", digest: "abc123", shell:, log:)
   end
 
   let(:image_name) { "gemvault-test:latest" }

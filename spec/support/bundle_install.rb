@@ -1,11 +1,11 @@
 module BundleInstall
   def run_bundle(gemfile_content:, assertions:, gems: [["vault_test_gem", "1.0.0"]], files: {}, dependencies: {})
-    podman_run(bundle_script(gemfile_content: gemfile_content, assertions: assertions, gems: gems, files: files,
-                             dependencies: dependencies))
+    podman_run(bundle_script(gemfile_content:, assertions:, gems:, files:,
+                             dependencies:))
   end
 
   def bundle_script(gemfile_content:, assertions:, gems:, files:, dependencies:)
-    preamble = FixtureScript.preamble(gems: gems, files: files, dependencies: dependencies)
+    preamble = FixtureScript.preamble(gems:, files:, dependencies:)
     <<~SH
       #{GemIndex.serve_preamble}
       #{preamble}

@@ -1,7 +1,7 @@
 require "gemvault/bundler_plugin_root"
 
 RSpec.describe Gemvault::BundlerPluginRoot do
-  subject(:plugin_root) { described_class.new(dir: gem_dir, gemfile: gemfile, env: env) }
+  subject(:plugin_root) { described_class.new(dir: gem_dir, gemfile:, env:) }
 
   let(:gemfile) { instance_double(Gemvault::BundlerGemfile, exist?: gemfile_present) }
   let(:gemfile_present) { false }

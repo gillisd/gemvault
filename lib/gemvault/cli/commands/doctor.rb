@@ -74,7 +74,7 @@ module Gemvault
         end
 
         def plugin_root
-          @plugin_root ||= BundlerPluginRoot.new(gemfile: gemfile)
+          @plugin_root ||= BundlerPluginRoot.new(gemfile:)
         end
 
         def index

@@ -4,7 +4,7 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
   describe "#run" do
     let(:stdout) { StringIO.new }
     let(:stderr) { StringIO.new }
-    let(:command) { described_class.new(stdout: stdout, stderr: stderr) }
+    let(:command) { described_class.new(stdout:, stderr:) }
     let(:uninstall) { ["bundle", "plugin", "uninstall", "bundler-source-vault"] }
     let(:gemfile) { instance_double(Gemvault::BundlerGemfile, exist?: true) }
     let(:plugin_root) do
@@ -20,9 +20,11 @@ RSpec.describe Gemvault::CLI::Commands::Doctor do
     end
 
     def invoke_run
-      command.run
-    rescue SystemExit => e
-      e.status
+      begin
+        command.run
+      rescue SystemExit => e
+        e.status
+      end
     end
 
     before do

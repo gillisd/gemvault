@@ -51,11 +51,11 @@ RSpec::Matchers.define :succeed_showing do |*shown|
   chain(:without) { |*absent| @absent = absent }
 
   match do |(output, status)|
-    ScenarioOutcome.satisfied?(output, status, shown: shown, hidden: Array(@absent))
+    ScenarioOutcome.satisfied?(output, status, shown:, hidden: Array(@absent))
   end
 
   failure_message do |(output, status)|
-    verdict = ScenarioOutcome.verdict(output, status, shown: shown, hidden: Array(@absent))
+    verdict = ScenarioOutcome.verdict(output, status, shown:, hidden: Array(@absent))
     "expected the run to succeed showing #{shown.inspect}\n#{verdict}"
   end
 end
@@ -64,11 +64,11 @@ RSpec::Matchers.define :fail_showing do |*shown|
   chain(:without) { |*absent| @absent = absent }
 
   match do |(output, status)|
-    ScenarioOutcome.satisfied?(output, status, shown: shown, hidden: Array(@absent), success: false)
+    ScenarioOutcome.satisfied?(output, status, shown:, hidden: Array(@absent), success: false)
   end
 
   failure_message do |(output, status)|
-    verdict = ScenarioOutcome.verdict(output, status, shown: shown, hidden: Array(@absent))
+    verdict = ScenarioOutcome.verdict(output, status, shown:, hidden: Array(@absent))
     "expected the run to fail showing #{shown.inspect}\n#{verdict}"
   end
 end

@@ -4,7 +4,7 @@ require "gemvault/vault_upgrade"
 RSpec.describe Gemvault::CLI::Commands::Upgrade do
   let(:plan) { Gemvault::VaultUpgrade::Plan.new(from_version: 1, to_version: 2, gem_count: 3) }
   let(:current_plan) { Gemvault::VaultUpgrade::Plan.new(from_version: 2, to_version: 2, gem_count: 1) }
-  let(:upgrade) { instance_double(Gemvault::VaultUpgrade, plan: plan) }
+  let(:upgrade) { instance_double(Gemvault::VaultUpgrade, plan:) }
 
   before { allow(Gemvault::VaultUpgrade).to receive(:new).and_return(upgrade) }
 

@@ -20,12 +20,12 @@ RSpec.describe Podman do
       let(:env) { { "GEMVAULT_PODMAN_RUNTIME" => "/usr/local/bin/crun-pinned" } }
 
       it "pins it" do
-        expect(described_class.command("build", env: env))
+        expect(described_class.command("build", env:))
           .to eq(["podman", "--runtime", "/usr/local/bin/crun-pinned", "build"])
       end
 
       it "pins it before the subcommand" do
-        pinned = described_class.command("run", "--rm", env: env)
+        pinned = described_class.command("run", "--rm", env:)
         expect(pinned.index("--runtime")).to be < pinned.index("run")
       end
     end

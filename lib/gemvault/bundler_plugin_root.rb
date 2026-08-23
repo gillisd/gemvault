@@ -13,7 +13,7 @@ module Gemvault
   class BundlerPluginRoot
     LOCAL_DIR = ".bundle/plugin".freeze
 
-    def initialize(dir: Dir.pwd, gemfile: BundlerGemfile.new(dir: dir), env: ENV)
+    def initialize(dir: Dir.pwd, gemfile: BundlerGemfile.new(dir:), env: ENV)
       @dir = Pathname(dir)
       @gemfile = gemfile
       @env = env

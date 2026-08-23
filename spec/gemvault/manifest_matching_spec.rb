@@ -12,7 +12,7 @@ RSpec.describe "Gemvault::Manifest matching" do
     end
     let(:manifest) { one_record_manifest.with_record(foo_two) }
 
-    def foo_matching(version: nil) = manifest.matching(Gemvault::GemReference.parse("foo", version: version))
+    def foo_matching(version: nil) = manifest.matching(Gemvault::GemReference.parse("foo", version:))
 
     it "selects every stored gem the reference matches" do
       expect(foo_matching).to contain_exactly(record, foo_two)

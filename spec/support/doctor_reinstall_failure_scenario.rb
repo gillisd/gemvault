@@ -55,7 +55,7 @@ module DoctorReinstallFailureScenario
     output, = podman_run(SCRIPT)
     doctored, _, rest = output.partition(DOCTOR_MARK)
     index, _, healed = rest.partition(INDEX_MARK)
-    Outcome.new(doctored: doctored, index: index, healed: healed)
+    Outcome.new(doctored:, index:, healed:)
   end
 end
 

@@ -1,9 +1,9 @@
 require "gemvault/gem_reference"
 
 RSpec.describe Gemvault::GemReference, ".parse" do
-  def specific(name, version) = described_class::SpecificVersion.new(name: name, version: Gem::Version.new(version))
+  def specific(name, version) = described_class::SpecificVersion.new(name:, version: Gem::Version.new(version))
 
-  def any(name) = described_class::AnyVersion.new(name: name)
+  def any(name) = described_class::AnyVersion.new(name:)
 
   def parse(...) = described_class.parse(...)
 

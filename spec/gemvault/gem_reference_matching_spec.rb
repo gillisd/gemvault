@@ -3,10 +3,10 @@ require "gemvault/gem_entry"
 
 RSpec.describe "Gemvault::GemReference matching" do
   def specific(name, version)
-    Gemvault::GemReference::SpecificVersion.new(name: name, version: Gem::Version.new(version))
+    Gemvault::GemReference::SpecificVersion.new(name:, version: Gem::Version.new(version))
   end
 
-  def any(name) = Gemvault::GemReference::AnyVersion.new(name: name)
+  def any(name) = Gemvault::GemReference::AnyVersion.new(name:)
 
   describe "#matches?" do
     let(:foo_one) { Gemvault::GemEntry.new(name: "foo", version: "1.0.0") }

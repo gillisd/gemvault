@@ -8,7 +8,7 @@ RSpec.describe "AES-256-GCM feasibility for encrypted gems" do
     cipher = OpenSSL::Cipher.new("aes-256-gcm").encrypt
     cipher.key = key
     iv = cipher.random_iv
-    { ciphertext: cipher.update(plaintext) + cipher.final, iv: iv, tag: cipher.auth_tag }
+    { ciphertext: cipher.update(plaintext) + cipher.final, iv:, tag: cipher.auth_tag }
   end
 
   def decrypt(ciphertext:, iv:, tag:)

@@ -23,10 +23,10 @@ class VaultSourceTestCase < Minitest::Test
   end
 
   def vault_source_with_gem(name:, version:, subdir:, remote: true, **options)
-    gem_path = build_subdir_gem(name: name, version: version, subdir: subdir, **options)
+    gem_path = build_subdir_gem(name:, version:, subdir:, **options)
     vault_path = @tmpdir / "#{name}.gemv"
     populate_vault(path: vault_path, gem_paths: [gem_path])
-    create_vault_source(vault_path, remote: remote)
+    create_vault_source(vault_path, remote:)
   end
 
   def find_spec(source:, name:)
