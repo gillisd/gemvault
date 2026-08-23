@@ -20,3 +20,5 @@ gem "rubycritic"
 # C extension that cannot build on the JVM, so JRuby leaves it out -- nothing
 # under test/ touches it, which is why the JRuby CI job runs `rake test` only.
 gem "sqlite3", "~> 2.0", platform: %i[ruby windows]
+
+gem "kaizo", "~> 0.8.0"
