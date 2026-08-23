@@ -2,6 +2,7 @@ require "pathname"
 require_relative "vaulted_gem"
 require_relative "../../gemvault/vault"
 require_relative "../../gemvault/gem_entry"
+require_relative "../../gemvault/ambient_registration"
 
 module Bundler
   module Plugin
@@ -12,6 +13,10 @@ module Bundler
     class VaultSource
       def initialize(opts)
         super
+        # Instantiation is the one moment gemvault code reliably runs while an
+        # ambient-recorded registration is still alive (issue #31); once the
+        # gem home copy is gone, nothing of this plugin loads at all.
+        Gemvault::AmbientRegistration.settle
         @vault_path = Pathname(@uri).expand_path(Bundler.root)
         @allow_remote = false
       end

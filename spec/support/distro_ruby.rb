@@ -49,6 +49,23 @@ module DistroRuby
     SH
   end
 
+  # An ambient copy of the shim, as `gem install bundler-source-vault` leaves
+  # it (the reporter's machines carry one -- issues #13, #23, #29). Bundler's
+  # plugin installer then satisfies the plugin from the gem home and records
+  # those paths in the project's plugin index, never populating the plugin
+  # root. Built from the tree's own shim so it matches what the local gem
+  # index resolves.
+  def self.ambient_shim
+    "gem install --local --no-document /work/src/shim/bundler-source-vault-*.gem >/dev/null\n"
+  end
+
+  # The other half of issue #31's wreck: the recorded copy leaves the gem
+  # home -- gem cleanup after an upgrade, a ruby switch, an explicit
+  # uninstall -- while the plugin index keeps naming its paths.
+  def self.ambient_shim_uninstalled
+    "gem uninstall -a -I bundler-source-vault >/dev/null\n"
+  end
+
   # Replaces the image's baked-in gemvault gems with ones freshly built from
   # the mounted source tree (requires TreeGems.build_preamble to have run).
   def self.current_tree_as_system_gems

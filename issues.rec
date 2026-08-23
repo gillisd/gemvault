@@ -1324,4 +1324,94 @@ Description: See the following sequence of commands and the error message. This 
 + 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.3/lib/bundler/setup.rb:16:in '<top (required)>'
 + 	from /usr/local/bin/rstore:8:in 'Kernel#require'
 + 	from /usr/local/bin/rstore:8:in '<main>'
-Status: open
++
++ RESOLUTION: not a gemvault regression -- no gemvault code runs before the
++ crash, and the break predates 0.2.7. Bundler's plugin installer, finding
++ bundler-source-vault already installed as an ambient gem, skips populating
++ the plugin root and records the gem home's absolute paths in the project's
++ .bundle/plugin/index (the ambient state issues #13/#23 document). Since
++ bundler 2.6.0 (rubygems/rubygems 0c6ad3ecbb, still on master),
++ Plugin.load_plugin skips a plugin whose recorded paths no longer exist,
++ behind a warning bundler/setup's ui.silence swallows; Plugin.source("vault")
++ then returns nil and SourceList#add_plugin_source does nil.new -- the
++ reported error, with no remedy named. Any ordinary decay detonates it: gem
++ cleanup after upgrading gemvault (why the report blames 0.2.7), a ruby
++ switch, gem uninstall. Worth filing at rubygems/rubygems, and it is one
++ upstream defect wearing three costumes: the Gemfile-inferred plugin install
++ resolves against the ambient gem world because it skips the
++ configure_gem_home_and_path(Plugin.root) step the explicit `bundle plugin
++ install` path performs -- the same shortcut behind issues #13 and #23.
++
++ Gemvault::AmbientRegistration now settles the registration while the
++ recorded copy is still alive -- payload and installation record copied into
++ the plugin root, index repointed at the copy -- invoked from
++ VaultSource#initialize, so any bundle command during the alive window
++ immunizes the project, and on fixed gemvault the poison never outlives the
++ install that wrote it. A registration with no installation record beside it
++ (path:, git:, source tree) is deliberately left alone. Machines already
++ decayed, or wrecked by moving the project directory (no alive window), are
++ repaired by gemvault doctor, whose uninstall-and-reinstall already handles
++ the dead-path entry.
++
++ Replicated first by spec/integration/vault_installed_executable_spec.rb --
++ the reported invocation verbatim: gem install --source out of a real vault,
++ the installed executable run through bundler/setup, real exit code -- red
++ with the reported NoMethodError before the fix. The moved-project flavor and
++ its doctor recovery are pinned in the same spec. Unit cover in
++ spec/gemvault/ambient_registration_spec.rb and the extended
++ bundler_plugin_index_spec.rb. Mechanism demos (poisoned index, silenced
++ warning, verbatim crash on bundler 2.6.9 and 4.0.17) live in
++ _claude/demos/issue-31/.
+Status: closed
+
+Id: 32
+Updated: Fri, 21 Aug 2026 16:24:01 +0000
+Name: bundle install on the gemvault tree itself warns "Error loading RubyGems plugin"
+Description: how can you say this issue is fixed and the pr approved when after
++ running a basic bundle install on this project, i see this in the warnings:
++
++ Error loading RubyGems plugin "/workspaces/gemvault/lib/rubygems_plugin.rb": cannot load such file -- gemvault/vault (LoadError)
++
++ (Reported amid a wall of environmental noise from the same terminal: a dozen
++ "Ignoring <gem> because its extensions are not built" lines and an "Error
++ loading RubyGems plugin ... gem-wrappers_plugin.rb" LoadError. A bare
++ `gem env` prints all of that too on the reporting machine, whose
++ /usr/local/bin ruby is 4.0.6 while GEM_HOME/GEM_PATH still name rvm's
++ ruby-3.4.7 gem trees, so each ruby sees the other's native builds as
++ broken. gemvault owns exactly one line of the wall: the rubygems_plugin
++ one.)
++
++ RESOLUTION: pre-existing on master and unrelated to issue #31 (Bundler's
++ plugin index, not RubyGems plugins) -- reproduced identically on a master
++ worktree. Bundler's Installer#load_plugins (2.2 through 4.x) loads every
++ path-source gem's lib/rubygems_plugin.rb by absolute file path before
++ installing -- the tree's own `gemspec` Gemfile line makes gemvault such a
++ gem -- with the tree's lib/ absent from $LOAD_PATH and nothing activated.
++ rubygems_plugin.rb itself was require_relative-clean, but
++ lib/rubygems/source/vault.rb still opened with `require "gemvault/vault"`
++ (and vault_path, gem_entry): resolvable only by activating an installed
++ gemvault, which a contributor checkout does not have. RubyGems rescues the
++ LoadError into the reported warning and the plugin silently never
++ registers. Any machine with gemvault gem-installed masks the defect via
++ activation -- the test container installs it system-wide by design, which
++ is why the suite never saw it -- and Bundler only performs the load on a
++ run with gems left to install, which is why it looks intermittent.
++
++ The three requires are now require_relative, guarded to defer to a
++ Gemvault core already loaded: plain require_relative force-loads the
++ plugin's own tree, and the superseded-gemvault integration spec caught it
++ clashing with the shim's pinned copy (constant redefinitions, then
++ superclass mismatch for GemEntry -- the old global require had deferred by
++ load-path accident). First copy wins, as shim/gemvault_load_path.rb
++ documents. The plugin also requires the rubygems files it patches
++ (rubygems/source, rubygems/user_interaction) instead of leaning on Bundler
++ having loaded them first -- the same no-activation doctrine
++ shim/plugins.rb documents. Replicated first by
++ spec/integration/path_bundled_gemvault_spec.rb: a project bundling the
++ tree with `gem "gemvault", path:` on a machine with no ambient gemvault,
++ real bundle install, real exit code, asserting the warning absent and the
++ install still doing real work. Mechanism pinned by
++ spec/rubygems_plugin_load_spec.rb: the plugin file loaded exactly as
++ Bundler loads it (Gem.load_plugin_files against an empty GEM_HOME and
++ GEM_PATH), red with the verbatim warning before the fix, green after.
+Status: closed

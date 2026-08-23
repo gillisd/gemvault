@@ -26,6 +26,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is shared with the RubyGems source via `Gemvault::VaultPath` (issue #9).
 
 ### Fixed
+- Bundling gemvault itself as a path gem -- a contributor checkout, or a
+  Gemfile pinning `gem "gemvault", path:` at a working tree -- no longer emits
+  `Error loading RubyGems plugin ... cannot load such file -- gemvault/vault`
+  on every `bundle install` that has gems to install. Bundler loads a path
+  gem's `lib/rubygems_plugin.rb` by absolute path with nothing activated and
+  the tree's lib/ off the load path, so the plugin now reaches every file it
+  needs by `require_relative` -- deferring to a gemvault core something else
+  already loaded, so a superseded install's plugin stub cannot clash with the
+  shim's pinned copy -- and requires the RubyGems files it patches itself
+  (issue #32).
+- A plugin registration pointing into the gem home -- the state Bundler leaves
+  behind when an ambient `bundler-source-vault` satisfies its plugin installer
+  -- no longer breaks the project forever once that copy is cleaned up or the
+  ruby is switched. The vault source settles such a registration into the
+  plugin root while it is still alive, so `bundler/setup` (and every
+  executable installed from a vault) keeps working after the ambient copy is
+  gone; a machine already broken, or broken by moving the project directory,
+  is repaired by `gemvault doctor` (issue #31).
 - `gemvault doctor` now repairs ghost installations: a
   `specifications/<gem>-<version>.gemspec` left behind after its gem directory
   was removed (interrupted uninstall, hand-cleaned gem home), even when the

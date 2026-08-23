@@ -4,7 +4,8 @@ module FixtureScript
   #
   # Options:
   #   gems: array of [name, version] pairs (default: one gem)
-  #   files: hash of {name => {path => content}} overrides
+  #   files: hash of {name => {path => content}} overrides; files under exe/
+  #     are declared as the gem's executables
   #   dependencies: hash of {name => [[dep_name, requirement]]}
   def self.preamble(gems: [["vault_test_gem", "1.0.0"]], files: {}, dependencies: {})
     <<~SH
@@ -55,9 +56,17 @@ module FixtureScript
         s.license = "MIT"
         s.homepage = "https://example.com"
         s.files = #{gem_files.keys.inspect}
+        #{executables_clause(gem_files)}
         #{dep_lines}
       end
     GEMSPEC
+  end
+
+  def self.executables_clause(gem_files)
+    exe_names = gem_files.keys.select { |path| path.start_with?("exe/") }.map { |path| File.basename(path) }
+    return "" if exe_names.empty?
+
+    %(s.bindir = "exe"; s.executables = #{exe_names.inspect})
   end
 
   def self.file_write_commands(name:, gem_files:)

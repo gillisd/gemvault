@@ -1,7 +1,14 @@
-require "gemvault/vault"
-require "gemvault/vault_path"
-require "gemvault/gem_entry"
+# require_relative, so the plugin carries its own gemvault when nothing else
+# does (a path-bundled tree has no gem to activate) -- but deferred to a copy
+# already loaded: the Bundler shim pins gemvault and loads it first, and a
+# newer install's plugin stub reopening these files over it clashes on every
+# constant. First copy wins, as in shim/gemvault_load_path.rb.
+require_relative "../../gemvault/vault" unless defined?(Gemvault::Vault)
+require_relative "../../gemvault/vault_path" unless defined?(Gemvault::VaultPath)
+require_relative "../../gemvault/gem_entry" unless defined?(Gemvault::GemEntry)
 require "pathname"
+require "rubygems/source"
+require "rubygems/user_interaction"
 
 ##
 # A source backed by a .gemv vault file: a tar archive of .gem files indexed

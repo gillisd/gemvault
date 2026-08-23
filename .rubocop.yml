@@ -9,12 +9,14 @@
 # readable for humans.
 # ===========================================================================
 
+<% require_relative "rubocop/branch_cohort" %>
 plugins:
   - rubocop-claude
   - rubocop-rspec
   - rubocop-minitest # Permitted by David.
   - rubocop-performance
   - rubocop-rake
+  - kaizo
 
 AllCops:
   NewCops: enable
@@ -29,6 +31,8 @@ AllCops:
     - rakelib/version_tag.rb
     - rakelib/github_release.rb
     - rakelib/strict_shell.rb
+
+<%= RuboCop::BranchCohort.create(plugins: ['kaizo']) %>
 
 # ===========================================================================
 # Overrides from stock — personal style preferences
@@ -80,9 +84,9 @@ Claude/NoOverlyDefensiveCode:
 Style/SafeNavigation:
   MaxChainLength: 2
 
-# Allow `return a, b` for tuple-style returns.
+# Explicitly prohibit `return a, b` for tuple-style returns.
 Style/RedundantReturn:
-  AllowMultipleReturnValues: true
+  AllowMultipleReturnValues: false
 
 # ===========================================================================
 # Overrides from rubocop-performance — disable chain-hostile cops
