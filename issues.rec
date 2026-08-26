@@ -1325,3 +1325,21 @@ Description: See the following sequence of commands and the error message. This 
 + 	from /usr/local/bin/rstore:8:in 'Kernel#require'
 + 	from /usr/local/bin/rstore:8:in '<main>'
 Status: open
+
+Id: 32
+Updated: Wed, 26 Aug 2026 09:43:42 -0400
+Name: Error still arises when switching platform. Do not try and self heal. Find and fix root problem
+Description: Installing bundler-source-vault 0.2.7
++ The following plugin paths don't exist: /workspace/spool/.bundle/plugin/gems/bundler-source-vault-0.2.7/..
++ 
++ This can happen if the plugin was installed with a different version of Ruby that has since been uninstalled.
++ 
++ If you would like to reinstall the plugin, run:
++ 
++ bundler plugin uninstall bundler-source-vault && bundler plugin install bundler-source-vault
++ 
++ Continuing without installing plugin bundler-source-vault.
++ /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.18/lib/bundler/source_list.rb:65:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
++ 
++       add_source_to_list Plugin.source(source).new(options), @plugin_sources
+Status: open
