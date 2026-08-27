@@ -1343,3 +1343,11 @@ Description: Installing bundler-source-vault 0.2.7
 + 
 +       add_source_to_list Plugin.source(source).new(options), @plugin_sources
 Status: open
+
+Id: 33
+Updated: Wed, 26 Aug 2026 21:59:22 -0400
+Name: Gemvault no longer works on bundler/inline
+Description: /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.18/lib/bundler/resolver.rb:367:in 'Bundler::Resolver#raise_not_found!': Could not find gem 'bundler-source-vault' in locally installed gems. (Bundler::GemNotFound)
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.18/lib/bundler/resolver.rb:529:in 'block in Bundler::Resolver#prepare_dependencies'
++ 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.18/lib/bundler/resolver.rb:504:in 'Hash#each'
+Status: open
