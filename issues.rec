@@ -1351,3 +1351,13 @@ Description: /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/b
 + 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.18/lib/bundler/resolver.rb:529:in 'block in Bundler::Resolver#prepare_dependencies'
 + 	from /Users/davidgillis/.rbenv/versions/4.0.1/lib/ruby/gems/4.0.0/gems/bundler-4.0.18/lib/bundler/resolver.rb:504:in 'Hash#each'
 Status: open
+
+Id: 34
+Updated: Sat, 05 Sep 2026 17:06:16 -0400
+Name: the recurring add_plugin_source error is not fixed. Running `doctor` is not an adequate solution. Fix the root problem
+Description: Error:
++ 
++ /private/tmp/local/reversal-store/reversal-store/vendor/ruby/4.0.0/gems/bundler-4.0.20/lib/bundler/source_list.rb:65:in 'Bundler::SourceList#add_plugin_source': undefined method 'new' for nil (NoMethodError)
++ 
++       add_source_to_list Plugin.source(source).new(options), @plugin_sources
+Status: open
