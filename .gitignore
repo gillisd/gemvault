@@ -15,3 +15,5 @@ Gemfile.lock
 !spec/fixtures/*.gemv
 .rspec_status
 references
+
+/.greenfield/
