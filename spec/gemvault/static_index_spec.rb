@@ -23,6 +23,13 @@ RSpec.describe Gemvault::StaticIndex do
       open_vault { |vault| index.publish(vault) }
       expect(index).to be_published
     end
+
+    it "is false when gems are stored but the released listing is missing" do
+      current_tarvault
+      open_vault { |vault| index.publish(vault) }
+      (directory / "specs.4.8.gz").delete
+      expect(index).not_to be_published
+    end
   end
 
   describe "#url" do
@@ -56,6 +63,40 @@ RSpec.describe Gemvault::StaticIndex do
 
     it "lists no prereleases" do
       expect(listed("prerelease_specs.4.8.gz")).to eq([])
+    end
+  end
+
+  context "when the vault holds two versions of a gem" do
+    before do
+      tarvault_with(build_gem(name: "foo", version: "1.0.0"), build_gem(name: "foo", version: "2.0.0"))
+      open_vault { |vault| index.publish(vault) }
+    end
+
+    it "lists only the newest as the latest" do
+      expect(listed("latest_specs.4.8.gz")).to eq([["foo", Gem::Version.new("2.0.0"), "ruby"]])
+    end
+
+    it "lists both as released" do
+      expect(listed("specs.4.8.gz").map { |_, version, _| version.to_s }).to contain_exactly("1.0.0", "2.0.0")
+    end
+  end
+
+  context "when the vault holds a release and a prerelease of a gem" do
+    before do
+      tarvault_with(build_gem(name: "foo", version: "1.0.0"), build_gem(name: "foo", version: "2.0.0.rc1"))
+      open_vault { |vault| index.publish(vault) }
+    end
+
+    it "lists the release as the latest" do
+      expect(listed("latest_specs.4.8.gz")).to eq([["foo", Gem::Version.new("1.0.0"), "ruby"]])
+    end
+
+    it "lists only the release as released" do
+      expect(listed("specs.4.8.gz")).to eq([["foo", Gem::Version.new("1.0.0"), "ruby"]])
+    end
+
+    it "lists only the prerelease as a prerelease" do
+      expect(listed("prerelease_specs.4.8.gz")).to eq([["foo", Gem::Version.new("2.0.0.rc1"), "ruby"]])
     end
   end
 
