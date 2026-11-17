@@ -27,7 +27,7 @@ RUN dnf \
 # Keep this in step with the `BUNDLED WITH` line the project's own lockfile
 # carries. The plugin machinery these specs exercise is Bundler's own, so a
 # stale version silently tests different code.
-RUN gem install --no-document bundler -v 4.0.17
+RUN gem install --no-document bundler -v 4.0.23
 
 # sqlite3 is not a gemvault runtime dependency; install it here so the upgrade
 # integration test can read the committed legacy SQLite (Dbvault) fixture it
