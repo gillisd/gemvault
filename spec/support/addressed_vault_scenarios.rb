@@ -86,9 +86,11 @@ module AddressedVaultScenarios
   def load_after_the_vault_changes
     run_addressed(<<~SH)
       bundle install
+      before=$(ls .bundle/gemvault/test.gemv)
       touch test.gemv
       #{LOAD}
-      ls .bundle/gemvault/test.gemv | wc -l
+      [ "$(ls .bundle/gemvault/test.gemv)" != "$before" ] && echo "republished"
+      echo "indexes: $(ls .bundle/gemvault/test.gemv | wc -l)"
     SH
   end
 

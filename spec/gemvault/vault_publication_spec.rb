@@ -157,6 +157,40 @@ RSpec.describe Gemvault::VaultPublication do
       end
     end
 
+    context "when the failure is reported in bytes outside the caller's encoding" do
+      let(:vault_path) { gem_dir / "josé.gemv" }
+
+      around do |example|
+        original = Encoding.default_external
+        Encoding.default_external = Encoding::US_ASCII
+        example.run
+      ensure
+        Encoding.default_external = original
+      end
+
+      before { vault_path.write("not a vault") }
+
+      it "still raises saying why" do
+        expect { publication.publish }.to raise_error(Gemvault::VaultPublication::Error, /as a gem index: \S/)
+      end
+    end
+
+    context "when a superseded index cannot be removed" do
+      let(:stuck) { shelf_directory / "1-2-3" / "stuck" }
+
+      before do
+        stuck.mkpath
+        (stuck / "file").write("")
+        stuck.chmod(0o555)
+      end
+
+      after { stuck.chmod(0o755) }
+
+      it "passes the warning on" do
+        expect { publication.publish }.to output(/could not remove superseded index/).to_stderr
+      end
+    end
+
     context "when the vault file is missing" do
       before { vault_path.delete }
 

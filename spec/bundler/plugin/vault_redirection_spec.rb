@@ -186,7 +186,44 @@ RSpec.describe Bundler::Plugin::VaultRedirection do
 
     it "raises a path error naming the address" do
       expect { redirection.apply }
-        .to raise_error(Bundler::PathError, a_string_including("cannot mirror the vault address '#{address}'"))
+        .to raise_error(Bundler::PathError, a_string_including("cannot carry the vault path 'my__vault.gemv'"))
+    end
+  end
+
+  context "when the vault path climbs out of the project" do
+    let(:project) { gem_dir / "app" }
+    let(:address) { "https://gemvault.invalid/../test.gemv/" }
+
+    before { current_tarvault }
+
+    it "raises a path error saying Bundler cannot carry the path" do
+      expect { redirection.apply }.to raise_error(Bundler::PathError, /cannot carry the vault path '\.\.\/test\.gemv'/)
+    end
+  end
+
+  context "when another mirror setting takes over the address" do
+    before do
+      current_tarvault
+      settings.set_command_option("mirror.all", "https://mirror.example/gems/")
+    end
+
+    it "raises a path error naming the mirror that won" do
+      expect { redirection.apply }.to raise_error(Bundler::PathError, %r{mirror\.example/gems})
+    end
+  end
+
+  context "when the vault path starts with a tilde" do
+    let(:address) { "https://gemvault.invalid/~/test.gemv/" }
+    let(:vault_path) { project / "~" / "test.gemv" }
+
+    before do
+      vault_path.dirname.mkpath
+      current_tarvault
+      redirection.apply
+    end
+
+    it "finds it inside the project" do
+      expect(mirror).to start_with("file://#{app_config}/gemvault/")
     end
   end
 

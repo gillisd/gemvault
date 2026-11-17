@@ -59,7 +59,7 @@ RSpec.describe "bundle install from a vault named by a gem source address", :int
 
   context "when the vault changes after installing" do
     it "republishes it from under bundle exec" do
-      expect(load_after_the_vault_changes).to succeed_showing("loaded 1.0.0")
+      expect(load_after_the_vault_changes).to succeed_showing("loaded 1.0.0", "republished", "indexes: 1")
     end
   end
 
