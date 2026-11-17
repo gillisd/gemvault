@@ -14,7 +14,7 @@ module BundleExecScenarios
       #{DistroRuby.current_tree_as_system_gems}
       #{FixtureScript.preamble}
       #{VaultedApp.gemfile_vault_only}
-      #{VaultedApp.vendored_install}
+      bundle install
       #{REQUIRE_VAULT_GEM}
     SH
   end
