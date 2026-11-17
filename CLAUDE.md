@@ -25,6 +25,16 @@ Do NOT modify `.rubocop.yml` or use inline `# rubocop:disable` tags without expl
 1. NEVER use Ruby's `sleep` method
 2. NEVER create any class ending in "er" or "or"
 
+## No backwards compatibility
+
+gemvault is an early, experimental gem, below 1.0.0. Do not design for or
+protect backwards compatibility: no guards, fallbacks, specs or docs whose only
+purpose is to keep an older Bundler, an older Ruby or older gemvault behaviour
+working. When a feature needs a newer Bundler, require it outright and fail
+with a clear message instead of degrading silently, and prefer the simpler
+design over one that keeps an old path alive. Anyone who needs compatibility
+uses an earlier version of the gem and of Bundler.
+
 ## Project Overview
 
 Multi-gem portable archives. A single `.gemv` file is a tarball holding multiple `.gem` files plus a line-oriented `manifest` index; legacy SQLite vaults are read-only.
