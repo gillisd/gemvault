@@ -13,7 +13,9 @@ module Bundler
     # mirrored to a static gem index published from the vault it names, so
     # Bundler reads the gems from disk and never contacts the host.
     #
-    # Each vault has a shelf of its own under the bundle's config directory. The
+    # Each vault has a shelf of its own under the bundle's config directory. A
+    # project whose path a gem source address cannot carry, such as one holding
+    # a space, keeps its shelves under the user's Bundler cache instead. The
     # mirror is set for the running process only; nothing is written to the
     # project's or the user's Bundler config.
     class VaultRedirection
@@ -57,7 +59,22 @@ module Bundler
       end
 
       def shelf_for(address)
-        File.join(Bundler.app_config_path, "gemvault", address.vault_path.gsub("/", "%2F"))
+        shelves = shelves_for(address)
+        shelf = shelves.find { |candidate| Gemvault::StaticIndex.new(candidate).addressable? }
+        return shelf if shelf
+
+        raise Bundler::PathError,
+              "Could not publish vault '#{address.vault_path}': neither #{shelves.join(" nor ")} can be written " \
+              "as a gem source address. Set BUNDLE_USER_CACHE to a directory whose path holds no spaces and " \
+              "only ASCII characters"
+      end
+
+      def shelves_for(address)
+        name = address.vault_path.gsub("/", "%2F")
+        project = Bundler::Digest.sha1(Bundler.root.to_s)
+
+        [File.join(Bundler.app_config_path, "gemvault", name),
+         File.join(Bundler.user_cache, "gemvault", project, name)]
       end
     end
   end
