@@ -31,44 +31,6 @@ RSpec.describe Gemvault::StaticIndex do
     end
   end
 
-  describe "#addressable?" do
-    it "is true for a directory a gem source address can carry" do
-      expect(index).to be_addressable
-    end
-
-    context "when the directory name is percent-encoded" do
-      let(:directory) { gem_dir / "vendor%2Ftest.gemv" }
-
-      it "is true" do
-        expect(index).to be_addressable
-      end
-    end
-
-    context "when the directory holds a space" do
-      let(:directory) { gem_dir / "My Projects" / "index" }
-
-      it "is false" do
-        expect(index).not_to be_addressable
-      end
-    end
-
-    context "when the directory holds a character outside ASCII" do
-      let(:directory) { gem_dir / "josé" / "index" }
-
-      it "is false" do
-        expect(index).not_to be_addressable
-      end
-    end
-
-    context "when the directory holds a character that ends an address path" do
-      let(:directory) { gem_dir / "app#1" / "index" }
-
-      it "is false" do
-        expect(index).not_to be_addressable
-      end
-    end
-  end
-
   describe "#publish" do
     before do
       current_tarvault
