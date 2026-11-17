@@ -14,13 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ruby-version: ['3.4.8', '4.0.1']
+        ruby-version: ['3.4', '4.0']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby-version }}
+        bundler: '4.0.23'
         bundler-cache: true
     - name: Run unit tests
       run: bundle exec rake test
@@ -39,13 +40,14 @@ jobs:
       # these two legs fail for different reasons often enough to matter.
       fail-fast: false
       matrix:
-        ruby-version: ['3.4.8', '4.0.1']
+        ruby-version: ['3.4', '4.0']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby-version }}
+        bundler: '4.0.23'
         bundler-cache: true
     - name: Ensure podman is available
       run: command -v podman || (sudo apt-get update && sudo apt-get install -y podman)
@@ -91,6 +93,7 @@ jobs:
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: jruby-10.1.0.0
+        bundler: '4.0.23'
         bundler-cache: true
     - name: Run unit tests
       run: bundle exec rake test
