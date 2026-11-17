@@ -92,6 +92,21 @@ module AddressedVaultScenarios
     SH
   end
 
+  def install_with_a_plugin_installed_before_the_hook_existed
+    run_bundle(gemfile_content: ADDRESSED_GEMFILE, assertions: <<~SH)
+      image_bundler=$(bundle --version | awk '{print $NF}')
+      gem install --no-document bundler -v #{HOOKED_BUNDLER}
+      #{GemIndex.gemrc_pointing_at_index}
+      BUNDLER_VERSION=$image_bundler bundle plugin install bundler-source-vault
+      export BUNDLER_VERSION=#{HOOKED_BUNDLER}
+      bundle install || echo "not redirected"
+      rm -rf .bundle/plugin
+      bundle plugin install bundler-source-vault
+      bundle install
+      #{LOAD}
+    SH
+  end
+
   private
 
   def run_addressed(steps, project: "$WORKDIR", gemfile: ADDRESSED_GEMFILE)

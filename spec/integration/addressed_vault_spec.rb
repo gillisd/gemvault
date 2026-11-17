@@ -69,6 +69,13 @@ RSpec.describe "bundle install from a vault named by a gem source address", :int
     end
   end
 
+  context "when the plugin was installed by a Bundler that predates the hook" do
+    it "is not redirected until the plugin is reinstalled" do
+      expect(install_with_a_plugin_installed_before_the_hook_existed)
+        .to succeed_showing("not redirected", "loaded 1.0.0")
+    end
+  end
+
   context "when the addressed vault is missing" do
     it "names the vault it could not find" do
       expect(install_from_absent_addressed_vault).to fail_showing("Could not find vault 'test.gemv'")
