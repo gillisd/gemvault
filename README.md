@@ -65,6 +65,10 @@ git add -f .bundle/plugin                    # so Dependabot's clone has the plu
   would resolve it before the plugin can redirect the address.
 - Ignore `.bundle/gemvault/`. It holds one index per vault, rebuilt whenever the
   vault file changes, and the index it replaces is removed.
+- A `file://` address cannot carry a path that needs escaping, such as one
+  with a space or a character outside ASCII. A project under such a path keeps
+  its indexes under your Bundler cache instead (`~/.bundle/cache/gemvault/`, or
+  wherever `BUNDLE_USER_CACHE` points), one directory per project.
 - The mirror is set for the running process only. Nothing is written to the
   project's or your own Bundler config.
 - The vault file has to be present wherever the Gemfile is evaluated,

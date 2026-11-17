@@ -69,7 +69,7 @@ gem install --source file:///path/to/myvault.gemv foo
 - `lib/gemvault/static_index.rb` — a vault's gems written out as a static gem index a `file://` source can read
 - `lib/gemvault/vault_publication.rb` — keeps one current index per vault on a shelf under `.bundle/gemvault/`, keyed by the vault file's size and mtime; publishes through `publish_static_index.rb` in a separate Ruby process
 - `lib/gemvault/publish_static_index.rb` — the script that process runs: clears superseded indexes, then publishes
-- `lib/bundler/plugin/vault_redirection.rb` — on Bundler's `after-eval` hook (4.1.0+), mirrors each vault address in the definition to its published index, in memory only
+- `lib/bundler/plugin/vault_redirection.rb` — on Bundler's `after-eval` hook (4.1.0+), mirrors each vault address in the definition to its published index, in memory only; the shelf moves to the user's Bundler cache when the project path is one a `file://` address cannot carry (RubyGems and Bundler never decode it)
 - `lib/rubygems_plugin.rb` — RubyGems plugin: monkey-patches for `--source myvault.gemv` support
 - `lib/rubygems/source/vault.rb` — `Gem::Source::Vault` class (spec loading, download, `file://` URI handling, verbose logging)
 - `lib/rubygems/resolver/vault_set.rb` — `Gem::Resolver::VaultSet` for dependency resolution
