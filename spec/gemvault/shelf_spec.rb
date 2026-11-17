@@ -52,7 +52,7 @@ RSpec.describe Gemvault::Shelf do
       expect(shelf).to be_writable
     end
 
-    context "when the nearest existing directory is read-only" do
+    context "when the nearest existing directory is read-only", :unprivileged do
       let(:directory) { gem_dir / "locked" / "deep" / "shelf" }
 
       before do
@@ -163,22 +163,39 @@ RSpec.describe Gemvault::Shelf do
       end
     end
 
-    context "when two callers stock the same stamp at once" do
+    context "when two callers stock the same stamp while the shelf is locked" do
       let(:publishes) { Queue.new }
+      let(:lock) { (directory / ".lock").open(File::RDWR | File::CREAT) }
+      let(:callers) { Array.new(2) { Thread.new { stock_recording } } }
 
-      before do
-        callers = Array.new(2) do
-          Thread.new do
-            described_class.new(directory).stock("1-2-3") do |index|
-              publishes << index
-              publish_into(index)
-            end
-          end
+      def stock_recording
+        described_class.new(directory).stock("1-2-3") do |index|
+          publishes << index
+          publish_into(index)
         end
+      end
+
+      def release
+        lock.flock(File::LOCK_UN)
         callers.each(&:join)
       end
 
-      it "publishes once" do
+      before do
+        directory.mkpath
+        lock.flock(File::LOCK_EX)
+        Thread.pass until callers.all?(&:stop?)
+      end
+
+      after { lock.close }
+
+      it "publishes nothing until the lock is released" do
+        waiting = publishes.size
+        release
+        expect(waiting).to eq(0)
+      end
+
+      it "publishes once after the lock is released" do
+        release
         expect(publishes.size).to eq(1)
       end
     end

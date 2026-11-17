@@ -58,7 +58,13 @@ module Gemvault
         raise Error, "could not read vault #{@vault_path}: #{e.message}"
       end
 
-      "#{stat.size}-#{stat.mtime.to_i}-#{stat.mtime.nsec}"
+      "#{stat.size}-#{seconds(stat.mtime)}-#{stat.mtime.nsec}"
+    end
+
+    # A time before 1970 counts backwards from zero. A stamp holds digits only,
+    # so such a time is written with a leading zero, which no later time has.
+    def seconds(time)
+      time.to_i.negative? ? "0#{time.to_i.abs}" : time.to_i.to_s
     end
 
     def shelve(index)

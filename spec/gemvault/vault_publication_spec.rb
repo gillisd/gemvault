@@ -175,7 +175,7 @@ RSpec.describe Gemvault::VaultPublication do
       end
     end
 
-    context "when a superseded index cannot be removed" do
+    context "when a superseded index cannot be removed", :unprivileged do
       let(:stuck) { shelf_directory / "1-2-3" / "stuck" }
 
       before do
@@ -188,6 +188,14 @@ RSpec.describe Gemvault::VaultPublication do
 
       it "passes the warning on" do
         expect { publication.publish }.to output(a_string_including("could not remove superseded")).to_stderr
+      end
+    end
+
+    context "when the vault was last modified before 1970" do
+      before { File.utime(Time.at(-5), Time.at(-5), vault_path) }
+
+      it "publishes the vault" do
+        expect(publication.publish).to be_published
       end
     end
 

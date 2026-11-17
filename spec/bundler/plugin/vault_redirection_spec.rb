@@ -130,7 +130,7 @@ RSpec.describe Bundler::Plugin::VaultRedirection do
     end
   end
 
-  context "when the project directory is read-only" do
+  context "when the project directory is read-only", :unprivileged do
     let(:project) { gem_dir / "app" }
     let(:vault_path) { project / "test.gemv" }
 
@@ -144,6 +144,21 @@ RSpec.describe Bundler::Plugin::VaultRedirection do
 
     it "publishes the vault under the user's Bundler cache" do
       expect(mirror).to start_with("file://#{user_cache}/gemvault/")
+    end
+  end
+
+  context "when the bundle's config directory leaves the project through a parent reference" do
+    let(:project) { gem_dir / "app" }
+    let(:app_config) { Pathname("#{project}/../global") }
+    let(:vault_path) { project / "test.gemv" }
+
+    before do
+      current_tarvault
+      redirection.apply
+    end
+
+    it "keeps the shelf apart from other projects that share the directory" do
+      expect(gem_dir.glob("global/gemvault/#{"[0-9a-f]" * 40}/test.gemv/*/gems/foo-1.0.0.gem").size).to eq(1)
     end
   end
 
