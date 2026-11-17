@@ -1,6 +1,6 @@
 # Projects whose Gemfile names its vault as an ordinary gem source address.
 module AddressedVaultScenarios
-  HOOKED_BUNDLER = "4.1.0".freeze
+  UNHOOKED_BUNDLER = "4.0.23".freeze
   ADDRESSED_GEMFILE = 'source "https://gemvault.invalid/test.gemv/" do; gem "vault_test_gem"; end'.freeze
   NESTED_GEMFILE = 'source "https://gemvault.invalid/vendor/test.gemv/" do; gem "vault_test_gem"; end'.freeze
   LOAD = %(bundle exec ruby -e "require 'vault_test_gem'; puts 'loaded ' + VaultTestGem::VERSION").freeze
@@ -30,11 +30,12 @@ module AddressedVaultScenarios
     SH
   end
 
-  def install_addressed_vault_on_image_bundler
+  def install_plugin_on_older_bundler
     run_bundle(gemfile_content: ADDRESSED_GEMFILE, assertions: <<~SH)
+      gem install --no-document bundler -v #{UNHOOKED_BUNDLER}
+      export BUNDLER_VERSION=#{UNHOOKED_BUNDLER}
       #{GemIndex.gemrc_pointing_at_index}
       bundle plugin install bundler-source-vault
-      bundle install
     SH
   end
 
@@ -94,27 +95,10 @@ module AddressedVaultScenarios
     SH
   end
 
-  def install_with_a_plugin_installed_before_the_hook_existed
-    run_bundle(gemfile_content: ADDRESSED_GEMFILE, assertions: <<~SH)
-      image_bundler=$(bundle --version | awk '{print $NF}')
-      gem install --no-document bundler -v #{HOOKED_BUNDLER}
-      #{GemIndex.gemrc_pointing_at_index}
-      BUNDLER_VERSION=$image_bundler bundle plugin install bundler-source-vault
-      export BUNDLER_VERSION=#{HOOKED_BUNDLER}
-      bundle install || echo "not redirected"
-      rm -rf .bundle/plugin
-      bundle plugin install bundler-source-vault
-      bundle install
-      #{LOAD}
-    SH
-  end
-
   private
 
   def run_addressed(steps, project: "$WORKDIR", gemfile: ADDRESSED_GEMFILE)
     run_bundle(gemfile_content: gemfile, assertions: <<~SH)
-      gem install --no-document bundler -v #{HOOKED_BUNDLER}
-      export BUNDLER_VERSION=#{HOOKED_BUNDLER}
       mkdir -p "#{project}"
       [ "#{project}" = "$WORKDIR" ] || mv Gemfile test.gemv "#{project}/"
       cd "#{project}"
