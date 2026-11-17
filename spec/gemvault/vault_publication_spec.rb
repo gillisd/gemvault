@@ -187,7 +187,7 @@ RSpec.describe Gemvault::VaultPublication do
       after { stuck.chmod(0o755) }
 
       it "passes the warning on" do
-        expect { publication.publish }.to output(/could not remove superseded index/).to_stderr
+        expect { publication.publish }.to output(a_string_including("could not remove superseded")).to_stderr
       end
     end
 

@@ -18,7 +18,7 @@ RSpec.describe Gemvault::SourceAddress do
       expect(described_class.vaulted?(Gem::URI("https://gemvault.invalid/private.gemv/"))).to be(true)
     end
 
-    it "recognises a vault path that climbs out of the Gemfile's directory" do
+    it "recognises a vault path that climbs so that it can be refused by name" do
       expect(described_class.vaulted?("https://gemvault.invalid/../shared/private.gemv/")).to be(true)
     end
 

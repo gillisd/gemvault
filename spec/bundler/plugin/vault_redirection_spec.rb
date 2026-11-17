@@ -197,7 +197,8 @@ RSpec.describe Bundler::Plugin::VaultRedirection do
     before { current_tarvault }
 
     it "raises a path error saying Bundler cannot carry the path" do
-      expect { redirection.apply }.to raise_error(Bundler::PathError, /cannot carry the vault path '\.\.\/test\.gemv'/)
+      expect { redirection.apply }
+        .to raise_error(Bundler::PathError, a_string_including("cannot carry the vault path '../test.gemv'"))
     end
   end
 
