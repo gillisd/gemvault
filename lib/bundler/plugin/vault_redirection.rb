@@ -26,11 +26,13 @@ module Bundler
       ##
       # Mirrors each vault address in the definition to its published index.
       def apply
-        @definition.sources.rubygems_sources
-                   .flat_map(&:remotes)
-                   .select { |remote| Gemvault::SourceAddress.vaulted?(remote) }
-                   .map { |remote| Gemvault::SourceAddress.new(remote) }
-                   .each { |address| redirect(address) }
+        @definition
+          .sources
+          .rubygems_sources
+          .flat_map(&:remotes)
+          .select { |remote| Gemvault::SourceAddress.vaulted?(remote) }
+          .map { |remote| Gemvault::SourceAddress.new(remote) }
+          .each { |address| redirect(address) }
       end
 
       private
