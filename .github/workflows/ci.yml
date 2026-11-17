@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ruby-version: ['3.4.8', '4.0.1']
+        ruby-version: ['3.4', '4.0']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Ruby
@@ -40,7 +40,7 @@ jobs:
       # these two legs fail for different reasons often enough to matter.
       fail-fast: false
       matrix:
-        ruby-version: ['3.4.8', '4.0.1']
+        ruby-version: ['3.4', '4.0']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Ruby
