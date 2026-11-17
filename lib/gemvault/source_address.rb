@@ -24,7 +24,7 @@ module Gemvault
 
     ##
     # The vault's path, resolved against the directory of the Gemfile that
-    # named it. It may climb out of that directory but is never absolute.
+    # named it. It is never absolute.
     attr_reader :vault_path
 
     def initialize(address)

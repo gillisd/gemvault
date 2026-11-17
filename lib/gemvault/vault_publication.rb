@@ -65,7 +65,7 @@ module Gemvault
       command = [Gem.ruby, SCRIPT, @vault_path, @shelf.directory, File.basename(index.directory)]
 
       begin
-        said = IO.popen(OUTSIDE_THE_BUNDLE, command, err: %i[child out], &:read)
+        said = IO.popen(OUTSIDE_THE_BUNDLE, command, err: %i[child out], &:read).scrub.strip
       rescue SystemCallError => e
         raise Error, "#{unpublished}: could not start #{Gem.ruby}: #{e.message}"
       end
@@ -74,10 +74,11 @@ module Gemvault
     end
 
     def concluded(index, status, said)
-      return index if status.success?
       raise Error, "#{unpublished}: the publishing process was killed by signal #{status.termsig}" if status.signaled?
+      raise Error, "#{unpublished}: #{said}" unless status.success?
 
-      raise Error, "#{unpublished}: #{said.strip}"
+      warn said unless said.empty?
+      index
     end
 
     def unpublished

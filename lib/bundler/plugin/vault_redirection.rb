@@ -49,11 +49,22 @@ module Bundler
       end
 
       def confirm(address, index)
-        return if Bundler.settings.mirror_for(address.to_s).to_s == index.url
+        served = Bundler.settings.mirror_for(address.to_s).to_s
+        return if served == index.url
 
-        raise Bundler::PathError,
-              "Bundler cannot mirror the vault address '#{address}'. Rename the vault file so that no '_' sits " \
-              "next to another '_', a '.' or a '-'"
+        raise Bundler::PathError, unmirrored(address, served)
+      end
+
+      def unmirrored(address, served)
+        return overridden(address, served) if served != address.to_s
+
+        "Bundler cannot carry the vault path '#{address.vault_path}' in a mirror setting. Keep the vault under " \
+          "the Gemfile's directory, with no '..' in its path and no '_' next to another '_', a '.' or a '-'"
+      end
+
+      def overridden(address, served)
+        "Another Bundler mirror setting serves '#{address}' from #{served}, so the vault is never read. " \
+          "Remove that mirror or narrow it to the sources it is for"
       end
 
       def publish(address)
@@ -66,7 +77,7 @@ module Bundler
 
       def existing_vault(address)
         relative_path = address.vault_path
-        vault_path = File.expand_path(relative_path, Bundler.root)
+        vault_path = File.expand_path(File.join(Bundler.root, relative_path))
         return vault_path if File.file?(vault_path)
 
         raise Bundler::PathError, absent(relative_path, vault_path)

@@ -75,10 +75,16 @@ git add -f .bundle/plugin                    # so Dependabot's clone has the plu
   wherever `BUNDLE_USER_CACHE` points), one directory per project, when the
   project's own directory cannot hold it: its path has a space or a character
   outside ASCII, which a `file://` address cannot carry, or it is read-only.
+  When `BUNDLE_APP_CONFIG` points outside the project, as it does in the
+  official `ruby` container image, the index is kept there instead of in
+  `.bundle/`, in a directory of its own per project.
   `bundle install --verbose` prints where each vault is served from.
-- Name the vault file so that no `_` sits next to another `_`, a `.` or a `-`
-  (`my_gems.gemv` is fine, `my__gems.gemv` is not). Bundler cannot carry such
-  a path in a mirror setting, and the plugin says so instead of installing.
+- Keep the vault under the Gemfile's directory, and name every part of its
+  path so that no `_` sits next to another `_`, a `.` or a `-`
+  (`vendor/my_gems.gemv` is fine; `vendor/my__gems.gemv` and `../my_gems.gemv`
+  are not). Bundler cannot carry such a path in a mirror setting, and the
+  plugin says so instead of installing. A `mirror.all` setting also takes over
+  the address, and the plugin reports that too.
 - Bundler includes the names of its settings in the User-Agent it sends to
   every gem server the bundle contacts. The mirror is one of them, so those
   servers see the vault's path as written in the Gemfile.
