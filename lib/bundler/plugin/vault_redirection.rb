@@ -109,7 +109,7 @@ module Bundler
       end
 
       def project_shelves
-        shelves = File.join(Bundler.app_config_path, "gemvault")
+        shelves = File.join(File.expand_path(Bundler.app_config_path), "gemvault")
         return shelves if shelves.start_with?("#{Bundler.root}/")
 
         File.join(shelves, project)
