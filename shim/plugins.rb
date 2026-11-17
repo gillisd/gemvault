@@ -18,6 +18,19 @@ unless defined?(Bundler::Plugin::VaultSource)
   BundlerSourceVault::GemvaultLoadPath.apply
 
   require "bundler/plugin/vault_source"
+  require "bundler/plugin/vault_redirection"
 end
 
 Bundler::Plugin::API.source("vault", Bundler::Plugin::VaultSource)
+
+# A Gemfile may instead address a vault as an ordinary gem source, so that it
+# and its lockfile carry no plugin source. Bundler loads this file for the
+# after-eval hook from the plugin index alone, which is what lets a tool that
+# never installs plugins still resolve from a vault committed beside the plugin.
+# Bundler gained the hook in 4.1.0; an older one keeps the vault source type and
+# simply has no address to redirect.
+if Bundler::Plugin::Events.defined_event?("after-eval")
+  Bundler::Plugin::API.hook("after-eval") do |definition|
+    Bundler::Plugin::VaultRedirection.new(definition).apply
+  end
+end
