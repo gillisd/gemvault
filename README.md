@@ -43,9 +43,8 @@ source "https://gemvault.invalid/vendor/private.gemv/" do
 end
 ```
 
-This form needs **Bundler 4.1.0 or newer**. An older Bundler has no hook for
-the plugin to act on, tries to reach the address, and fails with
-`Could not reach host gemvault.invalid`.
+The plugin needs **Bundler 4.1.0 or newer**, for both this form and
+`type: :vault`, and refuses to install on an older one.
 
 `gemvault.invalid` resolves nowhere and is never contacted. Everything after it
 is the vault's path relative to the Gemfile. The plugin publishes the vault as a
@@ -63,10 +62,6 @@ git add -f .bundle/plugin                    # so Dependabot's clone has the plu
   makes a committed `.bundle/plugin` work in someone else's clone.
 - Do not add a `plugin "bundler-source-vault"` line to the Gemfile. Bundler
   would resolve it before the plugin can redirect the address.
-- A plugin installed by a Bundler older than 4.1.0 is not picked up after
-  upgrading Bundler, because Bundler records a plugin's hooks when it installs
-  it. Delete `.bundle/plugin` and run `bundle plugin install
-  bundler-source-vault` again.
 - Ignore `.bundle/gemvault/`. It holds one index per vault, rebuilt whenever the
   vault file changes, and the index it replaces is removed. A `bundle` command
   that was already running when the vault changed may lose its index and need
@@ -154,16 +149,16 @@ The RubyGems plugin works similarly: `gem install --source vault.gemv` loads spe
 
 ## Recovering from broken bundler plugin state: `gemvault doctor`
 
-Two kinds of wreckage make every `bundle install` fail, and `gemvault doctor` repairs both.
+`gemvault doctor` repairs two kinds of wreckage.
 
-**A ghost installation.** If a gem home holds a `specifications/bundler-source-vault-<version>.gemspec` whose `gems/` directory is gone (an interrupted `gem uninstall`, a hand-cleaned gem home), bundler trusts the leftover record and every install dies with:
+**A ghost installation.** If a gem home holds a `specifications/bundler-source-vault-<version>.gemspec` whose `gems/` directory is gone (an interrupted `gem uninstall`, a hand-cleaned gem home), Bundler older than 4.1.0 trusted the leftover record and every install died with:
 
 ```
 Installing bundler-source-vault 0.2.4
 Failed to install plugin `bundler-source-vault`, due to Bundler::Plugin::MalformattedPlugin (plugins.rb was not found in the plugin.)
 ```
 
-Deleting `.bundle` or the lockfile cannot help — the wreck lives in the machine's gem home, not the project. `doctor` finds such records across your gem roots, removes them (reporting each), and reinstalls the plugin.
+Bundler 4.1.0 installs past such a record, but it stays in the machine's gem home. `doctor` finds such records across your gem roots, removes them (reporting each), and reinstalls the plugin.
 
 **A broken plugin path.** If you installed `bundler-source-vault` from a local path (e.g. `plugin "bundler-source-vault", path: "/path/to/gemvault"` in a Gemfile), bundler records that absolute path in its plugin index. Moving, renaming, or deleting the source directory afterwards invalidates the stored path, and the next `bundle install` prints:
 
