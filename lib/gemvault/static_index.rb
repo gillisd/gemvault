@@ -10,9 +10,10 @@ module Gemvault
   # specification, and the three listings a client fetches first.
   #
   # Asking where the index is and whether it is published touches nothing but
-  # the filesystem, so both are safe inside a Bundler process. Publishing reads
-  # gem packages, which loads zlib and the rest of what RubyGems needs for
-  # that; VaultPublication keeps it out of the Bundler process.
+  # the filesystem and requires no gem, so both are safe inside a Bundler
+  # process. Publishing reads gem packages, which loads zlib and the rest of
+  # what RubyGems needs for that; VaultPublication keeps it out of the Bundler
+  # process.
   class StaticIndex
     MARSHAL = "Marshal.#{Gem.marshal_version}".freeze
     RELEASED = "specs.#{Gem.marshal_version}.gz".freeze
@@ -47,11 +48,18 @@ module Gemvault
       prerelease, released = specs.partition { |spec| spec.version.prerelease? }
 
       list(PRERELEASE, prerelease)
-      list(LATEST, released)
+      list(LATEST, newest(released))
       list(RELEASED, released)
     end
 
     private
+
+    def newest(specs)
+      specs
+        .group_by { |spec| [spec.name, spec.platform.to_s] }
+        .values
+        .map { |versions| versions.max_by(&:version) }
+    end
 
     def store(vault, entry)
       write(File.join("gems", entry.filename), vault.gem_data(entry))
