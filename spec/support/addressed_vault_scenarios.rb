@@ -1,12 +1,12 @@
-# A project whose Gemfile names its vault as an ordinary gem source address.
-# The plugin is installed up front, as the Gemfile no longer infers it, and on
-# a Bundler new enough to fire the after-eval hook the address depends on.
+# Projects whose Gemfile names its vault as an ordinary gem source address.
 module AddressedVaultScenarios
   HOOKED_BUNDLER = "4.1.0".freeze
   ADDRESSED_GEMFILE = 'source "https://gemvault.invalid/test.gemv/" do; gem "vault_test_gem"; end'.freeze
+  NESTED_GEMFILE = 'source "https://gemvault.invalid/vendor/test.gemv/" do; gem "vault_test_gem"; end'.freeze
+  LOAD = %(bundle exec ruby -e "require 'vault_test_gem'; puts 'loaded ' + VaultTestGem::VERSION").freeze
 
   def install_from_addressed_vault
-    run_addressed("bundle install\nbundle exec ruby -e \"require 'vault_test_gem'; puts VaultTestGem::VERSION\"")
+    run_addressed("bundle install\n#{LOAD}")
   end
 
   def lock_addressed_vault
@@ -45,15 +45,57 @@ module AddressedVaultScenarios
   def install_from_addressed_vault_in_spaced_project
     run_addressed(<<~SH, project: "$WORKDIR/My Projects")
       bundle install
-      bundle exec ruby -e "require 'vault_test_gem'; puts VaultTestGem::VERSION"
+      #{LOAD}
       test ! -e .bundle/gemvault
+    SH
+  end
+
+  def install_from_addressed_vault_beside_another_source
+    gemfile = "#{GemIndex.source_line}\ngem \"command_kit\"\n#{ADDRESSED_GEMFILE}"
+
+    run_addressed(<<~SH, gemfile: gemfile)
+      bundle install
+      #{LOAD}
+      bundle exec ruby -e "require 'command_kit'; puts 'loaded command_kit'"
+      cat Gemfile.lock
+    SH
+  end
+
+  def install_from_nested_addressed_vault
+    run_addressed(<<~SH, gemfile: NESTED_GEMFILE)
+      mkdir vendor
+      mv test.gemv vendor/
+      bundle install
+      #{LOAD}
+    SH
+  end
+
+  def install_after_moving_the_project
+    run_addressed(<<~SH, project: "$WORKDIR/app")
+      bundle install
+      cd ..
+      cp -a app moved
+      rm -rf app
+      cd moved
+      rm -rf .bundle/gemvault
+      bundle install
+      #{LOAD}
+    SH
+  end
+
+  def load_after_the_vault_changes
+    run_addressed(<<~SH)
+      bundle install
+      touch test.gemv
+      #{LOAD}
+      ls .bundle/gemvault/test.gemv | wc -l
     SH
   end
 
   private
 
-  def run_addressed(steps, project: "$WORKDIR")
-    run_bundle(gemfile_content: ADDRESSED_GEMFILE, assertions: <<~SH)
+  def run_addressed(steps, project: "$WORKDIR", gemfile: ADDRESSED_GEMFILE)
+    run_bundle(gemfile_content: gemfile, assertions: <<~SH)
       gem install --no-document bundler -v #{HOOKED_BUNDLER}
       export BUNDLER_VERSION=#{HOOKED_BUNDLER}
       mkdir -p "#{project}"

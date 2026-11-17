@@ -1,6 +1,6 @@
 RSpec.describe "bundle install from a vault named by a gem source address", :integration do
   it "installs the gem and makes it loadable" do
-    expect(install_from_addressed_vault).to succeed_showing("1.0.0")
+    expect(install_from_addressed_vault).to succeed_showing("loaded 1.0.0")
   end
 
   it "locks the gem under an ordinary gem source" do
@@ -20,7 +20,7 @@ RSpec.describe "bundle install from a vault named by a gem source address", :int
   end
 
   it "leaves no mirror in any Bundler config" do
-    expect(configure_nothing_for_addressed_vault).to succeed.without("mirror", "MIRROR")
+    expect(configure_nothing_for_addressed_vault).to succeed_showing("Settings are listed").without("mirror", "MIRROR")
   end
 
   context "when Bundler predates the after-eval hook" do
@@ -33,16 +33,45 @@ RSpec.describe "bundle install from a vault named by a gem source address", :int
     end
   end
 
+  context "when the Gemfile also names another gem source" do
+    it "installs and loads gems from both" do
+      expect(install_from_addressed_vault_beside_another_source)
+        .to succeed_showing("loaded 1.0.0", "loaded command_kit")
+    end
+
+    it "locks each gem under its own source" do
+      expect(install_from_addressed_vault_beside_another_source)
+        .to succeed_showing("remote: https://gemvault.invalid/test.gemv/", "remote: http://127.0.0.1:8808/")
+    end
+  end
+
+  context "when the vault sits in a subdirectory" do
+    it "installs the gem and makes it loadable" do
+      expect(install_from_nested_addressed_vault).to succeed_showing("loaded 1.0.0")
+    end
+  end
+
+  context "when the project is moved after the plugin was installed" do
+    it "installs the gem and makes it loadable" do
+      expect(install_after_moving_the_project).to succeed_showing("loaded 1.0.0")
+    end
+  end
+
+  context "when the vault changes after installing" do
+    it "republishes it from under bundle exec" do
+      expect(load_after_the_vault_changes).to succeed_showing("loaded 1.0.0")
+    end
+  end
+
   context "when the project path holds a space" do
     it "installs the gem and makes it loadable" do
-      expect(install_from_addressed_vault_in_spaced_project).to succeed_showing("1.0.0")
+      expect(install_from_addressed_vault_in_spaced_project).to succeed_showing("loaded 1.0.0")
     end
   end
 
   context "when the addressed vault is missing" do
     it "names the vault it could not find" do
-      output, = install_from_absent_addressed_vault
-      expect(output).to include("Could not find vault 'test.gemv'")
+      expect(install_from_absent_addressed_vault).to fail_showing("Could not find vault 'test.gemv'")
     end
   end
 end
