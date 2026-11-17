@@ -65,6 +65,11 @@ gem install --source file:///path/to/myvault.gemv foo
 - `lib/gemvault/cli.rb` — CLI dispatcher (new/add/list/remove/extract)
 - `lib/gemvault/ghost_specification.rb` — installation records whose gem directory is gone; swept by `gemvault doctor` (issue #23)
 - `lib/bundler/plugin/vault_source.rb` — Bundler `Plugin::API::Source` implementation
+- `lib/gemvault/source_address.rb` — the `https://gemvault.invalid/<vault path>/` address a Gemfile uses to name a vault as an ordinary gem source
+- `lib/gemvault/static_index.rb` — a vault's gems written out as a static gem index a `file://` source can read
+- `lib/gemvault/vault_publication.rb` — keeps one current index per vault on a shelf under `.bundle/gemvault/`, keyed by the vault file's size and mtime; publishes through `publish_static_index.rb` in a separate Ruby process
+- `lib/gemvault/publish_static_index.rb` — the script that process runs: clears superseded indexes, then publishes
+- `lib/bundler/plugin/vault_redirection.rb` — on Bundler's `after-eval` hook (4.1.0+), mirrors each vault address in the definition to its published index, in memory only
 - `lib/rubygems_plugin.rb` — RubyGems plugin: monkey-patches for `--source myvault.gemv` support
 - `lib/rubygems/source/vault.rb` — `Gem::Source::Vault` class (spec loading, download, `file://` URI handling, verbose logging)
 - `lib/rubygems/resolver/vault_set.rb` — `Gem::Resolver::VaultSet` for dependency resolution
@@ -91,6 +96,8 @@ gem install --source file:///path/to/myvault.gemv foo
   avoided because it demands gemvault's full runtime dependency set (command_kit),
   which Bundler skips for the same reason — `vault_source.rb` reaches the rest of
   gemvault through `require_relative` alone and needs none of it.
+
+- Address-form code that runs in the Bundler process (`source_address.rb`, `vault_publication.rb`, `vault_redirection.rb`, and `static_index.rb` up to `publish`) requires nothing and activates no gem. The after-eval hook fires before Bundler sets up the bundle, so any default gem required there (zlib, openssl, digest, date, stringio, ...) is activated at the newest installed version and collides with a bundle that locks another, exactly as json did in issue #25. Reading gem packages needs those gems, so publishing runs in a separate Ruby process with RUBYOPT and BUNDLE_GEMFILE cleared. `spec/gemvault/vault_publication_spec.rb` asserts the calling process activates nothing.
 
 ## Testing
 

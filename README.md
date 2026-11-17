@@ -28,6 +28,53 @@ bundle install
 ```
 
 
+### Bundler, for Dependabot and other tools that do not install plugins
+
+Dependabot evaluates a Gemfile without installing Bundler plugins and accepts
+only rubygems, git and path sources, so it cannot read `type: :vault`. Name the
+vault by a gem source address instead:
+
+```ruby
+# Gemfile
+source "https://rubygems.org"
+
+source "https://gemvault.invalid/vendor/private.gemv/" do
+  gem "my_private_gem"
+end
+```
+
+This form needs **Bundler 4.1.0 or newer**. An older Bundler has no hook for
+the plugin to act on, tries to reach the address, and fails with
+`Could not reach host gemvault.invalid`.
+
+`gemvault.invalid` resolves nowhere and is never contacted. Everything after it
+is the vault's path relative to the Gemfile. The plugin publishes the vault as a
+local gem index under `.bundle/gemvault/` and mirrors the address to it, so the
+lockfile holds an ordinary `GEM` section.
+
+```bash
+bundle plugin install bundler-source-vault   # once per project
+bundle install
+git add -f .bundle/plugin                    # so Dependabot's clone has the plugin
+```
+
+- Bundler 4.1.0 is the first with the `after-eval` plugin hook this relies on,
+  and the first to write relative paths into a plugin index, which is what
+  makes a committed `.bundle/plugin` work in someone else's clone.
+- Do not add a `plugin "bundler-source-vault"` line to the Gemfile. Bundler
+  would resolve it before the plugin can redirect the address.
+- Ignore `.bundle/gemvault/`. It holds one index per vault, rebuilt whenever the
+  vault file changes, and the index it replaces is removed.
+- The mirror is set for the running process only. Nothing is written to the
+  project's or your own Bundler config.
+- The vault file has to be present wherever the Gemfile is evaluated,
+  including at application boot, as it does with `type: :vault`.
+- For Dependabot version updates, list the vault's gems under `ignore` in
+  `dependabot.yml`. Dependabot asks a gem's source directly for newer versions,
+  and the address answers nothing. Security updates need no extra configuration.
+- Resolution is slower than with `type: :vault`: a `file://` index has no
+  dependency API, so Bundler falls back to the full index for every source.
+
 ### RubyGems CLI
 
 ```bash
