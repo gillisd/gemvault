@@ -42,12 +42,23 @@ module AddressedVaultScenarios
     run_addressed("rm test.gemv\nbundle install")
   end
 
+  def install_from_addressed_vault_in_spaced_project
+    run_addressed(<<~SH, project: "$WORKDIR/My Projects")
+      bundle install
+      bundle exec ruby -e "require 'vault_test_gem'; puts VaultTestGem::VERSION"
+      test ! -e .bundle/gemvault
+    SH
+  end
+
   private
 
-  def run_addressed(steps)
+  def run_addressed(steps, project: "$WORKDIR")
     run_bundle(gemfile_content: ADDRESSED_GEMFILE, assertions: <<~SH)
       gem install --no-document bundler -v #{HOOKED_BUNDLER}
       export BUNDLER_VERSION=#{HOOKED_BUNDLER}
+      mkdir -p "#{project}"
+      [ "#{project}" = "$WORKDIR" ] || mv Gemfile test.gemv "#{project}/"
+      cd "#{project}"
       #{GemIndex.gemrc_pointing_at_index}
       bundle plugin install bundler-source-vault
       #{steps}

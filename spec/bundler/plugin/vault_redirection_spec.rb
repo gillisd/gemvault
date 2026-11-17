@@ -6,7 +6,9 @@ RSpec.describe Bundler::Plugin::VaultRedirection do
 
   subject(:redirection) { described_class.new(definition) }
 
-  let(:published_root) { gem_dir / ".bundle" / "gemvault" }
+  let(:project) { gem_dir }
+  let(:user_cache) { gem_dir / "cache" }
+  let(:published_root) { project / ".bundle" / "gemvault" }
   let(:shelf_url) { "file://#{published_root}/test.gemv/" }
   let(:settings) { instance_spy(Bundler::Settings) }
   let(:source) { Struct.new(:remotes) }
@@ -14,7 +16,8 @@ RSpec.describe Bundler::Plugin::VaultRedirection do
   let(:definition) { Struct.new(:sources).new(sources.new([source.new(remotes)])) }
 
   before do
-    allow(Bundler).to receive_messages(root: gem_dir, app_config_path: gem_dir / ".bundle", settings: settings)
+    allow(Bundler).to receive_messages(root: project, app_config_path: project / ".bundle",
+                                       user_cache: user_cache, settings: settings)
   end
 
   context "when a source is addressed to a vault" do
@@ -32,6 +35,73 @@ RSpec.describe Bundler::Plugin::VaultRedirection do
     it "mirrors the address to that index" do
       expect(settings).to have_received(:set_command_option)
         .with("mirror.https://gemvault.invalid/test.gemv/", a_string_starting_with(shelf_url))
+    end
+  end
+
+  context "when the project path cannot be written as an address" do
+    let(:project) { gem_dir / "My Projects" }
+    let(:vault_path) { project / "test.gemv" }
+    let(:remotes) { ["https://gemvault.invalid/test.gemv/"] }
+
+    before do
+      project.mkpath
+      current_tarvault
+      redirection.apply
+    end
+
+    it "publishes the vault under the user's Bundler cache" do
+      expect(user_cache.glob("gemvault/*/test.gemv/*/gems/foo-1.0.0.gem").size).to eq(1)
+    end
+
+    it "mirrors the address to that index" do
+      expect(settings).to have_received(:set_command_option)
+        .with("mirror.https://gemvault.invalid/test.gemv/", a_string_starting_with("file://#{user_cache}/gemvault/"))
+    end
+
+    it "publishes nothing inside the project" do
+      expect(published_root).not_to exist
+    end
+  end
+
+  context "when two projects fall back to the user's Bundler cache" do
+    let(:project) { gem_dir / "My Projects" }
+    let(:vault_path) { project / "test.gemv" }
+    let(:remotes) { ["https://gemvault.invalid/test.gemv/"] }
+
+    def other_project = gem_dir / "Other Projects"
+
+    before do
+      project.mkpath
+      current_tarvault
+      redirection.apply
+      other_project.mkpath
+      FileUtils.cp(vault_path, other_project / "test.gemv")
+      allow(Bundler).to receive_messages(root: other_project, app_config_path: other_project / ".bundle")
+      described_class.new(definition).apply
+    end
+
+    it "keeps a shelf for each project" do
+      expect(user_cache.glob("gemvault/*/test.gemv").size).to eq(2)
+    end
+  end
+
+  context "when neither the project nor the user's Bundler cache can be written as an address" do
+    let(:project) { gem_dir / "My Projects" }
+    let(:user_cache) { gem_dir / "My Cache" }
+    let(:vault_path) { project / "test.gemv" }
+    let(:remotes) { ["https://gemvault.invalid/test.gemv/"] }
+
+    before do
+      project.mkpath
+      current_tarvault
+    end
+
+    it "raises a path error naming the vault" do
+      expect { redirection.apply }.to raise_error(Bundler::PathError, /test\.gemv/)
+    end
+
+    it "names the setting that moves the cache" do
+      expect { redirection.apply }.to raise_error(Bundler::PathError, /BUNDLE_USER_CACHE/)
     end
   end
 

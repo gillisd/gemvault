@@ -33,6 +33,12 @@ RSpec.describe "bundle install from a vault named by a gem source address", :int
     end
   end
 
+  context "when the project path holds a space" do
+    it "installs the gem and makes it loadable" do
+      expect(install_from_addressed_vault_in_spaced_project).to succeed_showing("1.0.0")
+    end
+  end
+
   context "when the addressed vault is missing" do
     it "names the vault it could not find" do
       output, = install_from_absent_addressed_vault
