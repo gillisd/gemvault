@@ -1,0 +1,135 @@
+require "gemvault/vault_publication"
+require "open3"
+
+RSpec.describe Gemvault::VaultPublication do
+  include GemFixtures
+
+  subject(:publication) { described_class.new(vault_path, shelf: shelf) }
+
+  let(:shelf) { gem_dir / "shelf" }
+  let(:lib) { File.expand_path("../../lib", __dir__) }
+
+  def published_gems
+    shelf.glob("*/gems/*.gem").map { |gem| gem.basename.to_s }
+  end
+
+  def age(path)
+    past = Time.now - 3600
+    File.utime(past, past, path)
+  end
+
+  describe "#publish" do
+    before { current_tarvault }
+
+    it "publishes the vault's gems on the shelf" do
+      publication.publish
+      expect(published_gems).to eq(["foo-1.0.0.gem"])
+    end
+
+    it "returns the index it published" do
+      expect(publication.publish).to be_published
+    end
+
+    it "keeps one index per vault" do
+      publication.publish
+      expect(shelf.children.size).to eq(1)
+    end
+
+    context "when the vault has not changed since it was published" do
+      it "keeps the published index" do
+        first = publication.publish.url
+        expect(described_class.new(vault_path, shelf: shelf).publish.url).to eq(first)
+      end
+
+      it "leaves the published files untouched" do
+        publication.publish
+        marker = shelf.children.first / "untouched"
+        marker.write("")
+        described_class.new(vault_path, shelf: shelf).publish
+        expect(marker).to exist
+      end
+    end
+
+    context "when the vault has changed since it was published" do
+      before do
+        publication.publish
+        open_vault { |vault| vault.add(build_gem(name: "bar", version: "2.0.0")) }
+        age(vault_path)
+        described_class.new(vault_path, shelf: shelf).publish
+      end
+
+      it "publishes the vault's current gems" do
+        expect(published_gems).to contain_exactly("foo-1.0.0.gem", "bar-2.0.0.gem")
+      end
+
+      it "removes the superseded index" do
+        expect(shelf.children.size).to eq(1)
+      end
+    end
+
+    context "when called from the process that is publishing" do
+      around do |example|
+        ENV[described_class::PUBLISHING] = "1"
+        example.run
+      ensure
+        ENV.delete(described_class::PUBLISHING)
+      end
+
+      it "refuses to publish again" do
+        expect { publication.publish }.to raise_error(Gemvault::VaultPublication::Error, /already publishing/)
+      end
+    end
+
+    context "when the caller runs under Bundler" do
+      let(:loaded) { gem_dir / "bundler_setup_loaded" }
+      let(:bundler_setup) { gem_dir / "setup.rb" }
+
+      around do |example|
+        bundler_setup.write("File.write(#{loaded.to_s.inspect}, %q(loaded))")
+        ENV["BUNDLER_SETUP"] = bundler_setup.to_s
+        example.run
+      ensure
+        ENV.delete("BUNDLER_SETUP")
+      end
+
+      it "publishes without loading Bundler into the publishing process" do
+        publication.publish
+        expect(loaded).not_to exist
+      end
+    end
+
+    context "when the file is not a vault" do
+      before { vault_path.write("not a vault") }
+
+      it "raises" do
+        expect { publication.publish }.to raise_error(Gemvault::VaultPublication::Error, /test\.gemv/)
+      end
+    end
+  end
+
+  describe "the gems it activates in the calling process" do
+    let(:script) do
+      <<~RUBY
+        before = Gem.loaded_specs.keys
+        require "gemvault/vault_publication"
+        Gemvault::VaultPublication.new(ARGV.fetch(0), shelf: ARGV.fetch(1)).publish
+        puts Gem.loaded_specs.keys - before
+      RUBY
+    end
+
+    def activated
+      Open3.capture2e(RbConfig.ruby, "-I", lib, "-e", script, vault_path.to_s, shelf.to_s).first
+    end
+
+    before { current_tarvault }
+
+    it "is none when the index has to be published" do
+      expect(activated).to eq("")
+    end
+
+    it "is none when the index is already published" do
+      publication.publish
+      expect(activated).to eq("")
+    end
+  end
+end
