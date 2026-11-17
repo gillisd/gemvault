@@ -28,6 +28,78 @@ bundle install
 ```
 
 
+### Bundler, for Dependabot and other tools that do not install plugins
+
+Dependabot evaluates a Gemfile without installing Bundler plugins and accepts
+only rubygems, git and path sources, so it cannot read `type: :vault`. Name the
+vault by a gem source address instead:
+
+```ruby
+# Gemfile
+source "https://rubygems.org"
+
+source "https://gemvault.invalid/vendor/private.gemv/" do
+  gem "my_private_gem"
+end
+```
+
+This form needs **Bundler 4.1.0 or newer**. An older Bundler has no hook for
+the plugin to act on, tries to reach the address, and fails with
+`Could not reach host gemvault.invalid`.
+
+`gemvault.invalid` resolves nowhere and is never contacted. Everything after it
+is the vault's path relative to the Gemfile. The plugin publishes the vault as a
+local gem index under `.bundle/gemvault/` and mirrors the address to it, so the
+lockfile holds an ordinary `GEM` section.
+
+```bash
+bundle plugin install bundler-source-vault   # once per project
+bundle install
+git add -f .bundle/plugin                    # so Dependabot's clone has the plugin
+```
+
+- Bundler 4.1.0 is the first with the `after-eval` plugin hook this relies on,
+  and the first to write relative paths into a plugin index, which is what
+  makes a committed `.bundle/plugin` work in someone else's clone.
+- Do not add a `plugin "bundler-source-vault"` line to the Gemfile. Bundler
+  would resolve it before the plugin can redirect the address.
+- A plugin installed by a Bundler older than 4.1.0 is not picked up after
+  upgrading Bundler, because Bundler records a plugin's hooks when it installs
+  it. Delete `.bundle/plugin` and run `bundle plugin install
+  bundler-source-vault` again.
+- Ignore `.bundle/gemvault/`. It holds one index per vault, rebuilt whenever the
+  vault file changes, and the index it replaces is removed. A `bundle` command
+  that was already running when the vault changed may lose its index and need
+  running again.
+- The index moves to your Bundler cache (`~/.bundle/cache/gemvault/`, or
+  wherever `BUNDLE_USER_CACHE` points), one directory per project, when the
+  project's own directory cannot hold it: its path has a space or a character
+  outside ASCII, which a `file://` address cannot carry, or it is read-only.
+  When `BUNDLE_APP_CONFIG` points outside the project, as it does in the
+  official `ruby` container image, the index is kept there instead of in
+  `.bundle/`, in a directory of its own per project.
+  `bundle install --verbose` prints where each vault is served from.
+- Keep the vault under the Gemfile's directory, and name every part of its
+  path so that no `_` sits next to another `_`, a `.` or a `-`
+  (`vendor/my_gems.gemv` is fine; `vendor/my__gems.gemv` and `../my_gems.gemv`
+  are not). Bundler cannot carry such a path in a mirror setting, and the
+  plugin says so instead of installing. A `mirror.all` setting also takes over
+  the address, and the plugin reports that too.
+- Bundler includes the names of its settings in the User-Agent it sends to
+  every gem server the bundle contacts. The mirror is one of them, so those
+  servers see the vault's path as written in the Gemfile.
+- The mirror is set for the running process only. Nothing is written to the
+  project's or your own Bundler config.
+- The vault file has to be present wherever the Gemfile is evaluated,
+  including at application boot, as it does with `type: :vault`.
+- For Dependabot version updates, list the vault's gems under `ignore` in
+  `dependabot.yml`. Dependabot asks a gem's source directly for newer versions,
+  and the address answers nothing. Security updates need no extra configuration.
+- Resolution is slower than with `type: :vault`: a `file://` index has no
+  dependency API, so Bundler warns that the Gemfile "contains scoped sources
+  that don't implement a dependency API" and fetches the full index of every
+  source, rubygems.org included.
+
 ### RubyGems CLI
 
 ```bash

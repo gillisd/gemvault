@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- A Gemfile can name a vault by a gem source address,
+  `source "https://gemvault.invalid/<path to vault>/"`, instead of
+  `type: :vault`. The plugin publishes the vault as a local gem index and
+  mirrors the address to it from Bundler's `after-eval` hook, so the Gemfile
+  and lockfile carry no plugin source and Dependabot can read both. Requires
+  Bundler 4.1.0 or newer and the plugin installed with `bundle plugin install`
+  by that Bundler; commit `.bundle/plugin` so that Dependabot's clone has it.
 - Tarball vault format ("Tarvault"): new vaults are portable tarballs with a
   plain-text `manifest` index and per-gem SHA256 integrity, with no sqlite3
   dependency on the read/write path (works on JRuby). The original SQLite
