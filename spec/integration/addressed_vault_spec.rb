@@ -24,12 +24,8 @@ RSpec.describe "bundle install from a vault named by a gem source address", :int
   end
 
   context "when Bundler predates the after-eval hook" do
-    it "still installs the plugin" do
-      expect(install_addressed_vault_on_image_bundler).to fail_showing("Installed plugin bundler-source-vault")
-    end
-
-    it "reports the vault address it could not reach" do
-      expect(install_addressed_vault_on_image_bundler).to fail_showing("gemvault.invalid")
+    it "refuses to install the plugin and names the Bundler it needs" do
+      expect(install_plugin_on_older_bundler).to fail_showing("needs Bundler 4.1.0 or newer")
     end
   end
 
@@ -66,13 +62,6 @@ RSpec.describe "bundle install from a vault named by a gem source address", :int
   context "when the project path holds a space" do
     it "installs the gem and makes it loadable" do
       expect(install_from_addressed_vault_in_spaced_project).to succeed_showing("loaded 1.0.0")
-    end
-  end
-
-  context "when the plugin was installed by a Bundler that predates the hook" do
-    it "is not redirected until the plugin is reinstalled" do
-      expect(install_with_a_plugin_installed_before_the_hook_existed)
-        .to succeed_showing("not redirected", "loaded 1.0.0")
     end
   end
 
