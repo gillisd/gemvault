@@ -34,6 +34,20 @@ module Gemvault
     end
 
     ##
+    # Whether a gem source address can carry this directory. RubyGems and
+    # Bundler read a file address by its path exactly as written and never
+    # decode it, so a directory that would need escaping cannot be reached.
+    def addressable?
+      require "rubygems/vendor/uri/lib/uri" unless defined?(Gem::URI)
+
+      begin
+        Gem::URI.parse(url).path == "#{@directory}/"
+      rescue Gem::URI::InvalidURIError
+        false
+      end
+    end
+
+    ##
     # Whether a vault has already been published here. The released listing is
     # written last, so its presence marks a complete index.
     def published?
