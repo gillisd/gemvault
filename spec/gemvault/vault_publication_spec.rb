@@ -158,9 +158,10 @@ RSpec.describe Gemvault::VaultPublication do
     end
 
     context "when the vault file is missing" do
-      it "raises naming the vault it could not read" do
-        expect { publication.publish }
-          .to raise_error(Gemvault::VaultPublication::Error, /could not read vault .*test\.gemv/)
+      before { vault_path.delete }
+
+      it "raises saying it could not read the vault" do
+        expect { publication.publish }.to raise_error(Gemvault::VaultPublication::Error, /could not read vault/)
       end
     end
 

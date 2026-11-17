@@ -1,4 +1,4 @@
-require_relative "static_index"
+require_relative "shelf"
 
 module Gemvault
   ##
@@ -6,15 +6,15 @@ module Gemvault
   # holds exactly one index, for the vault as it currently stands.
   #
   # The index sits in a folder named for the vault file's size and modification
-  # time, so an unchanged vault is recognised by a single +stat+ and a changed
+  # time, so an unchanged vault is recognised without opening it and a changed
   # one is published afresh, replacing the index it supersedes.
   #
   # This runs inside whatever process evaluates a Gemfile, before Bundler has
   # set up the bundle. Anything required here is activated at whatever version
   # happens to be installed, and a bundle that locks a different version then
-  # fails to load. Reading gem packages needs zlib, openssl and a dozen other
-  # default gems, so the publishing itself happens in a separate Ruby process;
-  # this class loads nothing and activates nothing.
+  # fails to load. Reading gem packages needs zlib, openssl and other default
+  # gems, so the publishing itself happens in a separate Ruby process; this
+  # class requires no gem and activates nothing.
   #
   # That process must never come back here. RubyGems loads Bundler into any
   # Ruby started with BUNDLER_SETUP set, which would evaluate the Gemfile, find
@@ -35,14 +35,14 @@ module Gemvault
 
     def initialize(vault_path, shelf:)
       @vault_path = vault_path.to_s
-      @shelf = shelf.to_s
+      @shelf = shelf
     end
 
     ##
     # The index for the vault as it stands, published first if it is not
     # already on the shelf.
     def publish
-      index = StaticIndex.new(File.join(@shelf, stamp))
+      index = @shelf.index_for(stamp)
       return index if index.published?
       raise Error, "already publishing #{@vault_path}; refusing to start again" if ENV.key?(PUBLISHING)
 
@@ -52,16 +52,36 @@ module Gemvault
     private
 
     def stamp
-      stat = File.stat(@vault_path)
-      modified = stat.mtime
+      begin
+        stat = File.stat(@vault_path)
+      rescue SystemCallError => e
+        raise Error, "could not read vault #{@vault_path}: #{e.message}"
+      end
 
-      "#{stat.size}-#{modified.to_i}-#{modified.nsec}"
+      "#{stat.size}-#{stat.mtime.to_i}-#{stat.mtime.nsec}"
     end
 
     def shelve(index)
-      return index if system(OUTSIDE_THE_BUNDLE, Gem.ruby, SCRIPT, @vault_path, @shelf, index.directory)
+      command = [Gem.ruby, SCRIPT, @vault_path, @shelf.directory, File.basename(index.directory)]
 
-      raise Error, "could not publish #{@vault_path} as a gem index"
+      begin
+        said = IO.popen(OUTSIDE_THE_BUNDLE, command, err: %i[child out], &:read)
+      rescue SystemCallError => e
+        raise Error, "#{unpublished}: could not start #{Gem.ruby}: #{e.message}"
+      end
+
+      concluded(index, Process.last_status, said)
+    end
+
+    def concluded(index, status, said)
+      return index if status.success?
+      raise Error, "#{unpublished}: the publishing process was killed by signal #{status.termsig}" if status.signaled?
+
+      raise Error, "#{unpublished}: #{said.strip}"
+    end
+
+    def unpublished
+      "could not publish #{@vault_path} as a gem index"
     end
   end
 end
