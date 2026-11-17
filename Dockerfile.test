@@ -24,10 +24,10 @@ RUN dnf \
 	sqlite3 \
 	&& dnf clean all
 
-# Keep this in step with the `BUNDLED WITH` line the project's own lockfile
-# carries. The plugin machinery these specs exercise is Bundler's own, so a
-# stale version silently tests different code.
-RUN gem install --no-document bundler -v 4.0.23
+# The oldest Bundler the plugin accepts: it needs the after-eval hook, which
+# arrived in 4.1.0. The plugin machinery these specs exercise is Bundler's own,
+# so a stale version silently tests different code.
+RUN gem install --no-document bundler -v 4.1.0
 
 # sqlite3 is not a gemvault runtime dependency; install it here so the upgrade
 # integration test can read the committed legacy SQLite (Dbvault) fixture it

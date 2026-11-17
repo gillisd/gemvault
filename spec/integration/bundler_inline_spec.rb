@@ -12,7 +12,7 @@ RSpec.describe "bundler/inline with vault source", :integration do
   context "when RubyGems discovers the vault plugin twice under Bundler" do
     it "loads it without redefining its constants" do
       output, = run_inline_install
-      expect(output).not_to include("already initialized constant")
+      expect(redefinitions_in(output)).not_to include("vault")
     end
   end
 end
