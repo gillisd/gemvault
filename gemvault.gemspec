@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
     IO.popen(["git", "ls-files", "-z"], chdir: __dir__, err: IO::NULL) { |ls|
       ls.readlines("\x0", chomp: true).reject do |f|
         (f == gemspec_file) ||
-          f.start_with?("bin/", "test/", "spec/", "features/", ".git", "shim/", "Gemfile") ||
+          f.start_with?("bin/", "test/", "spec/", "features/", ".git", "shim/", "Gemfile", "_claude/") ||
           f == "plugins.rb"
       end
     }
