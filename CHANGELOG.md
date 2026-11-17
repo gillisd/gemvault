@@ -113,6 +113,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gemvault through `require_relative` alone (issue #13).
 
 ### Changed
+- `bundler-source-vault` requires Bundler 4.1.0 or newer and refuses to load on
+  an older one, for `type: :vault` as well as for addressed vaults.
+- With Bundler 4.1.0 a project that sets `path` cannot take the plugin from
+  system gems: Bundler applies `path` before it resolves Gemfile plugins, so
+  the Gemfile needs a gem index that carries `bundler-source-vault`.
 - The manifest is now line-oriented text rather than JSON (vault format 3).
   It was never document-shaped: a header plus one whitespace-separated line
   per gem — name, version, platform, stored-at, SHA256, encrypted — with no
