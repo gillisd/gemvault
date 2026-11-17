@@ -1,4 +1,6 @@
 module BundlerInline
+  REDEFINITION = /already initialized constant/
+
   def run_inline_install
     podman_run(inline_script("gemfile(true)"))
   end
@@ -17,6 +19,14 @@ module BundlerInline
       gemvault doctor
       #{followup}
     SH
+  end
+
+  def redefinitions_in(output)
+    output
+      .lines
+      .grep(REDEFINITION)
+      .join
+      .downcase
   end
 
   def inline_script(gemfile_call)
