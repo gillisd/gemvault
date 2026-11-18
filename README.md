@@ -43,8 +43,9 @@ source "https://gemvault.invalid/vendor/private.gemv/" do
 end
 ```
 
-The plugin needs **Bundler 4.1.0 or newer**, for both this form and
-`type: :vault`, and refuses to install on an older one.
+This form needs **Bundler 4.1.0 or newer**. On an older Bundler the plugin
+still serves `type: :vault`, and an addressed vault fails as an unreachable
+host.
 
 `gemvault.invalid` resolves nowhere and is never contacted. Everything after it
 is the vault's path relative to the Gemfile. The plugin publishes the vault as a

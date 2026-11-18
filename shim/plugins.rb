@@ -1,10 +1,3 @@
-# An addressed vault is redirected from Bundler's after-eval hook, which
-# Bundler gained in 4.1.0. An older Bundler would leave the address unredirected
-# and fail as an unreachable host, so it is refused here, by name.
-unless Bundler::Plugin::Events.defined_event?("after-eval")
-  raise Bundler::PluginError, "bundler-source-vault needs Bundler 4.1.0 or newer; this is Bundler #{Bundler::VERSION}"
-end
-
 require_relative "gemvault_load_path"
 
 # Runs on every evaluation. Bundler discards the registration while configuring
@@ -34,6 +27,11 @@ Bundler::Plugin::API.source("vault", Bundler::Plugin::VaultSource)
 # and its lockfile carry no plugin source. Bundler loads this file for the
 # after-eval hook from the plugin index alone, which is what lets a tool that
 # never installs plugins still resolve from a vault committed beside the plugin.
-Bundler::Plugin::API.hook("after-eval") do |definition|
-  Bundler::Plugin::VaultRedirection.new(definition).apply
+# Bundler gained the hook in 4.1.0; an older one keeps the vault source type,
+# and an addressed vault there is left unredirected and fails as an unreachable
+# host.
+if Bundler::Plugin::Events.defined_event?("after-eval")
+  Bundler::Plugin::API.hook("after-eval") do |definition|
+    Bundler::Plugin::VaultRedirection.new(definition).apply
+  end
 end

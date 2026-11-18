@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is shared with the RubyGems source via `Gemvault::VaultPath` (issue #9).
 
 ### Fixed
+- The plugin loads again on Bundler older than 4.1.0. 0.3.0 refused to, and
+  because Bundler installs the newest plugin for a `type: :vault` source, that
+  broke every such bundle on an older Bundler. An addressed vault still needs
+  Bundler 4.1.0.
 - `gemvault doctor` now repairs ghost installations: a
   `specifications/<gem>-<version>.gemspec` left behind after its gem directory
   was removed (interrupted uninstall, hand-cleaned gem home), even when the
@@ -113,8 +117,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gemvault through `require_relative` alone (issue #13).
 
 ### Changed
-- `bundler-source-vault` requires Bundler 4.1.0 or newer and refuses to load on
-  an older one, for `type: :vault` as well as for addressed vaults.
 - With Bundler 4.1.0 a project that sets `path` cannot take the plugin from
   system gems: Bundler applies `path` before it resolves Gemfile plugins, so
   the Gemfile needs a gem index that carries `bundler-source-vault`.

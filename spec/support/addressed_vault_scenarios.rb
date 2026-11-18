@@ -30,12 +30,27 @@ module AddressedVaultScenarios
     SH
   end
 
-  def install_plugin_on_older_bundler
+  def install_plugin_source_on_older_bundler
+    run_bundle(gemfile_content: single_gem_gemfile, assertions: <<~SH)
+      #{use_unhooked_bundler}
+      bundle install
+      #{LOAD}
+    SH
+  end
+
+  def install_from_addressed_vault_on_older_bundler
     run_bundle(gemfile_content: ADDRESSED_GEMFILE, assertions: <<~SH)
+      #{use_unhooked_bundler}
+      bundle plugin install bundler-source-vault
+      bundle install
+    SH
+  end
+
+  def use_unhooked_bundler
+    <<~SH
       gem install --no-document bundler -v #{UNHOOKED_BUNDLER}
       export BUNDLER_VERSION=#{UNHOOKED_BUNDLER}
       #{GemIndex.gemrc_pointing_at_index}
-      bundle plugin install bundler-source-vault
     SH
   end
 
