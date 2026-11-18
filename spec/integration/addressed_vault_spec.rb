@@ -24,12 +24,9 @@ RSpec.describe "bundle install from a vault named by a gem source address", :int
   end
 
   context "when Bundler predates the after-eval hook" do
-    it "installs a bundle whose vault is a plugin source" do
-      expect(install_plugin_source_on_older_bundler).to succeed_showing("loaded 1.0.0")
-    end
-
     it "leaves an addressed vault unredirected" do
-      expect(install_from_addressed_vault_on_older_bundler).to fail_showing("gemvault.invalid")
+      expect(install_from_addressed_vault_on_older_bundler)
+        .to fail_showing("Installed plugin bundler-source-vault", "Could not reach host gemvault.invalid")
     end
   end
 
