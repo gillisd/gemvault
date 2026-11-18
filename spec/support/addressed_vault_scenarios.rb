@@ -1,6 +1,5 @@
 # Projects whose Gemfile names its vault as an ordinary gem source address.
 module AddressedVaultScenarios
-  UNHOOKED_BUNDLER = "4.0.23".freeze
   ADDRESSED_GEMFILE = 'source "https://gemvault.invalid/test.gemv/" do; gem "vault_test_gem"; end'.freeze
   NESTED_GEMFILE = 'source "https://gemvault.invalid/vendor/test.gemv/" do; gem "vault_test_gem"; end'.freeze
   LOAD = %(bundle exec ruby -e "require 'vault_test_gem'; puts 'loaded ' + VaultTestGem::VERSION").freeze
@@ -30,12 +29,11 @@ module AddressedVaultScenarios
     SH
   end
 
-  def install_plugin_on_older_bundler
+  def install_from_addressed_vault_on_older_bundler
     run_bundle(gemfile_content: ADDRESSED_GEMFILE, assertions: <<~SH)
-      gem install --no-document bundler -v #{UNHOOKED_BUNDLER}
-      export BUNDLER_VERSION=#{UNHOOKED_BUNDLER}
-      #{GemIndex.gemrc_pointing_at_index}
+      #{OlderBundlerScenarios.selected}
       bundle plugin install bundler-source-vault
+      bundle install
     SH
   end
 

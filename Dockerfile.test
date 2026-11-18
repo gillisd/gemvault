@@ -24,8 +24,8 @@ RUN dnf \
 	sqlite3 \
 	&& dnf clean all
 
-# The oldest Bundler the plugin accepts: it needs the after-eval hook, which
-# arrived in 4.1.0. The plugin machinery these specs exercise is Bundler's own,
+# The oldest Bundler with the after-eval hook, which an addressed vault needs.
+# The plugin machinery these specs exercise is Bundler's own,
 # so a stale version silently tests different code.
 RUN gem install --no-document bundler -v 4.1.0
 

@@ -35,6 +35,11 @@ with a clear message instead of degrading silently, and prefer the simpler
 design over one that keeps an old path alive. Anyone who needs compatibility
 uses an earlier version of the gem and of Bundler.
 
+One exception: the plugin must always load on an older Bundler. Bundler
+installs the newest plugin for a `type: :vault` source on every fresh install,
+so a plugin that refuses to load breaks those bundles the moment it is
+published. Gate the feature that needs the newer Bundler, never the load.
+
 ## Project Overview
 
 Multi-gem portable archives. A single `.gemv` file is a tarball holding multiple `.gem` files plus a line-oriented `manifest` index; legacy SQLite vaults are read-only.
