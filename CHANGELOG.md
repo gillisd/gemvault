@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - The plugin loads again on Bundler older than 4.1.0. 0.3.0 refused to, and
   because Bundler installs the newest plugin for a `type: :vault` source, that
-  broke every such bundle on an older Bundler. An addressed vault still needs
+  broke every fresh install of such a bundle on an older Bundler. An addressed vault still needs
   Bundler 4.1.0.
 - `gemvault doctor` now repairs ghost installations: a
   `specifications/<gem>-<version>.gemspec` left behind after its gem directory
